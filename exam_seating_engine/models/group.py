@@ -11,7 +11,7 @@ class Group:
     subject_name: str
     exam_date: str
     session: str
-    students: List[Student] = field(default_factory=list)
+    students: list[Student] = field(default_factory=list)
     allocated_count: int = 0
 
     @property
