@@ -2,8 +2,16 @@ from exam_seating_engine.models.remaining_pool import RemainingPool
 
 class PrimaryAllocator:
 
-    def allocate(self, groups, classrooms):
-        room_allocations = []
-        remaining_pool = RemainingPool()
+    def execute(self, context):
 
-        return room_allocations, remaining_pool
+        # Iterate rooms
+
+        # Fill Stream A
+
+        # Fill Stream B
+
+        # Fill Stream C
+
+        # Build Remaining Pool
+
+        return context

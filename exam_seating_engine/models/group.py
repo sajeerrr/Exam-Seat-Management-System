@@ -19,8 +19,11 @@ class Group:
         return len(self.students)
 
     @property
-    def remaining_count(self):
+    def remaining_count(self):#find remaining count
         return self.strength - self.allocated_count
 
-    def allocate(self, count: int):
+    def allocate(self, count: int):#allocate count
         self.allocated_count += count
+
+    def next_start_index(self): #for get range like 0 to 15 and 16 to 30 like
+        return self.allocated_count
