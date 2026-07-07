@@ -1,17 +1,11 @@
-from exam_seating_engine.models.remaining_pool import RemainingPool
+from models.allocation import Allocation
+
 
 class PrimaryAllocator:
 
     def execute(self, context):
-
-        # Iterate rooms
-
-        # Fill Stream A
-
-        # Fill Stream B
-
-        # Fill Stream C
-
-        # Build Remaining Pool
-
+        room_index = 0
+        current_room = context.room_allocations[room_index]
+        for group in context.groups:
+            pass
         return context

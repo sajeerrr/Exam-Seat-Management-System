@@ -30,7 +30,7 @@ class GroupBuilder:
                     f"{student.section}"
                 )
 
-                groups[key] = Group(
+                groups[key] = Group(# if there is no key then create it
                     group_id=group_id,
                     department=student.department,
                     semester=student.semester,
