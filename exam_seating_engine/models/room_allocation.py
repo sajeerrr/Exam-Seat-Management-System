@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from typing import List
 
-from allocation import Allocation
-from classroom import Classroom
+from .allocation import Allocation
+from .classroom import Classroom
 
 
 @dataclass
 class RoomAllocation:
-    
+
     classroom: Classroom
     allocations: List[Allocation] = field(default_factory=list)
 
