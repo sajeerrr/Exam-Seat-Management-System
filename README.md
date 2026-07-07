@@ -1,1 +1,0 @@
-# Exam-Seat-Management-System
