@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+from group import Group
+
 
 @dataclass
 class Allocation:
-    room_no: str
-    group_id: str
+    group: Group
     allocated_count: int

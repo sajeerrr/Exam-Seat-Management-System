@@ -7,7 +7,7 @@ from classroom import Classroom
 
 @dataclass
 class RoomAllocation:
-
+    
     classroom: Classroom
     allocations: List[Allocation] = field(default_factory=list)
 
