@@ -1,4 +1,4 @@
-from models.allocation import Allocation
+from ..models.allocation import Allocation
 
 STREAMS = ["A", "B", "C"]#three students in a bench
 
