@@ -10,8 +10,18 @@ class Group:
     section: str
     subject_code: str
     subject_name: str
+    exam_date: str
+    session: str
     students: List[Student] = field(default_factory=list)
+    allocated_count: int = 0
 
     @property
-    def strength(self):
-        return len(self.students) #used to get strength of students
+    def strength(self): #find the strength
+        return len(self.students)
+
+    @property
+    def remaining_count(self):
+        return self.strength - self.allocated_count
+
+    def allocate(self, count: int):
+        self.allocated_count += count
