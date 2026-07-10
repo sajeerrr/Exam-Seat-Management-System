@@ -1,48 +1,96 @@
 from ..models.allocation import Allocation
 
-STREAMS = ["A", "B", "C"] #three students in a bench
+STREAMS = ["A", "B", "C"]
 
 
 class PrimaryAllocator:
 
     def execute(self, context):
 
-        room_index = 0
+        # Create runtime state
+        self.context = context
+        self.room_index = 0
+        self.group_index = 0
 
-        for group in context.groups:
+        # Active group for each stream
+        self.active_groups = {
+            "A": None,
+            "B": None,
+            "C": None,
+        }
+        self._initialize_streams()
 
-            while True:
+        while (
+            self.room_index < len(self.context.room_allocations)
+            and self._has_active_groups()
+        ):
+            self._allocate_room()
 
-                if room_index >= len(context.room_allocations):
-                    raise Exception("Not enough classrooms available.")
+        return self.context
+    
+    def _initialize_streams(self):
+        for stream in STREAMS:
+            if self.group_index < len(self.context.groups):
+                self.active_groups[stream] = self.context.groups[self.group_index]
+                self.group_index += 1
+    
+    def _has_active_groups(self):
+        return any(
+            group is not None
+            for group in self.active_groups.values()
+        )
 
-                current_room = context.room_allocations[room_index]
+    def _allocate_room(self):
+        room = self.context.room_allocations[self.room_index]
+        for stream in STREAMS:
+            self._allocate_stream(room, stream)
 
-                stream_size = current_room.stream_capacity 
+        self.room_index += 1
 
-                # Group cannot fill one complete stream
-                if group.remaining_count < stream_size:
-                    break
+    def _allocate_stream(self, room, stream):
+        group = self.active_groups[stream]
 
-                # Room already has 3 streams
-                if len(current_room.allocations) == 3:
-                    room_index += 1
-                    continue
+        # No active group for this stream
+        if group is None:
+            return
 
-                allocation = Allocation(
-                    stream=STREAMS[len(current_room.allocations)],
-                    group=group,
-                    start_index=group.next_start_index,
-                    end_index=group.next_start_index + stream_size - 1,
-                    allocated_count=stream_size,
-                )
+        column_capacity = room.column_capacity
 
-                current_room.allocations.append(allocation)
+        if room.remaining_capacity < column_capacity:
+            return
 
-                group.allocate(stream_size)
+        # Current group cannot fill one complete column
+        while True:
+            if group is None:
+                return
 
-        # Build Remaining Pool
-        for group in context.groups:
-            context.remaining_pool.add(group)
+            if group.remaining_count >= column_capacity:
+                break
 
-        return context
+            self._move_to_remaining_pool(group)
+            self._load_next_group(stream)
+            group = self.active_groups.get(stream)
+
+        allocation = Allocation(
+            stream=stream,
+            group=group,
+            start_index=group.next_start_index,
+            end_index=group.next_start_index + column_capacity - 1,
+            allocated_count=column_capacity,
+        )
+
+        room.streams[stream] = allocation
+        room.allocations.append(allocation)
+        group.allocate(column_capacity)
+
+    def _load_next_group(self, stream):
+        if self.group_index >= len(self.context.groups):
+            self.active_groups[stream] = None
+            return
+
+        self.active_groups[stream] = self.context.groups[self.group_index]
+        self.group_index += 1
+
+    def _move_to_remaining_pool(self, group):
+        if group.remaining_count > 0:
+            self.context.remaining_pool.add(group)

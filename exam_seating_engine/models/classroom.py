@@ -12,5 +12,5 @@ class Classroom:
         return self.rows * self.benches_per_row * self.seats_per_bench
 
     @property #capacity of bench in a class 
-    def stream_capacity(self):
+    def column_capacity(self):
         return self.rows * self.benches_per_row

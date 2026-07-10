@@ -28,7 +28,7 @@ for room in classrooms:
     print(
         f"{room.room_no} "
         f"Capacity = {room.capacity} "
-        f"Stream Capacity = {room.stream_capacity}"
+        f"Stream Capacity = {room.column_capacity}"
     )
 
 print()

@@ -9,11 +9,13 @@ from .classroom import Classroom
 class RoomAllocation:
 
     classroom: Classroom
-    streams = {
-        "A": None,
-        "B": None,
-        "C": None
-    }
+    streams: dict = field(
+        default_factory=lambda: {
+            "A": None,
+            "B": None,
+            "C": None
+        }
+    )
     allocations: List[Allocation] = field(default_factory=list)
 
     @property
@@ -28,5 +30,5 @@ class RoomAllocation:
         return self.classroom.capacity - self.used_capacity
 
     @property
-    def stream_capacity(self):
-        return self.classroom.stream_capacity
+    def column_capacity(self):
+        return self.classroom.column_capacity
