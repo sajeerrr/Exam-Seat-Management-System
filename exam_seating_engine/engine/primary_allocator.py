@@ -1,6 +1,6 @@
 from ..models.allocation import Allocation
 
-STREAMS = ["A", "B", "C"]#three students in a bench
+STREAMS = ["A", "B", "C"] #three students in a bench
 
 
 class PrimaryAllocator:

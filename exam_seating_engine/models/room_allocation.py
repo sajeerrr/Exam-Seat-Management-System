@@ -9,6 +9,11 @@ from .classroom import Classroom
 class RoomAllocation:
 
     classroom: Classroom
+    streams = {
+        "A": None,
+        "B": None,
+        "C": None
+    }
     allocations: List[Allocation] = field(default_factory=list)
 
     @property

@@ -6,7 +6,7 @@ from .remaining_pool import RemainingPool
 
 
 @dataclass
-class AllocationContext:# make a group for primary allocator parameter
+class AllocationContext: # make a group for primary allocator parameter
     groups: list[Group]
     room_allocations: list[RoomAllocation]
     remaining_pool: RemainingPool

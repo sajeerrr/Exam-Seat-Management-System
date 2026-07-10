@@ -28,3 +28,7 @@ class Group:
     @property
     def next_start_index(self): #for get range like 0 to 15 and 16 to 30 like
         return self.allocated_count
+
+    @property
+    def can_fill_stream(self): #check for class to add in stream
+        return self.remaining_count > 0
