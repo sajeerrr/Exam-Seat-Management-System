@@ -28,3 +28,11 @@ class Group:
     @property
     def next_start_index(self): #for get range like 0 to 15 and 16 to 30 like
         return self.allocated_count
+    
+    @property
+    def priority(self):     
+        """
+        Priority used by the Priority Queue.
+        Larger remaining groups have higher priority.
+        """
+        return self.remaining_count

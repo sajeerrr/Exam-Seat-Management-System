@@ -4,7 +4,7 @@ from .group import Group
 
 @dataclass
 class Allocation:
-
+    
     stream: str      # "A", "B", or "C"
     group: Group
     start_index: int

@@ -1,124 +1,63 @@
-from exam_seating_engine.tests.sample_data import groups, classrooms
-
-from exam_seating_engine.models.room_allocation import RoomAllocation
-from exam_seating_engine.models.remaining_pool import RemainingPool
-from exam_seating_engine.models.allocation_context import AllocationContext
-
-from exam_seating_engine.engine.primary_allocator import PrimaryAllocator
+from exam_seating_engine.algorithms.priority_queue import PriorityQueue
+from exam_seating_engine.tests.helper import build_group
 
 
-print("=" * 60)
-print("INPUT GROUPS")
-print("=" * 60)
+def test_push():
 
-for group in groups:
-    print(
-        f"{group.department}{group.semester}{group.section} "
-        f"{group.subject_name} "
-        f"Strength = {group.strength}"
-    )
+    pq = PriorityQueue()
+    pq.push(build_group("ME",90))
+    pq.push(build_group("CE",75))
+    pq.push(build_group("EE",60))
+    pq.push(build_group("CS",44))
+    assert pq.peek().department == "ME"
 
-print()
 
-print("=" * 60)
-print("CLASSROOMS")
-print("=" * 60)
+def test_pop():
 
-for room in classrooms:
-    print(
-        f"{room.room_no} "
-        f"Capacity = {room.capacity} "
-        f"Stream Capacity = {room.column_capacity}"
-    )
+    pq = PriorityQueue()
+    pq.push(build_group("ME",90))
+    pq.push(build_group("CE",75))
+    pq.push(build_group("EE",60))
+    top = pq.pop()
+    assert top.department == "ME"
+    assert pq.peek().department == "CE"
 
-print()
 
-# -------------------------------------
-# Build Room Allocations
-# -------------------------------------
+def test_update():
 
-room_allocations = [
-    RoomAllocation(classroom=room)
-    for room in classrooms
-]
+    pq = PriorityQueue()
+    me = build_group("ME",90)
+    ce = build_group("CE",75)
+    ee = build_group("EE",60)
+    pq.push(me)
+    pq.push(ce)
+    pq.push(ee)
+    me.allocate(60)   # 90 - 60 = 30 remaining, less than CE's 75
+    pq.update(me)
+    assert pq.peek().department == "CE"
 
-# -------------------------------------
-# Create Allocation Context
-# -------------------------------------
 
-context = AllocationContext(
-    groups=groups,
-    room_allocations=room_allocations,
-    remaining_pool=RemainingPool()
-)
+def test_remove():
 
-# -------------------------------------
-# Execute Primary Allocation
-# -------------------------------------
+    pq = PriorityQueue()
+    me = build_group("ME",90)
+    ce = build_group("CE",75)
+    pq.push(me)
+    pq.push(ce)
+    pq.remove(me)
+    assert pq.peek().department == "CE"
 
-allocator = PrimaryAllocator()
 
-context = allocator.execute(context)
+def test_empty():
 
-# -------------------------------------
-# Print Room Allocations
-# -------------------------------------
+    pq = PriorityQueue()
+    assert pq.pop() is None
+    assert pq.peek() is None
 
-print("=" * 60)
-print("ROOM ALLOCATIONS")
-print("=" * 60)
 
-for room in context.room_allocations:
+def test_size():
 
-    print(f"\n{room.classroom.room_no}")
-
-    if not room.allocations:
-        print("No Allocations")
-        continue
-
-    for allocation in room.allocations:
-
-        group = allocation.group
-
-        print(
-            f"Stream : {allocation.stream}"
-        )
-        print(
-            f"Group  : {group.department}{group.semester}{group.section}"
-        )
-        print(
-            f"Subject: {group.subject_name}"
-        )
-        print(
-            f"Students Allocated : {allocation.allocated_count}"
-        )
-        print(
-            f"Student Index : {allocation.start_index + 1}"
-            f" - {allocation.end_index + 1}"
-        )
-        print("-" * 30)
-
-# -------------------------------------
-# Remaining Pool
-# -------------------------------------
-
-print("\n" + "=" * 60)
-print("REMAINING POOL")
-print("=" * 60)
-
-if not context.remaining_pool.groups:
-    print("No Remaining Groups")
-
-else:
-    for group in context.remaining_pool.groups:
-
-        print(
-            f"{group.department}{group.semester}{group.section}"
-        )
-        print(
-            f"Subject : {group.subject_name}"
-        )
-        print(
-            f"Remaining Students : {group.remaining_count}"
-        )
-        print("-" * 30)
+    pq = PriorityQueue()
+    assert pq.size() == 0
+    pq.push(build_group("ME",10))
+    assert pq.size() == 1
