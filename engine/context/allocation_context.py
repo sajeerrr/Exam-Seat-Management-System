@@ -30,7 +30,6 @@ class AllocationContext:
                         room=room,
                         stream=stream,
                         capacity=capacity,
-                        remaining_capacity=capacity,
                     )
                 )
     

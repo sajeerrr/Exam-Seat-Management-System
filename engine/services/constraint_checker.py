@@ -11,7 +11,7 @@ class ConstraintChecker:
             return False
 
         # Capacity check
-        if stream.remaining_capacity < stream.capacity:
+        if not stream.is_available:
             return False
 
         # Check conflicts inside the room
