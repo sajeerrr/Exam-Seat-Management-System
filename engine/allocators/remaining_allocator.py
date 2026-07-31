@@ -1,4 +1,5 @@
 from engine.services.constraint_checker import ConstraintChecker
+from engine.models.allocation import Allocation
 
 
 class RemainingAllocator:
@@ -8,7 +9,7 @@ class RemainingAllocator:
             context.conflict_graph
         )
 
-        for group in context.remaining_pool.groups:
+        for group in list(context.remaining_pool.groups):
 
             self.allocate_group(
                 group,
@@ -51,14 +52,15 @@ class RemainingAllocator:
         if stream is None:
             return
 
+        students = group.allocate_students(
+            group.remaining_count
+        )
+
         allocation = Allocation(
             group=group,
+            students=students,
             stream=stream.stream,
-            allocated_count=group.remaining_count,
         )
 
         stream.room.add_allocation(allocation)
-
-        stream.remaining_capacity -= group.remaining_count
-
-        group.remaining_count = 0
+        context.remaining_pool.remove(group)

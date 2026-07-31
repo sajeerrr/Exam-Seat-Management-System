@@ -33,14 +33,13 @@ class PrimaryAllocator:
 
     
     def allocate(self, group, stream):
-
         count = stream.capacity
+        students = group.allocate_students(count)
 
         allocation = Allocation(
             group=group,
+            students=students,
             stream=stream.stream,
-            allocated_count=count,
         )
 
         stream.room.add_allocation(allocation)
-        group.remaining_count -= count

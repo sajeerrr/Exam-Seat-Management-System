@@ -1,12 +1,15 @@
 from dataclasses import dataclass
-
 from .group import Group
+from .student import Student
+
 
 @dataclass
 class Allocation:
-    
-    stream: str      # "A", "B", or "C"
+
     group: Group
-    start_index: int
-    end_index: int
-    allocated_count: int
+    students: list[Student]
+    stream: str
+
+    @property
+    def allocated_count(self):
+        return len(self.students)
