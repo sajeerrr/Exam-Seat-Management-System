@@ -35,7 +35,7 @@ class SeatGenerator:
                 student = allocation.students[i]
 
                 seat = Seat(
-                    room_no=room.classroom,
+                    classroom=room.classroom,
                     bench_no=bench_no,
                     stream=allocation.stream,
                     student=student,

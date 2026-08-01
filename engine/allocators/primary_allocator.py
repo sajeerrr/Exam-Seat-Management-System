@@ -7,6 +7,11 @@ class PrimaryAllocator:
     def execute(self, context):
         checker = ConstraintChecker(context.conflict_graph)
 
+        if not context.streams:
+            for group in context.groups:
+                context.remaining_pool.add(group)
+            return
+
         groups = sorted(
             context.groups,
             key=lambda g: g.remaining_count,
