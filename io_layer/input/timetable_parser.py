@@ -2,15 +2,15 @@
 """
 Parses TKM College exam timetable PDFs into ExamSession objects.
 
-Expected format (one block per exam slot):
-    Date : 12-03-2026 (Thursday)        ← date line
-    Time: 10:00 - 12:00 Noon FN         ← session line (FN / AN)
-    Subject & Code       Branch
-    Quantity Surveying.. (23CET601)  CE
-    Computer Aided..     (23MEP602)  ME
-    ...
+The PDF has a two-column layout — two exam slots side by side.
+Each subject row may contain entries for both columns on the same text line.
 
-The parser produces one ExamSession per (date, session, department, subject_code) tuple.
+Example:
+  Line 3: "Date : 12-03--2026 (Thursday) 1 Date : 13-03-2026 (Friday) 2"
+  Line 4: "Time: 10:00 - 12:00 Noon FN Time: 10:00 - 12:00 Noon FN"
+  Line 6: "Quantity Surveying and Valuation (23CET601 ) CE Project Management (23HUP608) ME"
+
+The parser extracts one ExamSession per (date, session, dept, subject_code) tuple.
 """
 
 import logging
@@ -22,9 +22,14 @@ import pdfplumber
 
 logger = logging.getLogger(__name__)
 
-_DATE_RE    = re.compile(r"(\d{2}-\d{2}-\d{4})")
+_DATE_RE    = re.compile(r"(\d{2}-\d{2}-{1,2}\d{4})")   # handles 12-03-2026 and 12-03--2026
+
 _SESSION_RE = re.compile(r"\b(FN|AN)\b")
-_SUBJECT_RE = re.compile(r"^(.+?)\s*\((\w+)\)\s+([A-Z]+)\s*$")
+
+# Splits a subject line into its individual (name, code, dept) segments.
+# A segment always ends with (CODE) DEPT.
+# We tokenise by finding every (CODE) DEPT occurrence and working backwards.
+_PAIR_RE = re.compile(r"(.*?)\((\w+)\s*\)\s*([A-Z]{2,5})\b", re.DOTALL)
 
 
 @dataclass
@@ -59,37 +64,98 @@ class TimetableParser:
         logger.info("Parsed %d exam sessions from timetable", len(sessions))
         return sessions
 
+    # ── Internal ──────────────────────────────────────────────────────────
+
     def _parse_text(self, text: str) -> list[ExamSession]:
+        """
+        Two-slot state machine.
+        slots[col] = (date, session)  — col 0 = left, col 1 = right.
+        """
         sessions: list[ExamSession] = []
-        current_date    = ""
-        current_session = ""
+
+        # col → (date, session)
+        slots: dict[int, tuple[str, str]] = {}
 
         for line in text.splitlines():
             line = line.strip()
             if not line:
                 continue
 
-            date_match = _DATE_RE.search(line)
-            if date_match and ("date" in line.lower() or re.search(r"\d{2}-\d{2}-\d{4}", line)):
-                raw_date = date_match.group(1)
-                raw_date = re.sub(r"-{2,}", "-", raw_date)
-                current_date = raw_date
-
-            sess_match = _SESSION_RE.search(line)
-            if sess_match and ("time" in line.lower() or "noon" in line.lower() or "pm" in line.lower()):
-                current_session = sess_match.group(1)
-
-            if not current_date or not current_session:
+            # ── Date line ─────────────────────────────────────────────────
+            if "date" in line.lower() and _DATE_RE.search(line):
+                all_dates = _DATE_RE.findall(line)
+                all_dates = [re.sub(r"-{2,}", "-", d) for d in all_dates]
+                # Preserve existing sessions if date line has no session info
+                new_slots: dict[int, tuple[str, str]] = {}
+                for col, date in enumerate(all_dates):
+                    old_sess = slots.get(col, ("", ""))[1]
+                    new_slots[col] = (date, old_sess)
+                slots = new_slots
                 continue
 
-            subj_match = _SUBJECT_RE.match(line)
-            if subj_match:
+            # ── Time / session line ───────────────────────────────────────
+            if "time" in line.lower() or "noon" in line.lower() or " pm" in line.lower():
+                all_sessions = _SESSION_RE.findall(line)
+                for col, sess in enumerate(all_sessions):
+                    if col in slots:
+                        date, _ = slots[col]
+                        slots[col] = (date, sess)
+                    else:
+                        slots[col] = ("", sess)
+                continue
+
+            # ── Skip header and empty-slot lines ─────────────────────────
+            if not slots or "subject" in line.lower():
+                continue
+
+            # ── Subject rows ──────────────────────────────────────────────
+            # Split line into segments: each ends with (CODE) DEPT
+            # "Name A (CODE1) DEPT1 Name B (CODE2) DEPT2"
+            segments = self._split_subject_line(line)
+            if not segments:
+                continue
+
+            for col, (subject_name, subject_code, department) in enumerate(segments):
+                if col not in slots:
+                    continue
+                date, session = slots[col]
+                if not date or not session:
+                    continue
+
                 sessions.append(ExamSession(
-                    exam_date    = current_date,
-                    session      = current_session,
-                    department   = subj_match.group(3).strip(),
-                    subject_code = subj_match.group(2).strip(),
-                    subject_name = subj_match.group(1).strip(),
+                    exam_date    = date,
+                    session      = session,
+                    department   = department,
+                    subject_code = subject_code,
+                    subject_name = subject_name.strip(),
                 ))
 
         return sessions
+
+    @staticmethod
+    def _split_subject_line(line: str) -> list[tuple[str, str, str]]:
+        """
+        Split a subject line into (name, code, dept) tuples.
+
+        E.g.:
+          "Qty Surveying (23CET601) CE Project Mgmt (23HUP608) ME"
+        →  [("Qty Surveying", "23CET601", "CE"),
+            ("Project Mgmt",  "23HUP608", "ME")]
+
+        Strategy: find each (CODE) DEPT position; the name is the text
+        between the end of the previous match and the start of this (CODE).
+        """
+        results = []
+        # Find positions of every (CODE) DEPT occurrence
+        pair_pattern = re.compile(r"\((\w+)\s*\)\s+([A-Z]{2,5})\b")
+        matches = list(pair_pattern.finditer(line))
+
+        prev_end = 0
+        for i, m in enumerate(matches):
+            name_part = line[prev_end : m.start()].strip()
+            subject_code = m.group(1).strip()
+            department   = m.group(2).strip()
+            prev_end = m.end()
+            results.append((name_part, subject_code, department))
+
+        return results

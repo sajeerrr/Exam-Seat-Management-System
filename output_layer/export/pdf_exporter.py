@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class _PDF(FPDF):
     def header(self):
         self.set_font("Helvetica", "B", 10)
-        self.cell(0, 8, "TKM COLLEGE OF ENGINEERING — EXAM SEATING PLAN", align="C")
+        self.cell(0, 8, "TKM COLLEGE OF ENGINEERING - EXAM SEATING PLAN", align="C")
         self.ln(10)
 
     def footer(self):
@@ -101,7 +101,7 @@ class PDFExporter:
                     text = f"{seat.student.register_no}  {seat.student.name}"
                     pdf.cell(col_w, 6, text[:48], border=1, fill=True)
                 else:
-                    pdf.cell(col_w, 6, "—", border=1, align="C")
+                    pdf.cell(col_w, 6, "-", border=1, align="C")
             pdf.ln()
 
         pdf.ln(5)

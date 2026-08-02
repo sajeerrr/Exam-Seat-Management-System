@@ -113,7 +113,8 @@ class PDFParser:
 
         for row in raw_student_rows:
             try:
-                register_no = str(row[3]).strip()   # Uni Reg No
+                roll_no     = str(row[2]).strip()   # College Roll No  e.g. B23CEA01
+                register_no = str(row[3]).strip()   # Uni Reg No       e.g. TKM23CE002
                 name        = str(row[4]).strip()
 
                 student = Student(
@@ -126,6 +127,7 @@ class PDFParser:
                     subject_name = "",
                     exam_date    = "",
                     session      = "",
+                    roll_no      = roll_no,
                 )
                 students.append(student)
             except (IndexError, AttributeError) as exc:

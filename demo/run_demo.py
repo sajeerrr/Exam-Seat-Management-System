@@ -22,7 +22,11 @@ What it does
 
 import logging
 import sys
+import io
 from pathlib import Path
+
+# Force UTF-8 output so box-drawing chars in the report don't crash on Windows
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # ── Logging ────────────────────────────────────────────────────────────────
 from engine.config import LOG_FORMAT

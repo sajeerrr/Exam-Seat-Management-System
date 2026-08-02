@@ -8,6 +8,10 @@ from engine.context.allocation_context import AllocationContext
 
 logger = logging.getLogger(__name__)
 
+_LINE = "=" * 55
+_DASH = "-" * 40
+
+
 
 class AllocationReport:
     """
@@ -27,7 +31,7 @@ class AllocationReport:
 
         for room in context.room_allocations:
             lines.append(f"\n  Room {room.classroom.room_no}")
-            lines.append(f"  {'─' * 40}")
+            lines.append(f"  {_DASH}")
 
             if not room.allocations:
                 lines.append("    (no allocations)")
@@ -38,7 +42,7 @@ class AllocationReport:
                     stream = allocation.stream
                     subj  = allocation.group.subject_code
                     lines.append(
-                        f"    Stream {stream}  →  {dept:5s}  {subj:12s}  ({count} students)"
+                        f"    Stream {stream}  ->  {dept:5s}  {subj:12s}  ({count} students)"
                     )
                     total_allocated += count
 
