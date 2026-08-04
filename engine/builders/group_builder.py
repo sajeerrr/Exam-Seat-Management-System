@@ -2,11 +2,18 @@
 """
 Automatically builds Groups from a list of annotated Student objects.
 
-Grouping key: (department, semester, section, subject_code, exam_date, session)
+Merge strategy
+--------------
+Students from the same (department, semester, subject_code, exam_date, session)
+but **different sections** (e.g. CE6A and CE6B both writing 23CET601) are merged
+into ONE combined group.  The section field on the merged group is set to ""
+and the group_id omits the section letter.
 
-This replaces all manual build_group("CE", 75) calls.
-Students must already have subject_code/exam_date/session stamped
-(done by SessionFilter before calling GroupBuilder).
+This is the correct real-world behaviour: CE students from both sections sit
+in the same rolling allocation and are interleaved with other departments room
+by room — not section by section.
+
+Grouping key (after merge): (department, semester, subject_code, exam_date, session)
 """
 
 import logging
@@ -20,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 class GroupBuilder:
     """
-    Groups students automatically by their exam slot attributes.
+    Groups students by exam slot, merging sections A+B into one group.
 
     Usage
     -----
@@ -32,14 +39,14 @@ class GroupBuilder:
             logger.warning("GroupBuilder received an empty student list")
             return []
 
-        # Bucket students by their grouping key
+        # Bucket by (dept, sem, subject_code, exam_date, session)
+        # Section is intentionally excluded so A and B merge together.
         buckets: dict[tuple, list[Student]] = defaultdict(list)
 
         for student in students:
             key = (
                 student.department,
                 student.semester,
-                student.section,
                 student.subject_code,
                 student.exam_date,
                 student.session,
@@ -48,15 +55,22 @@ class GroupBuilder:
 
         groups: list[Group] = []
 
-        for (dept, sem, section, subj_code, exam_date, session), bucket in buckets.items():
-            # Build a stable group_id
-            group_id = f"{dept}-S{sem}{section}-{subj_code}-{exam_date}-{session}"
+        for (dept, sem, subj_code, exam_date, session), bucket in buckets.items():
+            # Sort students within the merged group by section then roll number
+            # so the allocation order is A01, A02, … A75, B01, B02, … B72
+            bucket.sort(key=lambda s: (s.section, s.roll_no or s.register_no))
+
+            # Collect the distinct sections that were merged
+            sections = sorted(set(s.section for s in bucket if s.section))
+            section_label = "".join(sections)   # "AB", "A", "B", etc.
+
+            group_id = f"{dept}-S{sem}-{subj_code}-{exam_date}-{session}"
 
             group = Group(
                 group_id     = group_id,
                 department   = dept,
                 semester     = sem,
-                section      = section,
+                section      = section_label,
                 subject_code = subj_code,
                 subject_name = bucket[0].subject_name,
                 exam_date    = exam_date,
@@ -65,8 +79,8 @@ class GroupBuilder:
             )
             groups.append(group)
             logger.debug(
-                "Group built: %s  (%d students)",
-                group_id, group.strength,
+                "Group built: %s  (%d students, sections=%s)",
+                group_id, group.strength, section_label,
             )
 
         # Sort largest group first (feeds well into Modified-FFD primary allocator)

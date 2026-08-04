@@ -1,23 +1,22 @@
 """
 demo/run_demo.py
 ================
-End-to-end demonstration of the full Exam Seat Management pipeline.
+TKM College of Engineering — Exam Seat Management pipeline.
 
 Run from the project root:
     python -m demo.run_demo
 
-What it does
-------------
-1.  Parse all student PDFs in resources/
-2.  Parse the classroom list Excel
-3.  Parse the timetable PDF
-4.  Filter students for a chosen exam slot (date + session)
-5.  Build groups automatically
-6.  Run the allocation engine (Primary → Remaining → Validate → Seat plan)
-7.  Print the allocation report
-8.  Print allocation statistics
-9.  Export Excel seating plan  → output/seating_plan.xlsx
-10. Export PDF seating plan    → output/seating_plan.pdf
+Steps
+-----
+1.  Parse consolidated student Excel (resources/)  → Student objects
+2.  Parse classroom list (resources/class.xlsx)    → Classroom list
+3.  Parse ALL timetable PDFs in resources/         → ExamSession list
+4.  Show available exam slots; user picks one
+5.  Filter + stamp students for selected slot
+6.  Build groups
+7.  Run allocation engine
+8.  Print allocation report + statistics
+9.  Export output/master_<date>_<session>.xlsx
 """
 
 import logging
@@ -25,124 +24,179 @@ import sys
 import io
 from pathlib import Path
 
-# Force UTF-8 output so box-drawing chars in the report don't crash on Windows
+# Force UTF-8 so box-drawing chars don't crash on Windows
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-# ── Logging ────────────────────────────────────────────────────────────────
+# ── Logging ────────────────────────────────────────────────────────────────────
 from engine.config import LOG_FORMAT
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-# ── I/O Layer ──────────────────────────────────────────────────────────────
-from io_layer.input.pdf_parser        import MultiplePDFParser
-from io_layer.input.classroom_parser  import ClassroomParser
-from io_layer.input.timetable_parser  import TimetableParser
+# ── I/O Layer ──────────────────────────────────────────────────────────────────
+from io_layer.input.excel_student_parser import ExcelStudentParser
+from io_layer.input.classroom_parser     import ClassroomParser
+from io_layer.input.timetable_parser     import TimetableParser
 from io_layer.input.session_filter    import SessionFilter
 from io_layer.repositories.student_repository   import StudentRepository
 from io_layer.repositories.classroom_repository import ClassroomRepository
 
-# ── Engine ─────────────────────────────────────────────────────────────────
+# ── Engine ─────────────────────────────────────────────────────────────────────
 from engine.builders.group_builder      import GroupBuilder
 from engine.context.allocation_context  import AllocationContext
 from engine.models.remaining_pool       import RemainingPool
 from engine.services.allocation_service import AllocationService
 
-# ── Output Layer ───────────────────────────────────────────────────────────
+# ── Output Layer ───────────────────────────────────────────────────────────────
 from output_layer.reports.allocation_report     import AllocationReport
 from output_layer.reports.allocation_statistics import AllocationStatistics
-from output_layer.export.excel_exporter         import ExcelExporter
-from output_layer.export.pdf_exporter           import PDFExporter
+from output_layer.export.master_sheet_exporter  import MasterSheetExporter
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Configuration — change these to run for a different exam slot
+# Paths & constants
 # ══════════════════════════════════════════════════════════════════════════════
 
-RESOURCES_DIR   = Path("resources")
-OUTPUT_DIR      = Path("output")
+RESOURCES_DIR    = Path("resources")
+OUTPUT_DIR       = Path("output")
+CLASSROOM_EXCEL  = RESOURCES_DIR / "class.xlsx"
+STUDENT_EXCEL    = RESOURCES_DIR / "TKMCE_All_Classes_Separate_Student_Lists.xlsx"
 
-EXAM_DATE       = "12-03-2026"   # DD-MM-YYYY
-EXAM_SESSION    = "FN"           # FN or AN
+EXAM_INFO_BASE = {
+    "college_name": "TKM College of Engineering, Kollam-5",
+    "exam_name":    "Second Series Exam, March 2026",
+}
 
-TIMETABLE_PDF   = RESOURCES_DIR / "2 S6 B Tech 2nd Series Exam- March 2026 -  Revised.pdf"
-CLASSROOM_EXCEL = RESOURCES_DIR / "Classroom List.xlsx"
+# Keywords that identify timetable PDFs (vs. student PDFs)
+_TIMETABLE_KEYWORDS = ["exam", "series", "timetable", "time table", "revised"]
+
+
+def _is_timetable_pdf(path: Path) -> bool:
+    return any(kw in path.name.lower() for kw in _TIMETABLE_KEYWORDS)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
-    logger.info("━━━━  Exam Seat Management Demo  ━━━━")
+    logger.info("━━━━  TKM Exam Seat Management  ━━━━")
 
-    # ── Step 1: Parse student PDFs ─────────────────────────────────────────
-    logger.info("Step 1: Parsing student PDFs …")
-    all_students = MultiplePDFParser().parse_directory(RESOURCES_DIR)
-
+    # ── Step 1: Parse consolidated student Excel ──────────────────────────────
+    logger.info("Step 1: Parsing student Excel …")
+    if not STUDENT_EXCEL.exists():
+        logger.error("Student Excel not found: %s — aborting.", STUDENT_EXCEL)
+        sys.exit(1)
+    all_students = ExcelStudentParser().parse(STUDENT_EXCEL)
+    if not all_students:
+        logger.error("No students parsed from %s — aborting.", STUDENT_EXCEL)
+        sys.exit(1)
     student_repo = StudentRepository()
     student_repo.load(all_students)
     logger.info("  → %d students loaded", student_repo.count())
 
-    # ── Step 2: Parse classrooms ───────────────────────────────────────────
+    # ── Step 2: Parse classrooms ────────────────────────────────────────────────
     logger.info("Step 2: Parsing classroom list …")
+    if not CLASSROOM_EXCEL.exists():
+        logger.error("Classroom file not found: %s", CLASSROOM_EXCEL)
+        sys.exit(1)
     classrooms = ClassroomParser().parse(CLASSROOM_EXCEL)
-
     classroom_repo = ClassroomRepository()
     classroom_repo.load(classrooms)
     logger.info("  → %d classrooms loaded", classroom_repo.count())
 
-    # ── Step 3: Parse timetable ────────────────────────────────────────────
-    logger.info("Step 3: Parsing timetable …")
-    sessions = TimetableParser().parse(TIMETABLE_PDF)
-    logger.info("  → %d exam sessions parsed", len(sessions))
+    # ── Step 3: Parse ALL timetable PDFs ────────────────────────────────────────
+    logger.info("Step 3: Parsing all timetable PDFs …")
+    timetable_pdfs = sorted(
+        f for f in RESOURCES_DIR.iterdir()
+        if f.suffix.lower() == ".pdf" and _is_timetable_pdf(f)
+    )
+    if not timetable_pdfs:
+        logger.error("No timetable PDFs found in %s — aborting.", RESOURCES_DIR)
+        sys.exit(1)
 
-    # ── Step 4: Filter students for this exam slot ─────────────────────────
-    logger.info("Step 4: Filtering for %s %s …", EXAM_DATE, EXAM_SESSION)
+    parser = TimetableParser()
+    all_sessions = []
+    for pdf in timetable_pdfs:
+        sessions = parser.parse(pdf)
+        logger.info("    %s  →  %d sessions", pdf.name, len(sessions))
+        all_sessions.extend(sessions)
+    logger.info("  → %d total exam sessions parsed", len(all_sessions))
+
+    # ── Step 4: Interactive slot selection ──────────────────────────────────────
+    slots = sorted(set((s.exam_date, s.session) for s in all_sessions))
+
+    print("\nAvailable exam slots:")
+    for i, (date, session) in enumerate(slots, 1):
+        depts = sorted(set(
+            s.department for s in all_sessions
+            if s.exam_date == date and s.session == session
+        ))
+        print(f"  {i:2d}.  {date}  {session}   → {', '.join(depts)}")
+
+    while True:
+        try:
+            choice = int(input("\nEnter slot number: ").strip()) - 1
+            if 0 <= choice < len(slots):
+                break
+            print(f"  Please enter a number between 1 and {len(slots)}.")
+        except (ValueError, KeyboardInterrupt):
+            print("Cancelled.")
+            sys.exit(0)
+
+    exam_date, exam_session = slots[choice]
+    logger.info("Selected: %s %s", exam_date, exam_session)
+
+    # ── Step 5: Filter students for selected slot ───────────────────────────────
+    logger.info("Step 5: Filtering students for %s %s …", exam_date, exam_session)
     sitting_students = SessionFilter().filter(
         students  = student_repo.get_all(),
-        sessions  = sessions,
-        exam_date = EXAM_DATE,
-        session   = EXAM_SESSION,
+        sessions  = all_sessions,
+        exam_date = exam_date,
+        session   = exam_session,
     )
     logger.info("  → %d students sitting this slot", len(sitting_students))
 
     if not sitting_students:
-        logger.error("No students found for %s %s — check timetable or date.", EXAM_DATE, EXAM_SESSION)
+        logger.error(
+            "No students found for %s %s. "
+            "Check that timetable dept codes match student PDF dept codes.",
+            exam_date, exam_session,
+        )
         sys.exit(1)
 
-    # ── Step 5: Build groups ───────────────────────────────────────────────
-    logger.info("Step 5: Building groups …")
+    # ── Step 6: Build groups ────────────────────────────────────────────────────
+    logger.info("Step 6: Building groups …")
     groups = GroupBuilder().build(sitting_students)
     for g in groups:
-        logger.info("  Group %-30s  %d students", g.group_id, g.strength)
+        logger.info("  Group %-40s  %d students", g.group_id, g.strength)
 
-    # ── Step 6: Allocation ─────────────────────────────────────────────────
-    logger.info("Step 6: Running allocation engine …")
+    # ── Step 7: Allocation ──────────────────────────────────────────────────────
+    logger.info("Step 7: Running allocation engine …")
     context = AllocationContext(
         groups           = groups,
         room_allocations = classroom_repo.get_room_allocations(),
         remaining_pool   = RemainingPool(),
     )
-
     context, plan = AllocationService().execute(context)
     logger.info("  → Allocation complete. %d seats generated.", len(plan.seats))
 
-    # ── Step 7: Report ─────────────────────────────────────────────────────
-    logger.info("Step 7: Generating allocation report …")
+    # ── Step 8: Report + Statistics ─────────────────────────────────────────────
+    logger.info("Step 8: Generating allocation report …")
     print(AllocationReport().generate(context))
 
-    # ── Step 8: Statistics ─────────────────────────────────────────────────
-    logger.info("Step 8: Computing statistics …")
-    AllocationStatistics().compute(context, students_loaded=len(sitting_students)).print_summary()
+    logger.info("Step 8b: Computing statistics …")
+    AllocationStatistics().compute(
+        context, students_loaded=len(sitting_students)
+    ).print_summary()
 
-    # ── Step 9: Excel export ───────────────────────────────────────────────
-    logger.info("Step 9: Exporting Excel …")
-    excel_path = OUTPUT_DIR / f"seating_plan_{EXAM_DATE}_{EXAM_SESSION}.xlsx"
-    ExcelExporter().export(plan, excel_path)
+    # ── Step 9: Export Master Sheet Excel ───────────────────────────────────────
+    logger.info("Step 9: Exporting Master Sheet Excel …")
+    exam_info  = {**EXAM_INFO_BASE, "exam_date": exam_date, "session": exam_session}
+    excel_path = OUTPUT_DIR / f"master_{exam_date}_{exam_session}.xlsx"
+    MasterSheetExporter().export(
+        context    = context,
+        classrooms = classrooms,
+        exam_info  = exam_info,
+        filepath   = excel_path,
+    )
     logger.info("  → Saved: %s", excel_path)
-
-    # ── Step 10: PDF export ────────────────────────────────────────────────
-    logger.info("Step 10: Exporting PDF …")
-    pdf_path = OUTPUT_DIR / f"seating_plan_{EXAM_DATE}_{EXAM_SESSION}.pdf"
-    PDFExporter().export(plan, pdf_path)
-    logger.info("  → Saved: %s", pdf_path)
 
     logger.info("━━━━  Done  ━━━━")
 

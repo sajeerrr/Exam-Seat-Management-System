@@ -2,12 +2,11 @@
 """
 Parses the TKM College classroom list Excel file into Classroom objects.
 
-The Excel has a multi-column layout with sections for different blocks
-(Main Block, Chemical Block, Workshop Block, Mechanical Block, etc.)
-Each section has columns: Sl No | Hall No | cctv | Remarks
+The actual class.xlsx has a single column layout:
+  Row 1 (header): "Class Room"
+  Row 2+:         room numbers (integers like 101 or strings like "M203", "H205")
 
-We extract all Hall No values and create Classroom objects using the
-default dimensions from config.py (since the Excel doesn't have row/bench data).
+No bench/capacity columns are present — defaults from config.py are used.
 """
 
 import logging
@@ -24,14 +23,21 @@ from engine.config import (
 
 logger = logging.getLogger(__name__)
 
+# Header / label cells to skip (compared case-insensitively)
+_SKIP_LABELS = {"class room", "hall no", "hall no.", "room no", "room no.", ""}
+
 
 class ClassroomParser:
     """
     Parses the classroom list Excel into Classroom objects.
 
+    Supports the single-column format:
+      Column A, row 1 = header ("Class Room")
+      Column A, rows 2+ = room identifiers (101, M203, H205, …)
+
     Usage
     -----
-    classrooms = ClassroomParser().parse("resources/Classroom List.xlsx")
+    classrooms = ClassroomParser().parse("resources/class.xlsx")
     """
 
     def parse(
@@ -51,37 +57,23 @@ class ClassroomParser:
         classrooms: list[Classroom] = []
         seen: set[str] = set()
 
-        for row in ws.iter_rows(values_only=True):
-            for cell in row:
-                if cell is None:
-                    continue
-
-                val = str(cell).strip()
-
-                if val.lower() in {
-                    "sl no", "hall no", "cctv", "remarks",
-                    "main block", "chemical block", "workshop block",
-                    "mechanical block", "architecture studio's",
-                    "class room", "class", "sl no.", "",
-                }:
-                    continue
-
-                if val.isdigit() and int(val) < 100:
-                    continue
-
-                if val.lower() in {"yes", "no"}:
-                    continue
-
-                if val not in seen:
-                    seen.add(val)
-                    classrooms.append(
-                        Classroom(
-                            room_no         = val,
-                            rows            = rows,
-                            benches_per_row = benches_per_row,
-                            seats_per_bench = seats_per_bench,
-                        )
+        for row in ws.iter_rows(min_row=2, values_only=True):   # skip header
+            val = row[0]                                         # column A only
+            if val is None:
+                continue
+            room_no = str(val).strip()
+            if not room_no or room_no.lower() in _SKIP_LABELS:
+                continue
+            if room_no not in seen:
+                seen.add(room_no)
+                classrooms.append(
+                    Classroom(
+                        room_no         = room_no,
+                        rows            = rows,
+                        benches_per_row = benches_per_row,
+                        seats_per_bench = seats_per_bench,
                     )
+                )
 
         logger.info("Parsed %d classrooms from %s", len(classrooms), filepath.name)
         return classrooms

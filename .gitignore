@@ -4,3 +4,5 @@ tests
 __init__.py
 resources
 .vscode
+output
+*.zip

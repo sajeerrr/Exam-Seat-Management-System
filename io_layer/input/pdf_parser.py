@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 _ROMAN = {
     "I": 1, "II": 2, "III": 3, "IV": 4,
     "V": 5, "VI": 6, "VII": 7, "VIII": 8,
+    "IX": 9, "X": 10,
 }
 
 # Regex to extract section letter from class name like "CE 2K23A" → "A"
@@ -36,7 +37,7 @@ _SECTION_RE = re.compile(r"[A-Z]$")
 _DEPT_MAP = {
     "CE": "CE", "ME": "ME", "EE": "EE", "EC": "EC",
     "CS": "CS", "CH": "CH", "EL": "EL",
-    "B.ARCH": "ARCH", "ARCH": "ARCH",
+    "B.ARCH": "AR", "ARCH": "AR",
 }
 
 
