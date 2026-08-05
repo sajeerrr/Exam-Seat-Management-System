@@ -6,3 +6,4 @@ resources
 .vscode
 output
 *.zip
+*.xlsx
