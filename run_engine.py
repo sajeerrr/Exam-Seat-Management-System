@@ -1,4 +1,7 @@
+import os
 from datetime import datetime
+import pandas as pd
+
 from data.loader.classroom_loader import ClassroomLoader
 from data.loader.student_loader import StudentLoader
 
@@ -7,6 +10,41 @@ from engine.context.allocation_context import AllocationContext
 from engine.models.remaining_pool import RemainingPool
 from engine.models.room_allocation import RoomAllocation
 from engine.services.allocation_service import AllocationService
+
+
+def export_seating_plan_to_excel(seat_plan, selected_date: str, selected_session: str):
+    """
+    Exports the generated SeatPlan to an organized Excel spreadsheet.
+    """
+    data = []
+    for seat in seat_plan.seats:
+        data.append({
+            "Room No": seat.room_no,
+            "Bench No": seat.bench_no,
+            "Stream": seat.stream,
+            "Register No": seat.student.register_no,
+            "Roll No": getattr(seat.student, "roll_no", ""),
+            "Student Name": seat.student.name,
+            "Department": seat.student.department,
+            "Semester": f"S{seat.student.semester}",
+            "Section": seat.student.section,
+            "Subject Code": seat.student.subject_code,
+            "Subject Name": seat.student.subject_name,
+            "Exam Date": seat.student.exam_date,
+            "Session": seat.student.session,
+        })
+
+    df = pd.DataFrame(data)
+
+    # Clean file name string
+    date_clean = selected_date.split()[0]  # e.g., '12-03-2026'
+    output_filename = f"Seating_Plan_{date_clean}_{selected_session}.xlsx"
+
+    # Export to Excel
+    df.to_excel(output_filename, index=False)
+    print("\n" + "=" * 65)
+    print(f" SUCCESS: Seating plan exported to '{output_filename}'")
+    print("=" * 65 + "\n")
 
 
 def main():
@@ -92,7 +130,7 @@ def main():
     service = AllocationService()
 
     try:
-        ctx, seat_plan = service.execute(context)
+        ctx, seat_plan = service.execute(context)  #[cite: 9]
         print("\n" + "=" * 65)
         print(" SUCCESS: Seating Allocation completed successfully!")
         print("=" * 65)
@@ -103,11 +141,21 @@ def main():
         for room_alloc in ctx.room_allocations:
             used = room_alloc.used_capacity
             cap = room_alloc.classroom.capacity
-            print(f" Room {room_alloc.classroom.room_no:<8} | Used: {used:<3} / {cap:<3} seats")
+            if used > 0:
+                print(f" Room {room_alloc.classroom.room_no:<8} | Used: {used:<3} / {cap:<3} seats")
+
+        # 10. Prompt User for Excel Export
+        print("\n" + "-" * 65)
+        export_choice = input("Do you want to generate output in Excel? (yes/no): ").strip().lower()
+        
+        if export_choice in ["yes", "y"]:
+            export_seating_plan_to_excel(seat_plan, selected_date, selected_session)
+        else:
+            print("Excel export skipped.")
 
     except Exception as error:
         print("\n" + "=" * 65)
-        print(f" ALLOCATION FAILED: {error}")
+        print(f" ALLOCATION FAILED: {error}")  #[cite: 9]
         print("=" * 65)
 
 
