@@ -10,12 +10,7 @@ class StudentLoader:
 
     def load(self) -> list[Student]:
         timetable = self._load_timetable()
-
-        workbook = load_workbook(
-            self.student_file,
-            data_only=True,
-        )
-
+        workbook = load_workbook(self.student_file, data_only=True)
         students: list[Student] = []
 
         for sheet_name in workbook.sheetnames:
@@ -23,14 +18,11 @@ class StudentLoader:
                 continue
 
             worksheet = workbook[sheet_name]
-
             department = self._get_department(sheet_name)
             semester = self._get_semester(sheet_name)
             section = self._get_section(sheet_name)
 
-            # Retrieve all exams scheduled for this department and semester
             exams = timetable.get((department, semester), [])
-
             if not exams:
                 continue
 
@@ -38,33 +30,39 @@ class StudentLoader:
                 if row[0] is None:
                     break
 
-                # Create student entries for each scheduled exam slot
+                roll_no = str(row[2]).strip() if len(row) > 2 and row[2] else ""
+                base_reg_no = str(row[3]).strip()
+                name = str(row[4]).strip()
+
+                # Disambiguate registration numbers for multi-section classes
+                reg_no = f"{base_reg_no}-{section}" if section else base_reg_no
+
                 for exam in exams:
-                    student = Student(
-                        register_no=str(row[3]).strip(),
-                        name=str(row[4]).strip(),
-                        department=department,
-                        semester=semester,
-                        section=section,
-                        subject_code=str(exam["subject_code"] or "").strip(),
-                        subject_name=str(exam["subject_name"] or "").strip(),
-                        exam_date=str(exam["exam_date"] or "").strip(),
-                        session=str(exam["session"] or "").strip(),
+                    code = str(exam["subject_code"] or "").strip()
+                    subj_name = str(exam["subject_name"] or "").strip()
+
+                    students.append(
+                        Student(
+                            register_no=reg_no,
+                            name=name,
+                            department=department,
+                            semester=semester,
+                            section=section,
+                            subject_code=code if code and code.lower() != "nan" else subj_name,
+                            subject_name=subj_name,
+                            exam_date=str(exam["exam_date"] or "").strip(),
+                            session=str(exam["session"] or "").strip(),
+                            roll_no=roll_no,
+                        )
                     )
-                    students.append(student)
 
         workbook.close()
         return students
 
     def _load_timetable(self) -> dict[tuple[str, int], list[dict]]:
-        workbook = load_workbook(
-            self.timetable_file,
-            data_only=True,
-        )
-
+        workbook = load_workbook(self.timetable_file, data_only=True)
         worksheet = workbook.active
         timetable: dict[tuple[str, int], list[dict]] = {}
-
         all_btech_depts = ["CE", "ME", "EE", "EC", "CS", "CH", "EL"]
 
         for row in worksheet.iter_rows(min_row=2, values_only=True):
@@ -78,9 +76,6 @@ class StudentLoader:
             semester = int(sem_str)
 
             branch_raw = str(row[5]).strip().upper()
-
-            # Expand branches to match student sheets
-            target_depts = []
             if program == "B Arch":
                 target_depts = ["B.ARCH"]
             elif branch_raw == "ALL BRANCHES":
@@ -108,7 +103,6 @@ class StudentLoader:
 
     @staticmethod
     def _get_department(sheet_name: str) -> str:
-        # Standardize sheet names to match timetable branch identifiers
         raw = sheet_name.split()[0].upper().replace(".", "")
         if raw == "BARCH":
             return "B.ARCH"
@@ -127,4 +121,4 @@ class StudentLoader:
         parts = sheet_name.split()
         if len(parts) >= 3 and not parts[-2].startswith("(S"):
             return parts[-2]
-        return "A"
+        return ""
