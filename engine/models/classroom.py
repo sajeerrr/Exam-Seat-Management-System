@@ -1,16 +1,17 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class Classroom:
     room_no: str
-    rows: int
-    benches_per_row: int
+    rows: int = 5
+    benches_per_row: int = 3
     seats_per_bench: int = 3
 
-    @property #capacity of students in a class
-    def capacity(self):
+    @property  # total student capacity
+    def capacity(self) -> int:
         return self.rows * self.benches_per_row * self.seats_per_bench
 
-    @property #capacity of bench in a class 
-    def column_capacity(self):
+    @property  # total bench capacity
+    def column_capacity(self) -> int:
         return self.rows * self.benches_per_row

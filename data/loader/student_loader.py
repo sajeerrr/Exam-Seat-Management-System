@@ -19,7 +19,6 @@ class StudentLoader:
         students: list[Student] = []
 
         for sheet_name in workbook.sheetnames:
-
             if sheet_name.lower() == "master overview":
                 continue
 
@@ -29,64 +28,93 @@ class StudentLoader:
             semester = self._get_semester(sheet_name)
             section = self._get_section(sheet_name)
 
-            exam = timetable.get((department, semester))
+            # Retrieve all exams scheduled for this department and semester
+            exams = timetable.get((department, semester), [])
 
-            if exam is None:
+            if not exams:
                 continue
 
             for row in worksheet.iter_rows(min_row=7, values_only=True):
-
                 if row[0] is None:
                     break
 
-                student = Student(
-                    register_no=str(row[3]).strip(),
-                    name=str(row[4]).strip(),
-                    department=department,
-                    semester=semester,
-                    section=section,
-                    subject_code=exam["subject_code"],
-                    subject_name=exam["subject_name"],
-                    exam_date=exam["exam_date"],
-                    session=exam["session"],
-                )
-
-                students.append(student)
+                # Create student entries for each scheduled exam slot
+                for exam in exams:
+                    student = Student(
+                        register_no=str(row[3]).strip(),
+                        name=str(row[4]).strip(),
+                        department=department,
+                        semester=semester,
+                        section=section,
+                        subject_code=str(exam["subject_code"] or "").strip(),
+                        subject_name=str(exam["subject_name"] or "").strip(),
+                        exam_date=str(exam["exam_date"] or "").strip(),
+                        session=str(exam["session"] or "").strip(),
+                    )
+                    students.append(student)
 
         workbook.close()
-
         return students
 
-    def _load_timetable(self) -> dict:
-
+    def _load_timetable(self) -> dict[tuple[str, int], list[dict]]:
         workbook = load_workbook(
             self.timetable_file,
             data_only=True,
         )
 
         worksheet = workbook.active
+        timetable: dict[tuple[str, int], list[dict]] = {}
 
-        timetable = {}
+        all_btech_depts = ["CE", "ME", "EE", "EC", "CS", "CH", "EL"]
 
         for row in worksheet.iter_rows(min_row=2, values_only=True):
+            if row[0] is None or row[5] is None:
+                continue
 
-            department = str(row[5]).strip().upper()
-            semester = int(str(row[1]).replace("S", ""))
+            program = str(row[0]).strip()
+            sem_str = str(row[1]).strip().upper().replace("S", "")
+            if not sem_str.isdigit():
+                continue
+            semester = int(sem_str)
 
-            timetable[(department, semester)] = {
-                "exam_date": row[2],
-                "session": row[3],
-                "subject_name": row[6],
-                "subject_code": row[7],
+            branch_raw = str(row[5]).strip().upper()
+
+            # Expand branches to match student sheets
+            target_depts = []
+            if program == "B Arch":
+                target_depts = ["B.ARCH"]
+            elif branch_raw == "ALL BRANCHES":
+                target_depts = all_btech_depts
+            elif "/" in branch_raw:
+                target_depts = [b.strip() for b in branch_raw.split("/")]
+            else:
+                target_depts = [branch_raw]
+
+            exam_data = {
+                "exam_date": str(row[2]).strip() if row[2] else "",
+                "session": str(row[3]).strip() if row[3] else "",
+                "subject_name": str(row[6]).strip() if row[6] else "",
+                "subject_code": str(row[7]).strip() if row[7] else "",
             }
 
-        workbook.close()
+            for dept in target_depts:
+                key = (dept, semester)
+                if key not in timetable:
+                    timetable[key] = []
+                timetable[key].append(exam_data)
 
+        workbook.close()
         return timetable
 
     @staticmethod
     def _get_department(sheet_name: str) -> str:
-        return sheet_name.split()[0].upper()
+        # Standardize sheet names to match timetable branch identifiers
+        raw = sheet_name.split()[0].upper().replace(".", "")
+        if raw == "BARCH":
+            return "B.ARCH"
+        if raw == "EEE":
+            return "EE"
+        return raw
 
     @staticmethod
     def _get_semester(sheet_name: str) -> int:
@@ -96,10 +124,7 @@ class StudentLoader:
 
     @staticmethod
     def _get_section(sheet_name: str) -> str:
-
         parts = sheet_name.split()
-
-        if len(parts) >= 3 and parts[-2].startswith("(S") is False:
+        if len(parts) >= 3 and not parts[-2].startswith("(S"):
             return parts[-2]
-
         return "A"
