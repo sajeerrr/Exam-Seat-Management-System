@@ -12,35 +12,24 @@ class SeatGenerator:
 
         return plan
 
-    
     def generate_room(self, room, plan):
         streams = ["A", "B", "C"]
-        allocations = []
 
-        for stream in streams:
-            allocation = room.streams.get(stream)
-            allocations.append(allocation)
+        for stream_name in streams:
+            stream_students = [
+                student
+                for alloc in room.allocations
+                if alloc.stream == stream_name
+                for student in alloc.students
+            ]
 
-        bench_no = 1
-
-        for i in range(room.classroom.column_capacity):
-            for allocation in allocations:
-
-                if allocation is None:
-                    continue
-
-                if i >= allocation.allocated_count:
-                    continue
-
-                student = allocation.students[i]
-
+            bench_no = 1
+            for student in stream_students:
                 seat = Seat(
                     classroom=room.classroom,
                     bench_no=bench_no,
-                    stream=allocation.stream,
+                    stream=stream_name,
                     student=student,
                 )
-
                 plan.add(seat)
-
-            bench_no += 1
+                bench_no += 1

@@ -1,43 +1,44 @@
-# engine/services/constraint_checker.py
-"""
-ConstraintChecker — guards the allocation engine's placement decisions.
-
-Rules applied (in order):
-  1. Stream slot must be free (not already allocated).
-  2. Stream must have remaining capacity.
-  3. No two streams in the same room may have the same subject_code.
-     This guarantees that Stream A, Stream B, Stream C always carry
-     students writing *different* papers — so adjacent bench rows have
-     different subjects and copying is impossible.
-  4. Manual conflict-graph check (for any extra constraints added externally).
-"""
-
-
 class ConstraintChecker:
 
-    def __init__(self, conflict_graph):
+    def __init__(self, conflict_graph, allow_non_adjacent_same_subject: bool = False):
         self.conflict_graph = conflict_graph
+        self.allow_non_adjacent_same_subject = allow_non_adjacent_same_subject
 
-    def can_allocate(self, group, stream) -> bool:
-        # Rule 1: Stream slot already occupied
-        if stream.room.streams[stream.stream] is not None:
-            return False
+    def can_allocate(self, group, stream, count_needed: int = None) -> bool:
+        # Default needed count is the group's remaining count if not specified
+        needed = count_needed if count_needed is not None else group.remaining_count
 
-        # Rule 2: No capacity left in this stream
-        if not stream.is_available:
+        # Rule 1: Capacity check against needed batch size
+        if stream.remaining_capacity < needed:
             return False
 
         # Inspect existing allocations already placed in this room
         for existing_allocation in stream.room.allocations:
             existing_group = existing_allocation.group
+            existing_stream = existing_allocation.stream
+            target_stream = stream.stream
 
-            # Rule 3: Same subject in this room → block
-            # (CE A+B are now one merged group so this also catches
-            #  any remaining same-subject situation)
-            if existing_group.subject_code == group.subject_code:
-                return False
+            # Rule 2: Same subject / department handling
+            if (
+                existing_group.subject_code == group.subject_code
+                or existing_group.department == group.department
+            ):
+                if existing_stream == target_stream:
+                    # Same stream column -> allowed
+                    continue
+                else:
+                    # Different stream column in same room
+                    if not self.allow_non_adjacent_same_subject:
+                        return False
 
-            # Rule 4: External conflict graph
+                    # Exception Case: Allow same subject ONLY between Stream A and Stream C
+                    is_non_adjacent = (existing_stream == "A" and target_stream == "C") or (
+                        existing_stream == "C" and target_stream == "A"
+                    )
+                    if not is_non_adjacent:
+                        return False  # Stream B cannot share a subject with A or C
+
+            # Rule 3: External conflict graph
             if self.conflict_graph.has_conflict(
                 group.department, existing_group.department
             ):

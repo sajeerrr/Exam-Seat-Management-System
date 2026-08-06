@@ -19,11 +19,16 @@ class PrimaryAllocator:
         )
 
         for group in groups:
-            while group.remaining_count >= context.streams[0].capacity:
+            # Place full stream batches (e.g. 15 students) into available streams
+            while True:
                 allocated = False
 
                 for stream in context.streams:
-                    if not checker.can_allocate(group, stream):
+                    stream_batch = stream.capacity
+                    if group.remaining_count < stream_batch:
+                        break
+
+                    if not checker.can_allocate(group, stream, count_needed=stream_batch):
                         continue
 
                     self.allocate(group, stream)
@@ -36,7 +41,6 @@ class PrimaryAllocator:
             if group.remaining_count > 0:
                 context.remaining_pool.add(group)
 
-    
     def allocate(self, group, stream):
         count = stream.capacity
         students = group.allocate_students(count)
