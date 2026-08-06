@@ -1,9 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
-
-from .allocation import Allocation
 from .classroom import Classroom
-
 
 STREAMS = ["A", "B", "C"]
 
@@ -31,18 +27,19 @@ class RoomAllocation:
 
     @property
     def stream_capacity(self):
-        return self.classroom.capacity // len(self.streams)
+        return self.classroom.capacity // len(STREAMS)
+
+    def stream_used_capacity(self, stream: str) -> int:
+        return sum(a.allocated_count for a in self.allocations if a.stream == stream)
+
+    def stream_remaining_capacity(self, stream: str) -> int:
+        return self.stream_capacity - self.stream_used_capacity(stream)
 
     def add_allocation(self, allocation):
-
         self.allocations.append(allocation)
         self.streams[allocation.stream] = allocation
 
     def available_streams(self):
-        """
-        Return all empty streams.
-        """
-
-        for stream, allocation in self.streams.items():
-            if allocation is None:
+        for stream in STREAMS:
+            if self.stream_remaining_capacity(stream) > 0:
                 yield stream
