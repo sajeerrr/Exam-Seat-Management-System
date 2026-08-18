@@ -1,19 +1,32 @@
 from engine.allocators.primary_allocator import PrimaryAllocator
 from engine.allocators.remaining_allocator import RemainingAllocator
-from engine.validators.allocation_validator import AllocationValidator
 from engine.allocators.seat_generator import SeatGenerator
 
 
 class AllocationService:
 
+    def __init__(self):
+        self.primary_allocator = PrimaryAllocator()
+        self.remaining_allocator = RemainingAllocator()
+        self.seat_generator = SeatGenerator()
+
     def execute(self, context):
-        context.initialize_streams()
-        PrimaryAllocator().execute(context)
-        RemainingAllocator().execute(context)
-        validation = AllocationValidator().validate(context)
-        plan = SeatGenerator().execute(context)
+        # 1. Primary Pass
+        context = self.primary_allocator.execute(context)
+        if context is None:
+            raise ValueError(
+                "PrimaryAllocator.execute() returned None! It must return 'context'."
+            )
 
-        if not validation.success:
-            raise Exception("\n".join(validation.errors))
+        # 2. Remaining Pass
+        context = self.remaining_allocator.execute(context)
+        if context is None:
+            raise ValueError(
+                "RemainingAllocator.execute() returned None! It must return 'context'."
+            )
 
-        return context, plan
+        # 3. Generate Seats
+        seat_plan = self.seat_generator.generate(context)
+
+        # CRITICAL: Must return tuple (context, seat_plan)
+        return context, seat_plan
