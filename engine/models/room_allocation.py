@@ -1,45 +1,117 @@
-from dataclasses import dataclass, field
-from .classroom import Classroom
+# engine/models/room_allocation.py
 
-STREAMS = ["A", "B", "C"]
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
+class StreamSlot:
+    stream_name: str
+    capacity: int = 15
+    students: List[Any] = field(default_factory=list)
+
+    @property
+    def remaining_capacity(self) -> int:
+        return self.capacity - len(self.students)
+
+    @property
+    def is_empty(self) -> bool:
+        return len(self.students) == 0
+
+    @property
+    def subject_codes(self) -> set:
+        return {
+            getattr(s, "subject_code", "")
+            for s in self.students
+            if getattr(s, "subject_code", "")
+        }
+
+    @property
+    def departments(self) -> set:
+        return {
+            getattr(s, "department", "")
+            for s in self.students
+            if getattr(s, "department", "")
+        }
+
+
 class RoomAllocation:
 
-    classroom: Classroom
+    def __init__(self, classroom):
+        self.classroom = classroom
 
-    streams: dict = field(default_factory=lambda: {
-        "A": None,
-        "B": None,
-        "C": None,
-    })
+        # FIX: Stream capacity is column_capacity (15) or capacity // 3 (15)
+        if hasattr(classroom, "column_capacity") and classroom.column_capacity:
+            benches = classroom.column_capacity
+        elif hasattr(classroom, "capacity") and classroom.capacity:
+            benches = classroom.capacity // 3
+        else:
+            benches = 15
 
-    allocations: list = field(default_factory=list)
+        self.streams: Dict[str, StreamSlot] = {
+            "A": StreamSlot("A", capacity=benches),
+            "B": StreamSlot("B", capacity=benches),
+            "C": StreamSlot("C", capacity=benches),
+        }
+        self.allocated_seats = []
+
+    def get_stream(self, stream_name: str) -> Optional[StreamSlot]:
+        return self.streams.get(str(stream_name).upper().strip())
 
     @property
-    def used_capacity(self):
-        return sum(a.allocated_count for a in self.allocations)
+    def stream_a(self) -> StreamSlot:
+        return self.streams["A"]
 
     @property
-    def remaining_capacity(self):
-        return self.classroom.capacity - self.used_capacity
+    def stream_b(self) -> StreamSlot:
+        return self.streams["B"]
 
     @property
-    def stream_capacity(self):
-        return self.classroom.capacity // len(STREAMS)
+    def stream_c(self) -> StreamSlot:
+        return self.streams["C"]
 
-    def stream_used_capacity(self, stream: str) -> int:
-        return sum(a.allocated_count for a in self.allocations if a.stream == stream)
+    @property
+    def used_capacity(self) -> int:
+        return sum(len(s.students) for s in self.streams.values())
 
-    def stream_remaining_capacity(self, stream: str) -> int:
-        return self.stream_capacity - self.stream_used_capacity(stream)
+    @property
+    def departments(self) -> set:
+        depts = set()
+        for s in self.streams.values():
+            depts.update(s.departments)
+        return depts
 
-    def add_allocation(self, allocation):
-        self.allocations.append(allocation)
-        self.streams[allocation.stream] = allocation
+    def can_add_department(
+        self, dept: str, is_fallback_pass: bool = False
+    ) -> bool:
+        current = self.departments
+        if dept in current:
+            return True
+        limit = 4 if is_fallback_pass else 3
+        return len(current) < limit
 
-    def available_streams(self):
-        for stream in STREAMS:
-            if self.stream_remaining_capacity(stream) > 0:
-                yield stream
+    def can_seat_subject(self, stream_name: str, subject_code: str) -> bool:
+        name = str(stream_name).upper().strip()
+        sub_a = self.streams["A"].subject_codes
+        sub_b = self.streams["B"].subject_codes
+        sub_c = self.streams["C"].subject_codes
+
+        if name == "A":
+            return subject_code not in sub_b
+        elif name == "B":
+            return (subject_code not in sub_a) and (subject_code not in sub_c)
+        elif name == "C":
+            return subject_code not in sub_b
+        return True
+
+    def assign_to_stream(self, stream_name: str, group, count: int):
+        stream = self.get_stream(stream_name)
+        if not stream or count <= 0:
+            return
+
+        take = min(count, stream.remaining_capacity, group.remaining_count)
+        if take <= 0:
+            return
+
+        allocated_students = group.allocate_students(take)
+        stream.students.extend(allocated_students)
