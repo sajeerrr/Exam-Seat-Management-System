@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+from engine.config import AllocationLimits
 
 
 @dataclass
@@ -21,9 +22,17 @@ class StreamSlot:
     @property
     def subject_codes(self) -> set:
         return {
-            getattr(s, "subject_code", "")
+            subject_conflict_key(
+                getattr(s, "subject_code", ""),
+                getattr(s, "department", ""),
+                getattr(s, "subject_name", ""),
+            )
             for s in self.students
-            if getattr(s, "subject_code", "")
+            if subject_conflict_key(
+                getattr(s, "subject_code", ""),
+                getattr(s, "department", ""),
+                getattr(s, "subject_name", ""),
+            )
         }
 
     @property
@@ -84,14 +93,35 @@ class RoomAllocation:
     def can_add_department(
         self, dept: str, is_fallback_pass: bool = False
     ) -> bool:
+        """Check if a department can be added to this room.
+
+        Args:
+            dept: Department to check
+            is_fallback_pass: If True, allows up to MAX_DEPARTMENTS_FALLBACK (4),
+                            otherwise uses MAX_DEPARTMENTS_NORMAL (3)
+
+        Returns:
+            True if department can be added without exceeding limit
+        """
         current = self.departments
         if dept in current:
             return True
-        limit = 4 if is_fallback_pass else 3
+        limit = AllocationLimits.MAX_DEPARTMENTS_FALLBACK if is_fallback_pass else AllocationLimits.MAX_DEPARTMENTS_NORMAL
         return len(current) < limit
 
-    def can_seat_subject(self, stream_name: str, subject_code: str) -> bool:
+    def can_seat_subject(
+        self,
+        stream_name: str,
+        subject_code: str,
+        department: str = "",
+        subject_name: str = "",
+    ) -> bool:
         name = str(stream_name).upper().strip()
+        subject_code = subject_conflict_key(
+            subject_code,
+            department,
+            subject_name,
+        )
         sub_a = self.streams["A"].subject_codes
         sub_b = self.streams["B"].subject_codes
         sub_c = self.streams["C"].subject_codes
@@ -115,3 +145,19 @@ class RoomAllocation:
 
         allocated_students = group.allocate_students(take)
         stream.students.extend(allocated_students)
+
+
+def subject_conflict_key(
+    subject_code: str,
+    department: str = "",
+    subject_name: str = "",
+) -> str:
+    code = str(subject_code or "").strip()
+    normalized = code.upper()
+
+    if normalized and normalized not in {"N/A", "NA", "NAN", "NONE", "-"}:
+        return normalized
+
+    dept = str(department or "").strip().upper()
+    name = str(subject_name or "").strip().upper()
+    return f"MISSING:{dept}:{name or normalized}"

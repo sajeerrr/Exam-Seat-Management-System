@@ -10,6 +10,9 @@ from engine.context.allocation_context import AllocationContext
 from engine.models.remaining_pool import RemainingPool
 from engine.models.room_allocation import RoomAllocation
 from engine.services.allocation_service import AllocationService
+from engine.validators.allocation_validator import AllocationValidator
+
+from engine.hyper.state_analyzer import StateAnalyzer
 
 
 
@@ -245,6 +248,21 @@ def main():
         remaining_pool=remaining_pool,
     )
 
+    # Analyze current allocation state
+    state = StateAnalyzer().analyze(context)
+
+    print("\n" + "=" * 65)
+    print("CURRENT ALLOCATION STATE")
+    print("=" * 65)
+    print(f"Largest Group      : {state.largest_group}")
+    print(f"Smallest Group     : {state.smallest_group}")
+    print(f"Average Group Size : {state.average_group_size:.2f}")
+    print(f"Active Groups      : {state.active_groups}")
+    print(f"Remaining Students : {state.remaining_students}")
+    print(f"Remaining Rooms    : {state.remaining_rooms}")
+    print("=" * 65)
+
+
     # 8. Execute Allocation Service Engine
     print("\nExecuting Seating Allocation Engine...")
     service = AllocationService()
@@ -263,6 +281,21 @@ def main():
             cap = room_alloc.classroom.capacity
             if used > 0:
                 print(f" Room {room_alloc.classroom.room_no:<8} | Used: {used:<3} / {cap:<3} seats")
+
+        validation = AllocationValidator().validate(ctx)
+        print("\nAllocation Validation:")
+        print("-" * 65)
+        if validation.success:
+            print(" Validation passed.")
+        else:
+            print(" Validation failed:")
+            for error in validation.errors:
+                print(f"  - {error}")
+
+        if validation.warnings:
+            print(" Validation warnings:")
+            for warning in validation.warnings:
+                print(f"  - {warning}")
 
         # 10. Prompt User for Excel Export
         print("\n" + "-" * 65)
