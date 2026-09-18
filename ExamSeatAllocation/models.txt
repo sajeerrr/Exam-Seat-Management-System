@@ -1,0 +1,81 @@
+1.Department
+
+Attributes
+department_id (PK)
+department_code
+department_name
+
+2. Class
+
+Attributes
+class_id (PK)
+department_id (FK)
+class_name
+semester
+academic_year
+
+3. Student
+
+Attributes
+
+student_id (PK)
+class_id (FK)
+roll_number
+student_name
+
+4. Subject
+
+Attributes
+
+subject_id (PK)
+subject_code
+subject_name
+semester
+
+5. Exam
+
+Attributes
+
+exam_id (PK)
+subject_id (FK)
+exam_date
+session (FN/AN)
+duration
+
+6. Room
+
+Attributes
+
+room_id (PK)
+room_number
+capacity
+benches
+building
+
+7. ExamRegistration
+
+Attributes
+
+registration_id (PK)
+student_id (FK)
+exam_id (FK)
+
+Constraint
+
+Unique(student_id, exam_id)
+
+8. Allocation
+
+Attributes
+
+allocation_id (PK)
+registration_id (FK)
+room_id (FK)
+bench_number
+seat_number
+
+Constraints
+
+Unique(registration_id)
+Unique(exam_id, room_id, bench_number, seat_number) (implemented through the registration → exam relationship)
+Relationships

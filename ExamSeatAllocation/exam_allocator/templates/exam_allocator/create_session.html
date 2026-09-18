@@ -1,0 +1,235 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}New Allocation Session — ExamSeat{% endblock %}
+
+{% block extra_head %}<meta name="description" content="Create a new exam seat allocation session.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            animation: fadeUp 0.5s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── BACK LINK ──────────────────────────── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover { color: var(--text-secondary); }
+
+        /* ── CARD ───────────────────────────────── */
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 32px 36px 28px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 18px;
+            box-shadow: 0 0 28px var(--accent-glow);
+        }
+
+        .card-header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            margin-bottom: 6px;
+        }
+
+        .card-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ── FORM ───────────────────────────────── */
+        .card-body {
+            padding: 28px 36px 36px;
+        }
+
+        .error-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--error-bg);
+            border: 1px solid rgba(244,63,94,0.25);
+            border-radius: 8px;
+            color: var(--error);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 16px;
+            font-family: inherit;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            background: rgba(99,102,241,0.06);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99,102,241,0.45);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="container">
+
+    <a class="back-link" href="{% url 'exam_allocator:session_list' %}">
+        ← All Sessions
+    </a>
+
+    <div class="form-card">
+
+        <div class="card-header">
+            <div class="card-icon">✨</div>
+            <h1>New Allocation Session</h1>
+            <p>Create a completely separate workspace for a new examination cycle.</p>
+        </div>
+
+        <div class="card-body">
+
+            {% if error %}
+                <div class="error-message">
+                    <span>⚠</span>
+                    {{ error }}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-group">
+                    <label for="name">Session Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="e.g. June 2026 Exams"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <button type="submit" class="btn-primary" id="create-session-btn">
+                    Create Session →
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

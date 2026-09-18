@@ -1,0 +1,662 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}ExamSeat — Allocation Sessions{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="Manage and view all exam seat allocation sessions.">{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        padding: 0;
+    }
+
+    /* Ambient background blobs */
+    body::before {
+        content: '';
+        position: fixed;
+        top: -20%;
+        left: -10%;
+        width: 60vw;
+        height: 60vw;
+        background: radial-gradient(circle, var(--blob-a) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        bottom: -20%;
+        right: -10%;
+        width: 50vw;
+        height: 50vw;
+        background: radial-gradient(circle, var(--blob-b) 0%, transparent 70%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .page-wrapper {
+        position: relative;
+        z-index: 1;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+    }
+
+    /* ── HEADER ─────────────────────────────── */
+    .page-header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 180px;
+        margin-bottom: 48px;
+    }
+
+    .header-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .header-text h1 {
+        font-size: 64px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 4px;
+        background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .header-text p {
+        color: var(--text-secondary);
+        font-size: 18px;
+        font-weight: 500;
+        letter-spacing: 1px;
+        margin-top: 12px;
+    }
+
+    /* ── NEW SESSION BUTTON ──────────────────── */
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 20px var(--accent-glow);
+        white-space: nowrap;
+    }
+
+    /* Keep button positioned independently from centered branding */
+    .page-header>.btn-primary {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+    }
+
+    /* ── NEW SESSION BUTTON ──────────────────── */
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 20px var(--accent-glow);
+        white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+    /* ── SESSION CARDS ───────────────────────── */
+    .sessions-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .session-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 24px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        text-decoration: none;
+        color: var(--text-primary);
+        transition: all 0.25s ease;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        animation: slideUp 0.4s ease both;
+    }
+
+    .session-card:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-hover);
+        transform: translateX(4px);
+        box-shadow: 0 8px 32px var(--shadow-card), 0 0 0 1px var(--border-hover);
+    }
+
+    .session-card:nth-child(1) {
+        animation-delay: 0ms;
+    }
+
+    .session-card:nth-child(2) {
+        animation-delay: 100ms;
+    }
+
+    .session-card:nth-child(3) {
+        animation-delay: 200ms;
+    }
+
+    .session-card:nth-child(4) {
+        animation-delay: 300ms;
+    }
+
+    .session-card:nth-child(5) {
+        animation-delay: 400ms;
+    }
+
+    .session-card:nth-child(6) {
+        animation-delay: 500ms;
+    }
+
+    .session-card:nth-child(7) {
+        animation-delay: 600ms;
+    }
+
+    .session-card:nth-child(8) {
+        animation-delay: 700ms;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .session-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .session-name {
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .session-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .session-date {
+        font-size: 13px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        background: var(--warning-bg);
+        color: var(--warning);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .status-badge.active {
+        background: var(--success-bg);
+        color: var(--success);
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+
+    .session-arrow {
+        color: var(--text-muted);
+        font-size: 20px;
+        transition: transform 0.2s ease, color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .session-card:hover .session-arrow {
+        color: var(--accent-light);
+        transform: translateX(4px);
+    }
+
+    /* ── EMPTY STATE ─────────────────────────── */
+    .empty-state {
+        text-align: center;
+        padding: 80px 40px;
+        background: var(--bg-card);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        backdrop-filter: blur(12px);
+        animation: slideUp 0.4s ease both;
+    }
+
+    .empty-icon {
+        font-size: 56px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        color: var(--text-secondary);
+        font-size: 15px;
+        margin-bottom: 28px;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────── */
+    @media (max-width: 600px) {
+        .page-header {
+            min-height: 220px;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .header-text h1 {
+            font-size: 48px;
+        }
+
+        .header-text p {
+            font-size: 15px;
+        }
+
+        .page-header>.btn-primary {
+            position: static;
+            margin-top: 28px;
+        }
+
+        .session-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .session-arrow {
+            display: none;
+        }
+    }
+
+    /* ── DELETE BUTTON ───────────────────────── */
+    .session-card-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    .btn-delete-session {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        border: 1px solid transparent;
+        cursor: pointer;
+        font-size: 16px;
+        color: var(--text-muted);
+        opacity: 0;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .session-card:hover .btn-delete-session {
+        opacity: 1;
+    }
+
+    .btn-delete-session:hover {
+        background: var(--error-bg);
+        border-color: var(--error-border);
+        color: var(--error);
+        transform: scale(1.1);
+    }
+
+    .btn-delete-session:active {
+        transform: scale(0.95);
+    }
+
+    /* ── FLASH MESSAGES ──────────────────────── */
+    .messages-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 28px;
+        animation: slideUp 0.35s ease both;
+    }
+
+    .message-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 20px;
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-weight: 500;
+        backdrop-filter: blur(10px);
+    }
+
+    .message-item.success {
+        background: var(--success-bg);
+        border: 1px solid var(--success-border);
+        color: var(--success);
+    }
+
+    .message-item.error {
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
+        color: var(--error);
+    }
+
+    /* ── CONFIRMATION MODAL ──────────────────── */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        animation: fadeIn 0.18s ease;
+    }
+
+    .modal-overlay[hidden] {
+        display: none;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .modal-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 36px;
+        max-width: 440px;
+        width: 100%;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.22s ease;
+        text-align: center;
+    }
+
+    .modal-icon {
+        font-size: 44px;
+        margin-bottom: 16px;
+        filter: grayscale(0.2);
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+    }
+
+    .modal-desc {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 28px;
+    }
+
+    .modal-desc strong {
+        color: var(--text-primary);
+        font-weight: 700;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+
+    .btn-modal-cancel {
+        padding: 11px 24px;
+        border-radius: var(--radius-sm);
+        background: var(--bg-interactive);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-modal-cancel:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+    }
+
+    .btn-modal-delete {
+        padding: 11px 24px;
+        border-radius: var(--radius-sm);
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: white;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-modal-delete:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45);
+    }
+
+    .btn-modal-delete:active {
+        transform: translateY(0);
+    }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    <header class="page-header">
+        <div class="header-brand">
+            <div class="header-text">
+                <h1>E.S.M.S</h1>
+                <p>Exam Seat Management System</p>
+            </div>
+        </div>
+
+        <a class="btn-primary" href="{% url 'exam_allocator:create_session' %}" id="new-session-btn">
+            <span>+</span> New Session
+        </a>
+    </header>
+
+    <!-- FLASH MESSAGES -->
+    {% if messages %}
+    <ul class="messages-list">
+        {% for message in messages %}
+        <li class="message-item {{ message.tags }}">
+            {% if message.tags == 'success' %}✅{% else %}❌{% endif %}
+            {{ message }}
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <!-- SESSIONS -->
+    {% if sessions %}
+
+    <div class="sessions-grid">
+        {% for session in sessions %}
+        <a class="session-card" href="{% url 'exam_allocator:session_detail' session.session_id %}">
+
+            <div class="session-info">
+                <div class="session-name">{{ session.name }}</div>
+                <div class="session-meta">
+                    <span class="session-date">
+                        📅 {{ session.created_at|date:"d M Y, H:i" }}
+                    </span>
+                    <span class="status-badge {% if session.status == 'active' %}active{% endif %}">
+                        <span class="status-dot"></span>
+                        {{ session.get_status_display }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="session-card-actions">
+                <button class="btn-delete-session" data-session-id="{{ session.session_id }}"
+                    data-session-name="{{ session.name }}"
+                    data-delete-url="{% url 'exam_allocator:delete_session' session.session_id %}"
+                    onclick="event.preventDefault(); event.stopPropagation(); openDeleteModal(this);"
+                    aria-label="Delete {{ session.name }}" title="Delete session">🗑️</button>
+                <span class="session-arrow">›</span>
+            </div>
+
+        </a>
+        {% endfor %}
+    </div>
+
+    {% else %}
+
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h2>No Sessions Yet</h2>
+        <p>Create your first allocation session to get started.</p>
+        <a class="btn-primary" href="{% url 'exam_allocator:create_session' %}">
+            + Create First Session
+        </a>
+    </div>
+
+    {% endif %}
+
+</div>
+
+<!-- ── DELETE CONFIRMATION MODAL ──────────────────────────── -->
+<div id="delete-modal" class="modal-overlay" hidden>
+    <div class="modal-box">
+        <div class="modal-icon">🗑️</div>
+        <h2 class="modal-title">Delete Session?</h2>
+        <p class="modal-desc">
+            You are about to permanently delete
+            <strong id="modal-session-name"></strong>.
+            This will remove all associated students, exams, rooms,
+            registrations, and allocations.
+            <br><br>
+            <strong>This action cannot be undone.</strong>
+        </p>
+        <form id="delete-form" method="post" action="">
+            {% csrf_token %}
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button type="submit" class="btn-modal-delete" id="confirm-delete-btn">Delete Session</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openDeleteModal(btn) {
+        const modal = document.getElementById('delete-modal');
+        const nameEl = document.getElementById('modal-session-name');
+        const form = document.getElementById('delete-form');
+
+        nameEl.textContent = btn.dataset.sessionName;
+        form.action = btn.dataset.deleteUrl;
+
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        document.getElementById('confirm-delete-btn').focus();
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    /* Close when clicking the backdrop */
+    document.getElementById('delete-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeleteModal();
+    });
+
+    /* Close on Escape */
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeDeleteModal();
+    });
+</script>
+
+{% endblock %}
