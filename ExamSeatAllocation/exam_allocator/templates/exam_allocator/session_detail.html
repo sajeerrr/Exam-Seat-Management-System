@@ -1,0 +1,647 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}{{ session.name }} — ExamSeat{% endblock %}
+
+{% block extra_head %}<meta name="description" content="Session detail and data import for {{ session.name }}.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: -10%;
+            width: 55vw;
+            height: 55vw;
+            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* ── NAV ─────────────────────────────────── */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 36px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-secondary); }
+
+        /* ── SESSION HEADER ──────────────────────── */
+        .session-hero {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px 32px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            backdrop-filter: blur(12px);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .session-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 0 32px var(--accent-glow);
+            flex-shrink: 0;
+        }
+
+        .session-hero h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            margin-bottom: 6px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245,158,11,0.2);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        /* ── FLASH MESSAGES ──────────────────────── */
+        .messages-container {
+            margin-bottom: 24px;
+        }
+
+        .flash-msg {
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            margin-bottom: 10px;
+            background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--accent-light);
+        }
+
+        /* ── SECTION HEADINGS ────────────────────── */
+        .section {
+            margin-bottom: 36px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .section:nth-child(2) { animation-delay: 0.05s; }
+        .section:nth-child(3) { animation-delay: 0.1s; }
+        .section:nth-child(4) { animation-delay: 0.15s; }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .section-icon {
+            font-size: 18px;
+        }
+
+        /* ── STATS GRID ──────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ── IMPORT CARDS ────────────────────────── */
+        .import-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .import-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: all 0.25s ease;
+            backdrop-filter: blur(12px);
+        }
+
+        .import-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .import-card-icon {
+            font-size: 28px;
+            margin-bottom: 14px;
+        }
+
+        .import-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .import-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        /* ── FILE INPUT ──────────────────────────── */
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.03);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        input[type="file"]:hover {
+            border-color: var(--accent);
+            background: rgba(99,102,241,0.05);
+        }
+
+        /* ── BUTTONS ─────────────────────────────── */
+        .btn-upload {
+            width: 100%;
+            padding: 11px;
+            background: rgba(99,102,241,0.15);
+            color: var(--accent-light);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-upload:hover {
+            background: rgba(99,102,241,0.25);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99,102,241,0.45);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        /* ── EMPTY PLACEHOLDER ───────────────────── */
+        .empty-placeholder {
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 28px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ── ALLOCATION SECTION ──────────────────── */
+        .allocation-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            backdrop-filter: blur(12px);
+        }
+
+        .allocation-block p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .btn-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* ── RESPONSIVE ──────────────────────────── */
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .import-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .session-hero { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- FLASH MESSAGES -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="flash-msg">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- TOP NAV -->
+    <nav class="top-nav">
+        <a class="back-link" href="{% url 'exam_allocator:session_list' %}">
+            ← All Sessions
+        </a>
+    </nav>
+
+    <!-- SESSION HERO -->
+    <div class="session-hero">
+        <div class="session-icon">📋</div>
+        <div>
+            <h1>{{ session.name }}</h1>
+            <span class="status-badge">
+                <span class="status-dot"></span>
+                {{ session.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+
+    <!-- DATA SUMMARY -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">📊</span>
+            <span class="section-title">Data Overview</span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number">{{ departments_count }}</div>
+                <div class="stat-label">Departments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ classes_count }}</div>
+                <div class="stat-label">Classes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ students_count }}</div>
+                <div class="stat-label">Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ subjects_count }}</div>
+                <div class="stat-label">Subjects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ exams_count }}</div>
+                <div class="stat-label">Exams</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ rooms_count }}</div>
+                <div class="stat-label">Rooms</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ registrations_count }}</div>
+                <div class="stat-label">Mappings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ allocations_count }}</div>
+                <div class="stat-label">Allocations</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- IMPORT DATA -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">📁</span>
+            <span class="section-title">Import Data</span>
+        </div>
+
+        <div class="import-grid">
+
+            <!-- STUDENT LIST -->
+            <div class="import-card">
+                <div class="import-card-icon">👥</div>
+                <h3>Student List</h3>
+                <p>Import student and class information from a spreadsheet or document.</p>
+
+                <form
+                    method="post"
+                    action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                    enctype="multipart/form-data"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="file_kind" value="STUDENT">
+
+                    <div class="file-input-wrapper">
+                        <input
+                            type="file"
+                            name="file"
+                            accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg"
+                            required
+                            id="student-file-input"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-upload" id="upload-student-btn">
+                        ↑ Upload Student List
+                    </button>
+                </form>
+            </div>
+
+            <!-- TIMETABLE -->
+            <div class="import-card">
+                <div class="import-card-icon">🗓️</div>
+                <h3>Exam Timetable</h3>
+                <p>Import subjects, exams, and exam targets from the timetable file.</p>
+
+                <form
+                    method="post"
+                    action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                    enctype="multipart/form-data"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="file_kind" value="TIMETABLE">
+
+                    <div class="file-input-wrapper">
+                        <input
+                            type="file"
+                            name="file"
+                            accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg"
+                            required
+                            id="timetable-file-input"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-upload" id="upload-timetable-btn">
+                        ↑ Upload Timetable
+                    </button>
+                </form>
+            </div>
+
+            <!-- CLASSROOMS -->
+            <div class="import-card">
+                <div class="import-card-icon">🏫</div>
+                <h3>Classrooms</h3>
+                <p>Import examination rooms and their seating capacity data.</p>
+
+                <form
+                    method="post"
+                    action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                    enctype="multipart/form-data"
+                >
+                    {% csrf_token %}
+                    <input type="hidden" name="file_kind" value="CLASSROOM">
+
+                    <div class="file-input-wrapper">
+                        <input
+                            type="file"
+                            name="file"
+                            accept=".xlsx,.xls,.pdf,.png,.jpg,.jpeg"
+                            required
+                            id="classroom-file-input"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-upload" id="upload-classroom-btn">
+                        ↑ Upload Classroom List
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- STUDENT TO SUBJECT MAPPING -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">📝</span>
+            <span class="section-title">Student to Subject Mapping</span>
+        </div>
+
+        {% if exams_count and students_count %}
+
+            <div class="allocation-block">
+                <p>
+                    Map all imported students to their corresponding exam subjects
+                    in this session automatically.
+                </p>
+
+                <form
+                    method="post"
+                    action="{% url 'exam_allocator:generate_registrations' session.session_id %}"
+                >
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary" id="generate-registrations-btn">
+                        ⚡ Generate Exam Allocation
+                    </button>
+                </form>
+            </div>
+
+        {% else %}
+
+            <div class="empty-placeholder">
+                Import <strong>students</strong> and the <strong>exam timetable</strong> before generating student to subject mappings.
+            </div>
+
+        {% endif %}
+    </div>
+
+
+    <!-- ALLOCATIONS -->
+    <div class="section">
+        <div class="section-header">
+            <span class="section-icon">🪑</span>
+            <span class="section-title">Seat Allocations</span>
+        </div>
+
+        <div class="allocation-block">
+
+            {% if allocations_count %}
+                <p>
+                    <strong style="color:var(--text-primary)">{{ allocations_count }}</strong> allocation records currently exist for this session.
+                    You can regenerate the complete session-wide allocation — this will run the allocation
+                    engine across all examination time slots and replace existing allocations.
+                </p>
+            {% else %}
+                <p>
+                    No seat allocations have been generated yet. The allocation engine will process
+                    all examinations together according to their examination date and FN/AN session.
+                </p>
+            {% endif %}
+
+            <div class="btn-row">
+                <form
+                    method="post"
+                    action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}"
+                >
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary" id="generate-allocation-btn">
+                        {% if allocations_count %}
+                            🔄 Regenerate All Allocations
+                        {% else %}
+                            ⚡ Generate All Allocations
+                        {% endif %}
+                    </button>
+                </form>
+
+                {% if allocations_count %}
+                    <a
+                        class="btn-secondary"
+                        href="{% url 'exam_allocator:session_allocation_result' session.session_id %}"
+                        id="view-allocations-btn"
+                    >
+                        View Seat Allocations →
+                    </a>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

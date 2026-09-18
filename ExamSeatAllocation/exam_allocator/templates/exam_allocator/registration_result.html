@@ -1,0 +1,407 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}Mapping Results — {{ session.name }} — ExamSeat{% endblock %}
+
+{% block extra_head %}<meta name="description" content="Student to subject mapping results for {{ session.name }}.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* ── BACK ────────────────────────────────── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-secondary); }
+
+        /* ── PAGE HEADER ─────────────────────────── */
+        .page-header {
+            margin-bottom: 32px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            margin-bottom: 6px;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* ── SUCCESS BANNER ──────────────────────── */
+        .success-banner {
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            border-radius: var(--radius);
+            padding: 22px 26px;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            animation: fadeUp 0.4s ease 0.05s both;
+        }
+
+        .success-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .success-banner h2 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: 4px;
+        }
+
+        .success-banner p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* ── STATS GRID ──────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 32px;
+            animation: fadeUp 0.4s ease 0.1s both;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 22px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .stat-number {
+            font-size: 34px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        /* ── EXAM BREAKDOWN TABLE ────────────────── */
+        .section {
+            margin-bottom: 32px;
+            animation: fadeUp 0.4s ease 0.15s both;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+        }
+
+        .result-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 12px 20px;
+            background: rgba(99,102,241,0.07);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-header span {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+        }
+
+        .result-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 13px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-row:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .result-row > div {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .result-row > div:first-child {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid var(--success-border);
+        }
+
+        /* ── BOTTOM BUTTONS ──────────────────────── */
+        .bottom-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45);
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* ── BACK BUTTON ─────────────────────────── */
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 700px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .result-header,
+            .result-row { grid-template-columns: 1fr; gap: 6px; }
+            .result-header { display: none; }
+        }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    <a class="back-link" href="{% url 'exam_allocator:session_detail' session.session_id %}">
+        ← Back to Session
+    </a>
+
+    <div class="page-header">
+        <h1>Student to Subject Mapping Results</h1>
+        <p>{{ session.name }}</p>
+    </div>
+
+    <!-- SUCCESS BANNER -->
+    <div class="success-banner">
+        <div class="success-icon">
+            {% if result.total_created %}✓{% else %}ℹ{% endif %}
+        </div>
+        <div>
+            <h2>
+                Student to subject mapping completed
+            </h2>
+            <p>The mapping process has finished for <strong>{{ session.name }}</strong>.</p>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ result.total_created }}</div>
+            <div class="stat-label">Mappings Created</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ result.total_existing }}</div>
+            <div class="stat-label">Already Existing</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ result.auto_resolved_exams }}</div>
+            <div class="stat-label">Auto-resolved Exams</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ result.mapping_required_exams }}</div>
+            <div class="stat-label">Mapping Required</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ result.unresolved_exams }}</div>
+            <div class="stat-label">Unresolved Exams</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ result.results|length }}</div>
+            <div class="stat-label">Exams Processed</div>
+        </div>
+    </div>
+
+    <!-- EXAM BREAKDOWN -->
+    <div class="section">
+        <div class="section-title">Exam Breakdown</div>
+
+        <div class="table-wrapper">
+            <div class="result-header">
+                <span>Subject</span>
+                <span>Status</span>
+                <span>Mappings Created</span>
+                <span>Mappings Existing</span>
+            </div>
+
+            {% for item in result.results %}
+                <div class="result-row">
+                    <div>{{ item.subject_code }}</div>
+                    <div>
+                        <span class="status-pill">{{ item.status }}</span>
+                    </div>
+                    <div>{{ item.registrations_created }}</div>
+                    <div>{{ item.registrations_existing }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- NEXT STEP -->
+    <div class="bottom-actions">
+        <form
+            method="post"
+            action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}"
+            id="allocate-form"
+            style="display:contents;"
+        >
+            {% csrf_token %}
+            <button
+                type="submit"
+                class="btn-primary"
+                id="view-seat-allocations-btn"
+                onclick="this.disabled=true; this.innerHTML='&nbsp;&nbsp;Generating…'; this.form.submit();"
+            >
+                🪑 Generate &amp; View Final Seat Allocations →
+            </button>
+        </form>
+
+        <a
+            class="btn-secondary"
+            href="{% url 'exam_allocator:session_detail' session.session_id %}"
+            id="return-session-btn"
+        >
+            ← Return to Session
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

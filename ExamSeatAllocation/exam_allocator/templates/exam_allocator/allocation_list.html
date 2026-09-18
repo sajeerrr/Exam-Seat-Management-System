@@ -1,0 +1,229 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}{{ exam.subject.subject_code }} — Allocation — ExamSeat{% endblock %}
+
+{% block extra_head %}<meta name="description" content="Seat allocation list for {{ exam.subject.subject_name }}.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            right: -10%;
+            width: 55vw;
+            height: 55vw;
+            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* ── BACK LINK ──────────────────────────── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-secondary); }
+
+        /* ── PAGE HEADER ─────────────────────────── */
+        .page-header {
+            margin-bottom: 32px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            margin-bottom: 8px;
+        }
+
+        .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ── TABLE WRAPPER ──────────────────────── */
+        .table-wrapper {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            backdrop-filter: blur(12px);
+            animation: fadeUp 0.4s ease 0.1s both;
+        }
+
+        /* ── TABLE ───────────────────────────────── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            background: rgba(99,102,241,0.08);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            padding: 14px 20px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: var(--bg-card-hover);
+        }
+
+        td {
+            padding: 14px 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        td:first-child {
+            font-weight: 700;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .seat-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            background: rgba(99,102,241,0.12);
+            border: 1px solid rgba(99,102,241,0.2);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-light);
+        }
+
+        /* ── EMPTY ROW ───────────────────────────── */
+        .empty-row td {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 700px) {
+            th, td { padding: 12px 14px; font-size: 13px; }
+        }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    <a class="back-link" href="{% url 'exam_allocator:exam_list' %}">
+        ← Back to Exams
+    </a>
+
+    <div class="page-header">
+        <h1>{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}</h1>
+        <div class="header-meta">
+            <span class="meta-chip">📅 {{ exam.exam_date }}</span>
+            <span class="meta-chip">🕐 {{ exam.get_session_display }}</span>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Roll Number</th>
+                    <th>Student</th>
+                    <th>Room</th>
+                    <th>Bench</th>
+                    <th>Seat</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                {% for allocation in allocations %}
+                <tr>
+                    <td>{{ allocation.registration.student.roll_number }}</td>
+                    <td>{{ allocation.registration.student.student_name }}</td>
+                    <td>{{ allocation.room.room_number }}</td>
+                    <td>{{ allocation.bench_number }}</td>
+                    <td>
+                        <span class="seat-badge">
+                            {{ allocation.seat_number }}
+                        </span>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr class="empty-row">
+                    <td colspan="5">
+                        📋 No allocation has been generated yet.
+                    </td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}
