@@ -11,6 +11,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Test, type-checking, and linting caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
 # C extensions
 *.so
 
@@ -45,6 +56,7 @@ db.sqlite3
 db.sqlite3-journal
 uploads/
 media/
+staticfiles/
 
 # Test files
 test_*.py
@@ -55,4 +67,9 @@ test_*.py
 .idea/
 *.swp
 *.bak
+
+# Operating system files
+.DS_Store
+Thumbs.db
 models.txt
+
