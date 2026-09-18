@@ -1,0 +1,22 @@
+--- Exam Seat Management System Notes ---
+
+Tasks
+    we need to first create a model where we extract data from just two or three files for student list
+    and check if we are capable of successfully extracting data and formatting them for our use.
+
+    also check if we are able to upload them to database.
+
+    The system has to ask us for the studentlist first and then ask us for the rest of the files 
+    one after the other, and with each upload extracted data needs to be validated for errors.
+
+    studenlist -> classList -> timetable
+
+
+Current Status
+    Currently focused on designing of architecture of the system.
+    But need to immediately finalize the overall building plan of our application as in the 
+    SDLC and the stages of development divided across 7 weeks.
+
+
+
+
