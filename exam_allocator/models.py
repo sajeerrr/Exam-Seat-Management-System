@@ -271,6 +271,8 @@ class UploadedFile(models.Model):
 
 
 class ExamTarget(models.Model):
+    target_id = models.AutoField(primary_key=True)
+
     exam = models.ForeignKey(
         Exam,
         on_delete=models.CASCADE,

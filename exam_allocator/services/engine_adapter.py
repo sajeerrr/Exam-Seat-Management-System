@@ -1,3 +1,5 @@
+import math
+
 from exam_allocator.models import ExamRegistration, Room
 
 from engine.models.student import Student as EngineStudent
@@ -85,7 +87,6 @@ def django_room_to_engine_classroom(room):
     benches_per_row = 3  # always 3 benches across per row
 
     # Rows = ceil(total benches / benches_per_row)
-    import math
     rows = math.ceil(benches / benches_per_row)
 
     return EngineClassroom(
