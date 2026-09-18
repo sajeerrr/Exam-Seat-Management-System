@@ -73,3 +73,7 @@ test_*.py
 Thumbs.db
 models.txt
 
+# Local engine development tools
+dev_tools/
+resources/
+*.xlsx
