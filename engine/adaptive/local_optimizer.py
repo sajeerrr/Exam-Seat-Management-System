@@ -61,21 +61,23 @@ class LocalOptimizer:
                         continue
 
                     target_room, target_stream_name = target
+                    target_stream = target_room.get_stream(target_stream_name)
+
                     before = self.pattern_evaluator.score_context(context)
                     before_abc = self.pattern_evaluator.abc_count(context)
-                    self._move_fragment(
-                        source_stream,
-                        target_room.get_stream(target_stream_name),
-                        fragment,
-                    )
+
+                    # Capture insertion index BEFORE move to enable safe revert
+                    insert_at = len(target_stream.students)
+                    self._move_fragment(source_stream, target_stream, fragment)
+
                     after = self.pattern_evaluator.score_context(context)
                     after_abc = self.pattern_evaluator.abc_count(context)
 
                     if after >= before and after_abc >= before_abc:
                         return True
 
-                    target_stream = target_room.get_stream(target_stream_name)
-                    del target_stream.students[-fragment["count"]:]
+                    # Safe revert using captured insertion index
+                    del target_stream.students[insert_at:]
                     source_stream.students[
                         fragment["start"]:fragment["start"]
                     ] = fragment["students"]
