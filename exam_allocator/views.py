@@ -590,12 +590,11 @@ def session_allocation_result(request, session_id):
             "allocations_count": len(allocations),
             "slot_views": slot_views,
             "classroom_views": classroom_views,
+            "seating_arrangements_count": seating_arrangements_count,
             "registrations_count": registrations_count,
             "exams_count": exams_count,
             "rooms_count": rooms_count,
             "students_allocated": students_allocated,
-            "seating_arrangements_count": seating_arrangements_count,
-            "classroom_views": classroom_views,
         },
     )
 

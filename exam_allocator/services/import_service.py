@@ -1,3 +1,5 @@
+import hashlib
+
 from django.db import transaction
 
 from exam_allocator.models import (
@@ -253,8 +255,6 @@ def _make_subject_code(subject_code: str, subject_name: str) -> str:
                 return generated
 
     # Final deterministic fallback.
-    import hashlib
-
     digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]
 
     return f"SUBJ_{digest}"[:30]

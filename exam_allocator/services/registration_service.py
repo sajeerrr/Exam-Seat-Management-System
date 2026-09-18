@@ -11,15 +11,13 @@ It only produces a preview.
 
 from dataclasses import dataclass, field
 
+from django.db import transaction
+
 from exam_allocator.models import (
     Exam,
     Student,
     ExamRegistration,
 )
-
-from django.db import transaction
-
-from exam_allocator.models import ExamRegistration
 
 # Timetable and student data sometimes use different
 # department abbreviations for the same department.
