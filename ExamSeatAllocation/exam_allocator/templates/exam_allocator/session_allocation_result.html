@@ -1,0 +1,1735 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}Allocation Results — {{ session.name }} — ExamSeat{% endblock %}
+
+{% block extra_head %}<meta name="description" content="Seat allocation results and classroom viewer for {{ session.name }}.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            font-family: 'Inter', sans-serif;
+
+            max-width: 1400px;
+
+            margin: 0 auto;
+
+            padding: 40px 24px 80px;
+
+            background: var(--bg-primary);
+
+            color: var(--text-primary);
+        }
+
+
+        a {
+
+            text-decoration: none;
+
+            color: inherit;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, var(--blob-a) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -20%;
+            right: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: radial-gradient(circle, var(--blob-b) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-content {
+            position: relative;
+            z-index: 1;
+        }
+
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+
+        /* ── BACK LINK ──────────────────────────── */
+
+        .top {
+
+            margin-bottom: 28px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+
+        .back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back:hover { color: var(--text-secondary); }
+
+
+        /* ── PAGE HEADER ─────────────────────────── */
+
+        h1 {
+
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            margin-bottom: 5px;
+            animation: fadeUp 0.4s ease 0.05s both;
+        }
+
+
+        .subtitle {
+
+            color: var(--text-secondary);
+
+            margin-bottom: 28px;
+
+            font-size: 14px;
+            animation: fadeUp 0.4s ease 0.08s both;
+        }
+
+
+        /* ================================================== */
+        /* SUCCESS BANNER                                      */
+        /* ================================================== */
+
+        .success {
+
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            animation: fadeUp 0.4s ease 0.1s both;
+        }
+
+
+        .success-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .success h2 {
+
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .success p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+
+        /* ================================================== */
+        /* STATS                                               */
+        /* ================================================== */
+
+        .stats {
+
+            display: grid;
+
+            grid-template-columns: repeat(5, 1fr);
+
+            gap: 14px;
+
+            margin-bottom: 28px;
+            animation: fadeUp 0.4s ease 0.12s both;
+        }
+
+
+        .stat {
+
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .stat:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+
+        .stat-number {
+
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+
+        .stat-label {
+
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+
+        /* ================================================== */
+        /* CLASSROOM VIEWER                                    */
+        /* ================================================== */
+
+        .viewer {
+
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-top: 8px;
+            backdrop-filter: blur(12px);
+            animation: fadeUp 0.4s ease 0.15s both;
+        }
+
+
+        .viewer-header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            gap: 20px;
+
+            padding: 22px 28px;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+
+        .viewer-header h2 {
+
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+
+        .viewer-subtitle {
+
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+
+        .print-button {
+
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: var(--bg-interactive);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+
+        .print-button:hover {
+            background: var(--bg-interactive-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+
+        /* ================================================== */
+        /* CLASSROOM CONTAINER                                 */
+        /* ================================================== */
+
+        .classroom-viewer {
+
+            padding: 28px;
+        }
+
+
+        /*
+         * Only the selected classroom is visible on screen.
+         */
+
+        .classroom-page {
+
+            display: none;
+        }
+
+
+        .classroom-page.active {
+
+            display: block;
+        }
+
+
+        /* ================================================== */
+        /* ROOM HEADER                                         */
+        /* ================================================== */
+
+        .room-header {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            gap: 20px;
+
+            margin-bottom: 20px;
+        }
+
+
+        .room-title h3 {
+
+            margin: 0 0 5px 0;
+
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+
+        .room-title p {
+
+            margin: 0;
+
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+
+        .room-info {
+
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .room-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            background: var(--bg-interactive);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+
+        /* ================================================== */
+        /* FRONT / BACK                                        */
+        /* ================================================== */
+
+        .front {
+
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 10px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+
+
+        .back-marker {
+
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 10px;
+            margin-top: 16px;
+            border-top: 2px solid var(--border);
+        }
+
+
+        /* ================================================== */
+        /* CLASSROOM                                           */
+        /* ================================================== */
+
+        .classroom {
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            background: var(--bg-sunken);
+            overflow-x: auto;
+        }
+
+
+        /*
+         * Three benches across each row.
+         */
+
+        .classroom-rows {
+
+            display: flex;
+
+            flex-direction: column;
+
+            gap: 12px;
+
+            min-width: 1000px;
+        }
+
+
+        .classroom-row {
+
+            display: grid;
+
+            grid-template-columns: repeat(3, 1fr);
+
+            gap: 12px;
+        }
+
+
+        /* ================================================== */
+        /* BENCH                                               */
+        /* ================================================== */
+
+        .bench {
+
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(255,255,255,0.02);
+        }
+
+
+        .bench-label {
+
+            text-align: center;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 7px;
+            background: rgba(99,102,241,0.07);
+            border-bottom: 1px solid var(--border);
+        }
+
+
+        .seats {
+
+            display: grid;
+
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+
+        /* ================================================== */
+        /* SEAT                                                */
+        /* ================================================== */
+
+        .seat {
+
+            min-height: 78px;
+
+            padding: 8px 5px;
+
+            border-right: 1px solid var(--border);
+
+            text-align: center;
+
+            display: flex;
+
+            flex-direction: column;
+
+            justify-content: center;
+
+            align-items: center;
+
+            transition: background 0.15s;
+        }
+
+
+        .seat:last-child {
+
+            border-right: none;
+        }
+
+
+        /*
+         * Seat 1 and Seat 3 are END positions.
+         */
+
+        .seat.end-seat {
+
+            background: var(--end-seat);
+        }
+
+
+        /*
+         * Seat 2 is the MIDDLE position.
+         */
+
+        .seat.middle-seat {
+
+            background: var(--mid-seat);
+        }
+
+
+        .seat-number {
+
+            font-size: 10px;
+
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+
+            margin-bottom: 5px;
+        }
+
+
+        .roll-number {
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            word-break: break-word;
+            color: var(--text-primary);
+        }
+
+
+        .subject {
+
+            font-size: 10px;
+
+            color: var(--accent-light);
+
+            margin-top: 3px;
+            font-weight: 600;
+        }
+
+
+        .empty-seat {
+
+            color: var(--text-muted);
+
+            font-size: 11px;
+
+            font-style: italic;
+        }
+
+
+        /* ================================================== */
+        /* LEGEND                                              */
+        /* ================================================== */
+
+        .legend {
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            gap: 24px;
+
+            margin-top: 16px;
+
+            color: var(--text-muted);
+
+            font-size: 12px;
+        }
+
+
+        .legend-item {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 7px;
+        }
+
+
+        .legend-box {
+
+            width: 16px;
+
+            height: 16px;
+
+            border: 1px solid var(--border);
+
+            border-radius: 4px;
+        }
+
+
+        .legend-end {
+
+            background: var(--end-seat);
+        }
+
+
+        .legend-middle {
+
+            background: var(--mid-seat);
+        }
+
+
+        /* ================================================== */
+        /* CLASSROOM NAVIGATION                                */
+        /* ================================================== */
+
+        .viewer-navigation {
+
+            display: flex;
+
+            justify-content: space-between;
+
+            align-items: center;
+
+            padding: 18px 28px;
+
+            border-top: 1px solid var(--border);
+
+            background: var(--bg-nav-bar);
+        }
+
+
+        .nav-button {
+
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 18px;
+            background: var(--bg-interactive);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+
+        .nav-button:hover:not(:disabled) {
+            background: var(--bg-interactive-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+
+        .nav-button:disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+
+        .room-counter {
+
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .room-counter span {
+            color: var(--accent-light);
+        }
+
+
+        /* ================================================== */
+        /* NO ALLOCATIONS                                      */
+        /* ================================================== */
+
+        .no-allocation {
+
+            text-align: center;
+            padding: 60px 40px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .no-allocation-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .no-allocation h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .no-allocation p { color: var(--text-secondary); font-size: 14px; }
+
+
+        /* ================================================== */
+        /* MOBILE                                              */
+        /* ================================================== */
+
+        @media (max-width: 900px) {
+
+            .stats {
+
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+
+            .room-header {
+
+                flex-direction: column;
+
+                align-items: flex-start;
+            }
+
+
+            .viewer-header {
+
+                flex-direction: column;
+
+                align-items: flex-start;
+            }
+        }
+
+
+        @media (max-width: 600px) {
+
+            .stats {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            body {
+
+                padding: 20px 14px 60px;
+            }
+
+
+            .classroom-viewer {
+
+                padding: 14px;
+            }
+
+
+            .viewer-navigation {
+
+                padding: 14px;
+
+                gap: 10px;
+            }
+
+
+            .room-counter {
+
+                font-size: 12px;
+            }
+        }
+
+
+        /* ================================================== */
+        /* PRINT                                               */
+        /* ================================================== */
+
+        @media print {
+
+            /*
+             * Each classroom is treated as one physical page.
+             */
+
+            @page {
+
+                size: A4 landscape;
+
+                margin: 8mm;
+            }
+
+
+            body {
+
+                max-width: none;
+
+                margin: 0;
+
+                padding: 0;
+
+                background: white;
+                color: black;
+            }
+
+            body::before,
+            body::after { display: none; }
+
+
+            /*
+             * These elements are useful on screen
+             * but should not appear on the printed
+             * classroom sheets.
+             */
+
+            .top,
+            h1,
+            .subtitle,
+            .success,
+            .stats,
+            .viewer-header,
+            .viewer-navigation {
+
+                display: none !important;
+            }
+
+
+            .viewer {
+
+                border: none;
+
+                margin: 0;
+
+                padding: 0;
+
+                overflow: visible;
+
+                background: white;
+            }
+
+
+            .classroom-viewer {
+
+                padding: 0;
+
+                overflow: visible;
+            }
+
+
+            /*
+             * IMPORTANT:
+             *
+             * On screen only .active is displayed.
+             *
+             * During printing ALL classrooms are
+             * displayed.
+             */
+
+            .classroom-page {
+
+                display: block !important;
+
+                width: 100%;
+
+                min-height: 190mm;
+
+                padding: 5mm;
+
+                page-break-after: always;
+
+                break-after: page;
+            }
+
+
+            /*
+             * Do not create an unnecessary blank page
+             * after the final classroom.
+             */
+
+            .classroom-page:last-child {
+
+                page-break-after: auto;
+
+                break-after: auto;
+            }
+
+
+            .room-header {
+
+                margin-bottom: 8px;
+            }
+
+
+            .room-title h3 {
+
+                font-size: 20px;
+            }
+
+
+            .room-title p {
+
+                font-size: 12px;
+            }
+
+
+            .room-chip {
+                font-size: 12px;
+            }
+
+
+            .front {
+                color: #555;
+                border-bottom: 2px solid #aaa;
+            }
+
+            .back-marker {
+                color: #555;
+                border-top: 2px solid #aaa;
+            }
+
+            .classroom {
+
+                border: 1px solid #aaa;
+
+                border-radius: 5px;
+
+                padding: 8px;
+
+                overflow: visible;
+
+                background: white;
+            }
+
+
+            .classroom-rows {
+
+                min-width: 0;
+
+                width: 100%;
+
+                gap: 6px;
+            }
+
+
+            .classroom-row {
+
+                gap: 6px;
+            }
+
+
+            .bench {
+
+                break-inside: avoid;
+
+                page-break-inside: avoid;
+
+                border: 1px solid #ccc;
+            }
+
+
+            .bench-label {
+                font-size: 11px;
+                padding: 4px;
+                background: #f0f0f0;
+                color: #333;
+                border-bottom: 1px solid #ccc;
+            }
+
+
+            .seat {
+                min-height: 55px;
+                padding: 4px 2px;
+                border-right: 1px solid #ddd;
+            }
+
+            .seat.end-seat { background: #eef8ea; }
+            .seat.middle-seat { background: white; }
+
+            .seat-number {
+                font-size: 9px;
+                color: #999;
+                margin-bottom: 2px;
+            }
+
+            .roll-number {
+                font-size: 10px;
+                color: black;
+            }
+
+            .subject {
+                font-size: 8px;
+                color: #555;
+                margin-top: 2px;
+            }
+
+            .empty-seat {
+                font-size: 9px;
+                color: #aaa;
+            }
+
+
+            .legend {
+                margin-top: 8px;
+                font-size: 10px;
+                color: #555;
+            }
+
+
+            .legend-box {
+                width: 14px;
+                height: 14px;
+            }
+
+
+            .back-marker {
+
+                padding: 5px;
+
+                margin-top: 8px;
+            }
+
+            .room-info { display: flex; }
+        }
+
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="page-content">
+
+<!-- ====================================================== -->
+<!-- TOP                                                   -->
+<!-- ====================================================== -->
+
+<div class="top">
+
+    <a
+        class="back"
+        href="{% url 'exam_allocator:session_detail' session.session_id %}"
+    >
+        ← Back to Session
+    </a>
+
+</div>
+
+
+<h1>Allocation Results</h1>
+
+<div class="subtitle">
+
+    {{ session.name }}
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- SUCCESS                                               -->
+<!-- ====================================================== -->
+
+{% if messages %}
+<div style="margin-bottom:20px; display:flex; flex-direction:column; gap:10px; animation: fadeUp 0.4s ease 0.08s both;">
+    {% for message in messages %}
+    <div style="
+        background: var(--warning-bg, rgba(245,158,11,0.1));
+        border: 1px solid rgba(245,158,11,0.3);
+        border-radius: var(--radius-sm);
+        padding: 14px 20px;
+        font-size: 13px;
+        color: var(--warning, #f59e0b);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    ">
+        ⚠ {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if classroom_views %}
+<div class="success">
+
+    <div class="success-icon">✓</div>
+    <div>
+        <h2>Allocation generation completed</h2>
+        <p>Seat allocations have been generated for the resolved examination slots.</p>
+    </div>
+
+</div>
+{% endif %}
+
+
+<!-- ====================================================== -->
+<!-- PROGRESS REPORT                                       -->
+<!-- ====================================================== -->
+
+<div class="stats">
+
+
+    <div class="stat">
+
+        <div class="stat-number">
+
+            {{ registrations_count }}
+
+        </div>
+
+        <div class="stat-label">
+
+            Total Mappings
+
+        </div>
+
+    </div>
+
+
+    <div class="stat">
+
+        <div class="stat-number">
+
+            {{ students_allocated }}
+
+        </div>
+
+        <div class="stat-label">
+
+            Students Allocated
+
+        </div>
+
+    </div>
+
+
+    <div class="stat">
+
+        <div class="stat-number">
+
+            {{ exams_count }}
+
+        </div>
+
+        <div class="stat-label">
+
+            Exams
+
+        </div>
+
+    </div>
+
+
+    <div class="stat">
+
+        <div class="stat-number">
+
+            {{ rooms_count }}
+
+        </div>
+
+        <div class="stat-label">
+
+            Physical Rooms
+        </div>
+
+    </div>
+
+    <div class="stat">
+
+    <div class="stat-number">
+
+        {{ seating_arrangements_count }}
+
+    </div>
+
+    <div class="stat-label">
+
+        Seating Arrangements
+
+    </div>
+
+</div>
+
+
+    <div class="stat">
+
+        <div class="stat-number">
+
+            {{ allocations_count }}
+
+        </div>
+
+        <div class="stat-label">
+
+            Allocation Records
+
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- CLASSROOM VIEWER                                      -->
+<!-- ====================================================== -->
+
+{% if classroom_views %}
+
+
+<div class="viewer">
+
+
+    <!-- ================================================== -->
+    <!-- VIEWER HEADER                                      -->
+    <!-- ================================================== -->
+
+    <div class="viewer-header">
+
+
+        <div>
+
+            <h2>
+
+                Classroom Seat Allocations
+
+            </h2>
+
+            <p class="viewer-subtitle">
+
+                Browse each classroom seating arrangement for every examination slot.
+
+            </p>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="print-button"
+            onclick="printAllClassrooms()"
+            id="print-all-btn"
+        >
+
+            🖨 Print All Seating Arrangements
+
+        </button>
+
+
+    </div>
+
+
+    <!-- ================================================== -->
+    <!-- CLASSROOM PAGES                                    -->
+    <!-- ================================================== -->
+
+    <div class="classroom-viewer">
+
+
+        {% for classroom in classroom_views %}
+
+
+        <div
+            class="classroom-page"
+            data-classroom-index="{{ forloop.counter0 }}"
+        >
+
+
+            <!-- ========================================== -->
+            <!-- CLASSROOM HEADER                            -->
+            <!-- ========================================== -->
+
+            <div class="room-header">
+
+
+                <div class="room-title">
+
+                    <h3>
+
+    Classroom {{ classroom.room.room_number }}
+
+</h3>
+
+<p>
+
+    Seating arrangement for
+
+    <strong>
+        {{ classroom.date }}
+    </strong>
+
+    —
+
+    <strong>
+        {{ classroom.session }}
+    </strong>
+
+</p>
+
+                </div>
+
+
+                <div class="room-info">
+
+                    <span class="room-chip">👥 {{ classroom.students }} students</span>
+                    <span class="room-chip">🪑 Capacity: {{ classroom.capacity }}</span>
+                    <span class="room-chip">📐 {{ classroom.benches }} benches</span>
+                    <span class="room-chip">3 seats / bench</span>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- FRONT                                       -->
+            <!-- ========================================== -->
+
+            <div class="front">
+
+                ↑ FRONT
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- CLASSROOM                                  -->
+            <!-- ========================================== -->
+
+            <div class="classroom">
+
+
+                <div class="classroom-rows">
+
+
+                    {% for row in classroom.rows %}
+
+
+                    <div class="classroom-row">
+
+
+                        {% for bench in row.benches %}
+
+
+                        <div class="bench">
+
+
+                            <div class="bench-label">
+
+                                Bench {{ bench.number }}
+
+                            </div>
+
+
+                            <div class="seats">
+
+
+                                {% for seat in bench.seats %}
+
+
+                                <div
+                                    class="
+                                        seat
+                                        {% if seat.number == 1 or seat.number == 3 %}
+                                            end-seat
+                                        {% else %}
+                                            middle-seat
+                                        {% endif %}
+                                    "
+                                >
+
+
+                                    <div class="seat-number">
+
+                                        Seat {{ seat.number }}
+
+                                    </div>
+
+
+                                    {% if seat.allocation %}
+
+
+                                    <div class="roll-number">
+
+                                        {{ seat.allocation.registration.student.roll_number }}
+
+                                    </div>
+
+
+                                    <div class="subject">
+
+                                        {{ seat.allocation.exam.subject.subject_code }}
+
+                                    </div>
+
+
+                                    {% else %}
+
+
+                                    <div class="empty-seat">
+
+                                        Empty
+
+                                    </div>
+
+
+                                    {% endif %}
+
+
+                                </div>
+
+
+                                {% endfor %}
+
+
+                            </div>
+
+
+                        </div>
+
+
+                        {% endfor %}
+
+
+                    </div>
+
+
+                    {% endfor %}
+
+
+                </div>
+
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- LEGEND                                     -->
+            <!-- ========================================== -->
+
+            <div class="legend">
+
+
+                <div class="legend-item">
+
+                    <div class="legend-box legend-end"></div>
+
+                    End position
+
+                </div>
+
+
+                <div class="legend-item">
+
+                    <div class="legend-box legend-middle"></div>
+
+                    Middle position
+
+                </div>
+
+
+            </div>
+
+
+            <!-- ========================================== -->
+            <!-- BACK                                       -->
+            <!-- ========================================== -->
+
+            <div class="back-marker">
+
+                ↓ BACK
+
+            </div>
+
+
+        </div>
+
+
+        {% endfor %}
+
+
+    </div>
+
+
+    <!-- ================================================== -->
+    <!-- NAVIGATION                                         -->
+    <!-- ================================================== -->
+
+    <div class="viewer-navigation">
+
+
+        <button
+            type="button"
+            id="previousClassroom"
+            class="nav-button"
+            onclick="changeClassroom(-1)"
+        >
+
+            ← Previous
+
+        </button>
+
+
+        <div class="room-counter">
+
+            Seating Arrangement
+
+            <span id="currentClassroom">
+                1
+            </span>
+
+            of
+
+            <span id="totalClassrooms">
+                {{ classroom_views|length }}
+            </span>
+
+        </div>
+
+
+        <button
+            type="button"
+            id="nextClassroom"
+            class="nav-button"
+            onclick="changeClassroom(1)"
+        >
+
+            Next →
+
+        </button>
+
+
+    </div>
+
+
+</div>
+
+
+{% else %}
+
+
+<!-- ====================================================== -->
+<!-- NO ALLOCATIONS                                        -->
+<!-- ====================================================== -->
+
+<div class="no-allocation">
+
+    <div class="no-allocation-icon">📋</div>
+    <h2>No allocations found</h2>
+    <p>There are currently no seat allocations to display.</p>
+
+</div>
+
+
+{% endif %}
+
+</div>
+
+
+<!-- ====================================================== -->
+<!-- JAVASCRIPT                                            -->
+<!-- ====================================================== -->
+
+<script>
+
+
+    let currentClassroom = 0;
+
+
+    /*
+     * Get every classroom page currently present
+     * in the viewer.
+     */
+
+    function getClassrooms() {
+
+        return document.querySelectorAll(
+            ".classroom-page"
+        );
+
+    }
+
+
+    /*
+     * Display one classroom.
+     */
+
+    function showClassroom(index) {
+
+        const classrooms = getClassrooms();
+
+
+        if (classrooms.length === 0) {
+
+            return;
+
+        }
+
+
+        /*
+         * Prevent going before the first classroom.
+         */
+
+        if (index < 0) {
+
+            index = 0;
+
+        }
+
+
+        /*
+         * Prevent going beyond the last classroom.
+         */
+
+        if (index >= classrooms.length) {
+
+            index = classrooms.length - 1;
+
+        }
+
+
+        /*
+         * Hide every classroom except
+         * the selected one.
+         */
+
+        classrooms.forEach(
+            function(classroom, classroomIndex) {
+
+                classroom.classList.toggle(
+                    "active",
+                    classroomIndex === index
+                );
+
+            }
+        );
+
+
+        currentClassroom = index;
+
+
+        /*
+         * Update the counter.
+         */
+
+        document.getElementById(
+            "currentClassroom"
+        ).innerText = index + 1;
+
+
+        /*
+         * Update Previous button.
+         */
+
+        const previousButton =
+            document.getElementById(
+                "previousClassroom"
+            );
+
+
+        previousButton.disabled =
+            index === 0;
+
+
+        /*
+         * Update Next button.
+         */
+
+        const nextButton =
+            document.getElementById(
+                "nextClassroom"
+            );
+
+
+        nextButton.disabled =
+            index === classrooms.length - 1;
+
+    }
+
+
+    /*
+     * Move to the next or previous classroom.
+     */
+
+    function changeClassroom(direction) {
+
+        showClassroom(
+            currentClassroom + direction
+        );
+
+    }
+
+
+    /*
+     * Print every classroom.
+     *
+     * The print CSS automatically changes all
+     * classroom-page elements to display:block.
+     */
+
+    function printAllClassrooms() {
+
+        window.print();
+
+    }
+
+
+    /*
+     * Show the first classroom when the page loads.
+     */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function() {
+
+            showClassroom(0);
+
+        }
+    );
+
+
+</script>
+
+
+{% endblock %}

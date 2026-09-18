@@ -1,0 +1,546 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}{% if session %}{{ session.name }} — Exams{% else %}Examinations — ExamSeat{% endif %}{% endblock %}
+
+{% block extra_head %}<meta name="description" content="View and manage examinations in this session.">{% endblock %}
+
+{% block extra_css %}
+<style>
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 60vw;
+            height: 60vw;
+            background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* ── NAV ─────────────────────────────────── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 28px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: var(--text-secondary); }
+
+        /* ── PAGE HEADER ─────────────────────────── */
+        .page-header {
+            margin-bottom: 32px;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header h1 {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+            margin-bottom: 6px;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        /* ── MESSAGE BANNER ──────────────────────── */
+        #message {
+            display: none;
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            animation: fadeUp 0.3s ease both;
+        }
+
+        #message.success {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            color: var(--success);
+        }
+
+        #message.error {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
+            color: var(--error);
+        }
+
+        /* ── EXAM CARDS ──────────────────────────── */
+        .exams-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .exam-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px 26px;
+            backdrop-filter: blur(12px);
+            transition: all 0.25s ease;
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .exam-card:nth-child(1) { animation-delay: 0.05s; }
+        .exam-card:nth-child(2) { animation-delay: 0.1s; }
+        .exam-card:nth-child(3) { animation-delay: 0.15s; }
+        .exam-card:nth-child(4) { animation-delay: 0.2s; }
+        .exam-card:nth-child(5) { animation-delay: 0.25s; }
+
+        .exam-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .exam-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .exam-subject {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+        }
+
+        .exam-meta {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .exam-meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .meta-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .meta-value {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* ── ACTION BUTTONS ──────────────────────── */
+        .exam-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn-generate {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 14px var(--accent-glow);
+        }
+
+        .btn-generate:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(99,102,241,0.4);
+        }
+
+        .btn-generate:disabled {
+            opacity: 0.6;
+            cursor: wait;
+            transform: none;
+        }
+
+        .btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 18px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-view:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        /* ── EMPTY STATE ─────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            animation: fadeUp 0.4s ease both;
+        }
+
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        .empty-state h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .empty-state p { color: var(--text-secondary); font-size: 14px; }
+
+        /* ── SPINNER ─────────────────────────────── */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @media (max-width: 600px) {
+            .exam-card-top { flex-direction: column; }
+            .exam-meta { flex-direction: column; }
+        }
+    </style>
+{% endblock %}
+{% block content %}
+
+<div class="page-wrapper">
+
+    {% if session %}
+        <a class="back-link" href="{% url 'exam_allocator:session_detail' session.session_id %}">
+            ← Back to Session
+        </a>
+    {% endif %}
+
+    <div class="page-header">
+        <h1>
+            {% if session %}{{ session.name }}{% else %}All Examinations{% endif %}
+        </h1>
+        <p>
+            {% if session %}Examinations in this allocation session{% else %}All examinations across sessions{% endif %}
+        </p>
+    </div>
+
+    <div id="message"></div>
+
+    {% if exams %}
+
+        <div class="exams-grid">
+            {% for exam in exams %}
+
+                <div class="exam-card" id="exam-card-{{ exam.exam_id }}">
+
+                    <div class="exam-card-top">
+                        <div class="exam-subject">
+                            {{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}
+                        </div>
+                    </div>
+
+                    <div class="exam-meta" style="margin-bottom:16px;">
+                        <div class="exam-meta-item">
+                            <span class="meta-label">Exam ID</span>
+                            <span class="meta-value">{{ exam.exam_id }}</span>
+                        </div>
+                        <div class="exam-meta-item">
+                            <span class="meta-label">Date</span>
+                            <span class="meta-value">{{ exam.exam_date }}</span>
+                        </div>
+                        <div class="exam-meta-item">
+                            <span class="meta-label">Session</span>
+                            <span class="meta-value">{{ exam.get_session_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="exam-actions">
+                        <button
+                            type="button"
+                            class="btn-generate"
+                            id="gen-btn-{{ exam.exam_id }}"
+                            data-exam-id="{{ exam.exam_id }}"
+                        >
+                            ⚡ Generate Allocation
+                        </button>
+
+                        <a
+                            class="btn-view"
+                            href="{% url 'exam_allocator:allocation_list' exam.exam_id %}"
+                            id="view-btn-{{ exam.exam_id }}"
+                        >
+                            View Allocation →
+                        </a>
+                    </div>
+
+                </div>
+
+            {% endfor %}
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h2>No Examinations</h2>
+            <p>No examinations are available in this session.</p>
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+<script>
+
+document.querySelectorAll('.btn-generate').forEach(function(button) {
+    button.addEventListener('click', function() {
+        generateAllocation(this.dataset.examId, this);
+    });
+});
+
+function generateAllocation(examId, button) {
+
+    const message = document.getElementById("message");
+
+    /*
+     * Disable the button while the allocation
+     * engine is running.
+     */
+
+    button.disabled = true;
+
+    button.innerHTML =
+        '<span class="spinner"></span> Generating...';
+
+
+    message.className =
+        "success";
+
+    message.innerHTML =
+        "⚡ Generating seat allocation for exam " + examId + "...";
+
+
+    fetch(
+        `/exam/${examId}/generate/`,
+        {
+            method: "POST",
+
+            headers: {
+                "X-CSRFToken":
+                    getCookie("csrftoken"),
+
+                "Content-Type":
+                    "application/json",
+            },
+        }
+    )
+
+    .then(response => {
+
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(
+                    data.error ||
+                    "Allocation generation failed."
+                );
+            });
+        }
+
+        return response.json();
+
+    })
+
+    .then(data => {
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                "Allocation generation failed."
+            );
+        }
+
+
+        message.className =
+            "success";
+
+        message.innerHTML =
+            "✓ <strong>Allocation generated successfully.</strong><br>" +
+            data.allocations +
+            " students have been allocated seats.";
+
+
+        /*
+         * Change the button so the user knows
+         * the allocation is complete.
+         */
+
+        button.disabled = false;
+
+        button.innerHTML =
+            "🔄 Regenerate Allocation";
+
+
+        /*
+         * Add a direct link to the allocation
+         * visualization.
+         */
+
+        const actions =
+            button.parentElement;
+
+        const existingLink =
+            actions.querySelector(
+                ".generated-allocation-link"
+            );
+
+        if (!existingLink) {
+
+            const link =
+                document.createElement("a");
+
+            link.className =
+                "btn-view generated-allocation-link";
+
+            link.href =
+                `/exam/${examId}/allocations/`;
+
+            link.innerHTML =
+                "Open Seat Allocation →";
+
+            actions.appendChild(link);
+        }
+
+    })
+
+    .catch(error => {
+
+        message.className =
+            "error";
+
+        message.innerHTML =
+            "⚠ Error: " + error.message;
+
+
+        button.disabled = false;
+
+        button.innerHTML =
+            "⚡ Generate Allocation";
+
+    });
+
+}
+
+
+function getCookie(name) {
+
+    let cookieValue = null;
+
+
+    if (
+        document.cookie &&
+        document.cookie !== ""
+    ) {
+
+        const cookies =
+            document.cookie.split(";");
+
+
+        for (
+            let cookie of cookies
+        ) {
+
+            cookie =
+                cookie.trim();
+
+
+            if (
+                cookie.startsWith(
+                    name + "="
+                )
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+                        cookie.substring(
+                            name.length + 1
+                        )
+                    );
+
+                break;
+            }
+
+        }
+
+    }
+
+
+    return cookieValue;
+}
+
+</script>
+
+{% endblock %}

@@ -1,10 +1,63 @@
 from django.db import models
 
 
+class AllocationSession(models.Model):
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PROCESSING = "PROCESSING", "Processing"
+        READY = "READY", "Ready"
+        ALLOCATING = "ALLOCATING", "Allocating"
+        COMPLETED = "COMPLETED", "Completed"
+        ARCHIVED = "ARCHIVED", "Archived"
+        FAILED = "FAILED", "Failed"
+
+    session_id = models.AutoField(primary_key=True)
+
+    name = models.CharField(
+        max_length=150,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def __str__(self):
+        return self.name
+
+
 class Department(models.Model):
     department_id = models.AutoField(primary_key=True)
-    department_code = models.CharField(max_length=20, unique=True)
+
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="departments",
+        null=True,
+        blank=True,
+    )
+
+    department_code = models.CharField(max_length=20)
+
     department_name = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "department_code"],
+                name="unique_department_per_session",
+            )
+        ]
 
     def __str__(self):
         return self.department_code
@@ -49,9 +102,25 @@ class Student(models.Model):
 class Subject(models.Model):
     subject_id = models.AutoField(primary_key=True)
 
-    subject_code = models.CharField(max_length=30, unique=True)
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="subjects",
+        null=True,
+        blank=True,
+    )
+
+    subject_code = models.CharField(max_length=30)
     subject_name = models.CharField(max_length=150)
     semester = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "subject_code"],
+                name="unique_subject_per_session",
+            )
+        ]
 
     def __str__(self):
         return f"{self.subject_code} - {self.subject_name}"
@@ -78,11 +147,27 @@ class Exam(models.Model):
 class Room(models.Model):
     room_id = models.AutoField(primary_key=True)
 
-    room_number = models.CharField(max_length=50, unique=True)
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="rooms",
+        null=True,
+        blank=True,
+    )
+
+    room_number = models.CharField(max_length=50)
 
     capacity = models.PositiveIntegerField()
     benches = models.PositiveIntegerField()
     building = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "room_number"],
+                name="unique_room_per_session",
+            )
+        ]
 
     def __str__(self):
         return self.room_number
@@ -141,8 +226,15 @@ class Allocation(models.Model):
         )
 
 
-
 class UploadedFile(models.Model):
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="uploaded_files",
+        null=True,
+        blank=True,
+    )
+
     class FileKind(models.TextChoices):
         STUDENT_LIST = "STUDENT", "Student List"
         CLASSROOM_LIST = "CLASSROOM", "Classroom List"
@@ -164,12 +256,29 @@ class UploadedFile(models.Model):
     original_filename = models.CharField(max_length=255)
     file_kind = models.CharField(max_length=20, choices=FileKind.choices)
     source_format = models.CharField(max_length=10, choices=SourceFormat.choices)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.UPLOADED)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.UPLOADED
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     error_log = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.original_filename} ({self.get_status_display()})"
+
+
 # Create your models here.
 
+
+class ExamTarget(models.Model):
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE,
+        related_name="targets",
+    )
+
+    target_type = models.CharField(max_length=30)
+
+    branch_code = models.CharField(max_length=20, blank=True)
+
+    slot = models.CharField(max_length=20, blank=True)
