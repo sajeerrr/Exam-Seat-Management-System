@@ -304,7 +304,7 @@ def _parse_date(value) -> date | None:
     # 12-03-2026
 
     match = re.search(
-        r"(\d{1,2})[-/](\d{1,2})[-/](\d{4})",
+        r"(\d{1,2})[-/]+(\d{1,2})[-/]+(\d{4})",
         text,
     )
 

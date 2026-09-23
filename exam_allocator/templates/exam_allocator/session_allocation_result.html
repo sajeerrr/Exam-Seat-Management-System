@@ -787,7 +787,77 @@
         /* PRINT                                               */
         /* ================================================== */
 
+
+        /* ================================================== */
+        /* SLOT FILTERS                                        */
+        /* ================================================== */
+
+        .slot-filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+            animation: fadeUp 0.4s ease 0.14s both;
+        }
+
+        .slot-filter-btn {
+            background: var(--bg-card);
+            border: 2px solid transparent;
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slot-filter-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-hover);
+        }
+
+        .slot-filter-btn.active {
+            border-color: var(--accent);
+            background: rgba(99,102,241,0.05);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .slot-filter-btn .slot-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .slot-filter-btn .slot-count {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Update print CSS */
         @media print {
+            .top, .success, .stats, .viewer-header, .viewer-navigation, .slot-filters {
+                display: none !important;
+            }
+            .viewer { border: none !important; margin: 0 !important; background: none !important; }
+            .classroom-viewer { padding: 0 !important; }
+            
+            .classroom-page {
+                display: none !important;
+            }
+            /* Only print the active pages within the filtered subset */
+            .classroom-page.print-active {
+                display: block !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
+            body { padding: 0 !important; background: white !important; }
+        }
+
+        @media print {
+
 
             /*
              * Each classroom is treated as one physical page.
@@ -1214,10 +1284,20 @@
 <!-- CLASSROOM VIEWER                                      -->
 <!-- ====================================================== -->
 
+
 {% if classroom_views %}
 
+<div class="slot-filters">
+    {% for slot in slot_views %}
+    <button class="slot-filter-btn" data-slot-id="{{ slot.date|date:'Y-m-d' }}-{{ slot.session }}">
+        <div class="slot-title">{{ slot.date|date:'d M Y' }} - {{ slot.session }}</div>
+        <div class="slot-count">{{ slot.classrooms_used }} rooms</div>
+    </button>
+    {% endfor %}
+</div>
 
-<div class="viewer">
+<div class="viewer" id="classroom-viewer-container" style="display: none;">
+
 
 
     <!-- ================================================== -->
@@ -1272,6 +1352,7 @@
         <div
             class="classroom-page"
             data-classroom-index="{{ forloop.counter0 }}"
+            data-slot-id="{{ classroom.date|date:'Y-m-d' }}-{{ classroom.session }}"
         >
 
 
@@ -1572,163 +1653,81 @@
 <!-- ====================================================== -->
 
 <script>
-
-
     let currentClassroom = 0;
+    let currentSlotId = null;
 
-
-    /*
-     * Get every classroom page currently present
-     * in the viewer.
-     */
-
-    function getClassrooms() {
-
-        return document.querySelectorAll(
-            ".classroom-page"
+    function getFilteredClassrooms() {
+        if (!currentSlotId) return [];
+        return Array.from(document.querySelectorAll(".classroom-page")).filter(
+            el => el.getAttribute("data-slot-id") === currentSlotId
         );
-
     }
 
-
-    /*
-     * Display one classroom.
-     */
-
     function showClassroom(index) {
+        const classrooms = getFilteredClassrooms();
+        if (classrooms.length === 0) return;
 
-        const classrooms = getClassrooms();
+        if (index < 0) index = 0;
+        if (index >= classrooms.length) index = classrooms.length - 1;
 
+        // Hide all first
+        document.querySelectorAll(".classroom-page").forEach(el => {
+            el.classList.remove("active");
+            el.classList.remove("print-active");
+        });
 
-        if (classrooms.length === 0) {
-
-            return;
-
-        }
-
-
-        /*
-         * Prevent going before the first classroom.
-         */
-
-        if (index < 0) {
-
-            index = 0;
-
-        }
-
-
-        /*
-         * Prevent going beyond the last classroom.
-         */
-
-        if (index >= classrooms.length) {
-
-            index = classrooms.length - 1;
-
-        }
-
-
-        /*
-         * Hide every classroom except
-         * the selected one.
-         */
-
-        classrooms.forEach(
-            function(classroom, classroomIndex) {
-
-                classroom.classList.toggle(
-                    "active",
-                    classroomIndex === index
-                );
-
-            }
-        );
-
+        // Show selected
+        classrooms[index].classList.add("active");
+        
+        // Mark all filtered classrooms as print-active
+        classrooms.forEach(el => el.classList.add("print-active"));
 
         currentClassroom = index;
 
+        document.getElementById("currentClassroom").innerText = index + 1;
+        document.getElementById("totalClassrooms").innerText = classrooms.length;
 
-        /*
-         * Update the counter.
-         */
-
-        document.getElementById(
-            "currentClassroom"
-        ).innerText = index + 1;
-
-
-        /*
-         * Update Previous button.
-         */
-
-        const previousButton =
-            document.getElementById(
-                "previousClassroom"
-            );
-
-
-        previousButton.disabled =
-            index === 0;
-
-
-        /*
-         * Update Next button.
-         */
-
-        const nextButton =
-            document.getElementById(
-                "nextClassroom"
-            );
-
-
-        nextButton.disabled =
-            index === classrooms.length - 1;
-
+        document.getElementById("previousClassroom").disabled = (index === 0);
+        document.getElementById("nextClassroom").disabled = (index === classrooms.length - 1);
     }
-
-
-    /*
-     * Move to the next or previous classroom.
-     */
 
     function changeClassroom(direction) {
-
-        showClassroom(
-            currentClassroom + direction
-        );
-
+        showClassroom(currentClassroom + direction);
     }
-
-
-    /*
-     * Print every classroom.
-     *
-     * The print CSS automatically changes all
-     * classroom-page elements to display:block.
-     */
 
     function printAllClassrooms() {
-
         window.print();
-
+    }
+    
+    function selectSlot(slotId) {
+        currentSlotId = slotId;
+        
+        // Update buttons
+        document.querySelectorAll(".slot-filter-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.getAttribute("data-slot-id") === slotId);
+        });
+        
+        // Show viewer
+        document.getElementById("classroom-viewer-container").style.display = "block";
+        
+        // Show first classroom of this slot
+        showClassroom(0);
     }
 
-
-    /*
-     * Show the first classroom when the page loads.
-     */
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        function() {
-
-            showClassroom(0);
-
+    document.addEventListener("DOMContentLoaded", function() {
+        // Add click listeners to filter buttons
+        document.querySelectorAll(".slot-filter-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                selectSlot(btn.getAttribute("data-slot-id"));
+            });
+        });
+        
+        // Auto-select the first slot if available
+        const firstBtn = document.querySelector(".slot-filter-btn");
+        if (firstBtn) {
+            selectSlot(firstBtn.getAttribute("data-slot-id"));
         }
-    );
-
-
+    });
 </script>
 
 

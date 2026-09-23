@@ -95,6 +95,8 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                             sess = "FN"
                             if "AN" in cell_clean.upper():
                                 sess = "AN"
+                            elif c + 1 < len(row) and row[c + 1] and "AN" in row[c + 1].upper():
+                                sess = "AN"
                                 
                             time_str = re.sub(r"(?i)time\s*:", "", cell_clean)
                             time_str = re.sub(r"(?i)\b(FN|AN)\b", "", time_str)
