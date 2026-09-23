@@ -32,8 +32,10 @@ from .services.session_allocation_service import (
 )
 
 from .parsers.student_parser import parse_student_excel
+from .parsers.student_pdf_parser import parse_student_pdf
 from .parsers.classroom_parser import parse_classroom_excel
 from .parsers.timetable_parser import parse_timetable_excel
+from .parsers.timetable_pdf_parser import parse_timetable_pdf
 
 from .services.import_service import (
     import_students,
@@ -679,10 +681,10 @@ def upload_file(request, session_id):
             status=405,
         )
 
-    uploaded = request.FILES.get("file")
+    uploaded_files = request.FILES.getlist("file")
     file_kind = request.POST.get("file_kind", "").strip().upper()
 
-    if not uploaded:
+    if not uploaded_files:
         messages.error(request, "No file was uploaded.")
 
         return redirect(
@@ -704,153 +706,169 @@ def upload_file(request, session_id):
             session_id=session.session_id,
         )
 
-    filename = uploaded.name.lower()
-
-    if filename.endswith(".xlsx"):
-        source_format = UploadedFile.SourceFormat.XLSX
-
-    elif filename.endswith(".pdf"):
-        source_format = UploadedFile.SourceFormat.PDF
-
-    elif filename.endswith((".png", ".jpg", ".jpeg")):
-        source_format = UploadedFile.SourceFormat.IMAGE
-
-    else:
-        messages.error(
-            request,
-            "Unsupported file format.",
-        )
-
-        return redirect(
-            "exam_allocator:session_detail",
-            session_id=session.session_id,
-        )
-
-    # ---------------------------------------------------------
-    # Create UploadedFile record
-    # ---------------------------------------------------------
-
-    record = UploadedFile.objects.create(
-        session=session,
-        file=uploaded,
-        original_filename=uploaded.name,
-        file_kind=file_kind,
-        source_format=source_format,
-        status=UploadedFile.Status.PROCESSING,
-    )
+    # Accumulators for aggregate statistics
+    total_stats = {
+        "students_created": 0,
+        "classes_created": 0,
+        "departments_created": 0,
+        "rooms_created": 0,
+        "exams_created": 0,
+        "subjects_created": 0,
+        "targets_created": 0,
+    }
+    
+    error_occurred = False
 
     try:
+        for uploaded in uploaded_files:
+            filename = uploaded.name.lower()
 
-        # -----------------------------------------------------
-        # Student List
-        # -----------------------------------------------------
+            if filename.endswith(".xlsx"):
+                source_format = UploadedFile.SourceFormat.XLSX
 
-        if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+            elif filename.endswith(".pdf"):
+                source_format = UploadedFile.SourceFormat.PDF
 
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Student List currently supports Excel (.xlsx) files only."
+            elif filename.endswith((".png", ".jpg", ".jpeg")):
+                source_format = UploadedFile.SourceFormat.IMAGE
+
+            else:
+                messages.error(
+                    request,
+                    f"Unsupported file format for {uploaded.name}.",
+                )
+                continue
+
+            # ---------------------------------------------------------
+            # Create UploadedFile record
+            # ---------------------------------------------------------
+
+            record = UploadedFile.objects.create(
+                session=session,
+                file=uploaded,
+                original_filename=uploaded.name,
+                file_kind=file_kind,
+                source_format=source_format,
+                status=UploadedFile.Status.PROCESSING,
+            )
+
+            try:
+                # -----------------------------------------------------
+                # Student List
+                # -----------------------------------------------------
+                if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+                    if source_format == UploadedFile.SourceFormat.XLSX:
+                        result = parse_student_excel(record.file.path)
+                    elif source_format == UploadedFile.SourceFormat.PDF:
+                        result = parse_student_pdf(record.file.path)
+                    else:
+                        raise ValueError(
+                            "Student List currently supports Excel (.xlsx) and PDF files only."
+                        )
+
+                    stats = import_students(
+                        result,
+                        session,
+                    )
+                    total_stats["students_created"] += stats.get("students_created", 0)
+                    total_stats["classes_created"] += stats.get("classes_created", 0)
+                    total_stats["departments_created"] += stats.get("departments_created", 0)
+
+                # -----------------------------------------------------
+                # Classroom List
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
+                    if source_format != UploadedFile.SourceFormat.XLSX:
+                        raise ValueError(
+                            "Classroom List currently supports Excel (.xlsx) files only."
+                        )
+
+                    result = parse_classroom_excel(record.file.path)
+                    stats = import_classrooms(
+                        result,
+                        session,
+                    )
+                    total_stats["rooms_created"] += stats.get("rooms_created", 0)
+
+                # -----------------------------------------------------
+                # Timetable
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.TIMETABLE:
+                    if source_format == UploadedFile.SourceFormat.XLSX:
+                        result = parse_timetable_excel(record.file.path)
+                    elif source_format == UploadedFile.SourceFormat.PDF:
+                        result = parse_timetable_pdf(record.file.path)
+                    else:
+                        raise ValueError(
+                            "Exam Timetable currently supports Excel (.xlsx) and PDF files only."
+                        )
+
+                    stats = import_timetable(
+                        result,
+                        session,
+                    )
+                    total_stats["exams_created"] += stats.get("exams_created", 0)
+                    total_stats["subjects_created"] += stats.get("subjects_created", 0)
+                    total_stats["targets_created"] += stats.get("targets_created", 0)
+
+                # -----------------------------------------------------
+                # Mark upload as successfully processed
+                # -----------------------------------------------------
+                record.status = UploadedFile.Status.VALIDATED
+                record.processed_at = timezone.now()
+                record.error_log = ""
+                record.save(
+                    update_fields=[
+                        "status",
+                        "processed_at",
+                        "error_log",
+                    ]
                 )
 
-            result = parse_student_excel(record.file.path)
-
-            stats = import_students(
-                result,
-                session,
-            )
-
-            message = (
-                f"Student list imported successfully: "
-                f"{stats['students_created']} students, "
-                f"{stats['classes_created']} classes, "
-                f"{stats['departments_created']} departments created."
-            )
-
-        # -----------------------------------------------------
-        # Classroom List
-        # -----------------------------------------------------
-
-        elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
-
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Classroom List currently supports Excel (.xlsx) files only."
+            except Exception as exc:
+                record.status = UploadedFile.Status.FAILED
+                record.processed_at = timezone.now()
+                record.error_log = str(exc)
+                record.save(
+                    update_fields=[
+                        "status",
+                        "processed_at",
+                        "error_log",
+                    ]
                 )
-
-            result = parse_classroom_excel(record.file.path)
-
-            stats = import_classrooms(
-                result,
-                session,
-            )
-
-            message = (
-                f"Classroom list imported successfully: "
-                f"{stats['rooms_created']} rooms created."
-            )
-
-        # -----------------------------------------------------
-        # Timetable
-        # -----------------------------------------------------
-
-        elif file_kind == UploadedFile.FileKind.TIMETABLE:
-
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Exam Timetable currently supports Excel (.xlsx) files only."
+                messages.error(
+                    request,
+                    f"Import failed for {uploaded.name}: {exc}",
                 )
+                error_occurred = True
 
-            result = parse_timetable_excel(record.file.path)
-
-            stats = import_timetable(
-                result,
-                session,
-            )
-
-            message = (
-                f"Timetable imported successfully: "
-                f"{stats['subjects_created']} subjects, "
-                f"{stats['exams_created']} exams, "
-                f"{stats['targets_created']} targets created."
-            )
-
-        # -----------------------------------------------------
-        # Mark upload as successfully processed
-        # -----------------------------------------------------
-
-        record.status = UploadedFile.Status.VALIDATED
-        record.processed_at = timezone.now()
-        record.error_log = ""
-        record.save(
-            update_fields=[
-                "status",
-                "processed_at",
-                "error_log",
-            ]
-        )
-
-        messages.success(
-            request,
-            message,
-        )
+        if not error_occurred or len(uploaded_files) > 1:
+            if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+                message = (
+                    f"Student list imported: "
+                    f"{total_stats['students_created']} students, "
+                    f"{total_stats['classes_created']} classes, "
+                    f"{total_stats['departments_created']} departments created."
+                )
+            elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
+                message = (
+                    f"Classroom list imported: "
+                    f"{total_stats['rooms_created']} rooms created."
+                )
+            elif file_kind == UploadedFile.FileKind.TIMETABLE:
+                message = (
+                    f"Timetable imported: "
+                    f"{total_stats['subjects_created']} subjects, "
+                    f"{total_stats['exams_created']} exams, "
+                    f"{total_stats['targets_created']} targets created."
+                )
+            if not error_occurred or total_stats["students_created"] > 0 or total_stats["rooms_created"] > 0 or total_stats["exams_created"] > 0:
+                messages.success(request, message)
 
     except Exception as exc:
-
-        record.status = UploadedFile.Status.FAILED
-        record.processed_at = timezone.now()
-        record.error_log = str(exc)
-
-        record.save(
-            update_fields=[
-                "status",
-                "processed_at",
-                "error_log",
-            ]
-        )
-
         messages.error(
             request,
-            f"Import failed: {exc}",
+            f"An unexpected error occurred during upload: {exc}",
         )
 
     return redirect(
