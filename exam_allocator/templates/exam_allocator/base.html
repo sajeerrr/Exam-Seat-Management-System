@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,43 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* ══ DARK THEME (default) ═══════════════════════════════════ */
-        :root, [data-theme="dark"] {
-            --bg-primary:     #0a0f1e;
-            --bg-secondary:   #0f1629;
-            --bg-card:        rgba(255,255,255,0.04);
-            --bg-card-hover:  rgba(255,255,255,0.07);
-            --border:         rgba(255,255,255,0.08);
-            --border-hover:   rgba(99,102,241,0.5);
-            --accent:         #6366f1;
-            --accent-light:   #818cf8;
-            --accent-glow:    rgba(99,102,241,0.2);
-            --text-primary:   #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-muted:     #64748b;
-            --success:        #10b981;
-            --success-bg:     rgba(16,185,129,0.1);
-            --success-border: rgba(16,185,129,0.25);
-            --warning:        #f59e0b;
-            --warning-bg:     rgba(245,158,11,0.1);
-            --error:          #f43f5e;
-            --error-bg:       rgba(244,63,94,0.1);
-            --error-border:   rgba(244,63,94,0.25);
-            --end-seat:       rgba(16,185,129,0.15);
-            --mid-seat:       rgba(255,255,255,0.02);
-            --shadow-card:    rgba(0,0,0,0.3);
-            --blob-a:         rgba(99,102,241,0.12);
-            --blob-b:         rgba(16,185,129,0.08);
-            --bg-sunken:      rgba(0,0,0,0.2);
-            --bg-nav-bar:     rgba(0,0,0,0.15);
-            --bg-interactive: rgba(255,255,255,0.06);
-            --bg-interactive-hover: rgba(99,102,241,0.15);
-            --radius:         14px;
-            --radius-sm:      8px;
-        }
-
-        /* ══ LIGHT THEME ════════════════════════════════════════════ */
-        [data-theme="light"] {
+        :root {
             --bg-primary:     #f0f4ff;
             --bg-secondary:   #e8eeff;
             --bg-card:        rgba(255,255,255,0.75);
@@ -84,82 +48,16 @@
 
         body { font-family: 'Inter', sans-serif; }
 
-        /* ══ SMOOTH THEME TRANSITIONS ════════════════════════════════ */
-        *, *::before, *::after {
-            transition: background-color 0.3s ease, border-color 0.3s ease,
-                        color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        /* ══ FLOATING THEME TOGGLE (FAB) ════════════════════════════ */
-        .theme-fab {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            font-size: 20px;
-            line-height: 1;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 4px 20px var(--shadow-card), 0 0 0 1px var(--border);
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .theme-fab:hover {
-            transform: scale(1.12) rotate(18deg);
-            border-color: var(--border-hover);
-            box-shadow: 0 8px 32px var(--shadow-card), 0 0 0 1px var(--border-hover);
-        }
-
-        .theme-fab:active {
-            transform: scale(0.92);
-        }
     </style>
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-<!-- ── FLOATING THEME TOGGLE ──────────────────────────────── -->
-<button class="theme-fab" id="theme-fab" aria-label="Toggle theme" title="Switch between light and dark theme">🌙</button>
 
 {% block content %}{% endblock %}
 
-<script>
-    (function () {
-        const html    = document.documentElement;
-        const fab     = document.getElementById('theme-fab');
-        const STORAGE = 'esm-theme';
 
-        /* Restore saved theme before first paint */
-        const saved = localStorage.getItem(STORAGE) || 'dark';
-        html.setAttribute('data-theme', saved);
-
-        function setIcon(theme) {
-            const icon = theme === 'dark' ? '🌙' : '☀️';
-            if (fab) fab.textContent = icon;
-        }
-
-        setIcon(saved);
-
-        function toggle() {
-            const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            setIcon(next);
-            localStorage.setItem(STORAGE, next);
-        }
-
-        if (fab) fab.addEventListener('click', toggle);
-    })();
-</script>
 
 </body>
 </html>
