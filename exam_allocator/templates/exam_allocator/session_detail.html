@@ -560,7 +560,7 @@
     <div class="section">
         <div class="section-header">
             <span class="section-icon">📝</span>
-            <span class="section-title">Student to Subject Mapping</span>
+            <span class="section-title">Review of engine data</span>
         </div>
 
         {% if exams_count and students_count %}
@@ -577,7 +577,7 @@
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn-primary" id="generate-registrations-btn">
-                        ⚡ Generate Exam Allocation
+                        Review
                     </button>
                 </form>
             </div>
@@ -621,11 +621,7 @@
                 >
                     {% csrf_token %}
                     <button type="submit" class="btn-primary" id="generate-allocation-btn">
-                        {% if allocations_count %}
-                            🔄 Regenerate All Allocations
-                        {% else %}
-                            ⚡ Generate All Allocations
-                        {% endif %}
+                        ⚡ Generate Seat Allocations
                     </button>
                 </form>
 
