@@ -44,3 +44,15 @@ class Group:
     @property
     def priority(self):
         return self.remaining_count
+
+    def snapshot(self) -> int:
+        """Return current allocated_count for later restore."""
+        return self.allocated_count
+
+    def restore(self, allocated_count: int):
+        """Restore allocated_count to a previous snapshot value."""
+        self.allocated_count = allocated_count
+
+    def deallocate(self, count: int):
+        """Reverse allocation of `count` students (for LNS destroy)."""
+        self.allocated_count = max(0, self.allocated_count - count)

@@ -146,6 +146,23 @@ class RoomAllocation:
         allocated_students = group.allocate_students(take)
         stream.students.extend(allocated_students)
 
+    def snapshot(self) -> dict:
+        """Return a snapshot of all stream student lists."""
+        return {
+            name: list(stream.students)
+            for name, stream in self.streams.items()
+        }
+
+    def restore(self, snapshot: dict):
+        """Restore streams from a snapshot."""
+        for name, students in snapshot.items():
+            self.streams[name].students = list(students)
+
+    def clear_all_streams(self):
+        """Remove all students from all streams (for LNS destroy)."""
+        for stream in self.streams.values():
+            stream.students.clear()
+
 
 def subject_conflict_key(
     subject_code: str,
