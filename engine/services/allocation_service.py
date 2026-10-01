@@ -9,6 +9,11 @@ class AllocationService:
         self.seat_generator = SeatGenerator()
 
     def execute(self, context):
+        from engine.adaptive.invariant import AbcInvariant
+        if not getattr(context, "abc_invariant", None):
+            capacity = context.room_allocations[0].classroom.column_capacity if context.room_allocations else 15
+            context.abc_invariant = AbcInvariant(context, stream_capacity=capacity)
+
         # 1. Hyper-heuristic allocation pass
         context = self.allocator.execute(context)
         if context is None:

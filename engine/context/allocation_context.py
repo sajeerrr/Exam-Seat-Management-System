@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 from engine.models.stream_state import StreamState
 from engine.algorithms.conflict_graph import ConflictGraph
 
@@ -16,6 +17,7 @@ class AllocationContext:
 
     streams: list[StreamState] = field(default_factory=list)
 
+    abc_invariant: Optional[object] = field(default=None)
     STREAMS = ["A", "B", "C"]
 
     def initialize_streams(self):
@@ -24,14 +26,13 @@ class AllocationContext:
         for room in self.room_allocations:
             capacity = room.classroom.column_capacity
 
-            for stream in self.STREAMS:
-                self.streams.append(
-                    StreamState(
-                        room=room,
-                        stream=stream,
-                        capacity=capacity,
-                    )
+            for stream_name in self.STREAMS:
+                state = StreamState(
+                    stream_name=stream_name,
+                    capacity=capacity,
                 )
+                state.room = room
+                self.streams.append(state)
     
     @property
     def stream_capacity(self):
