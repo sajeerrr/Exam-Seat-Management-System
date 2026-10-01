@@ -110,8 +110,9 @@ class StudentLoader:
                     target_depts = ["B.ARCH"]
                 elif branch_raw == "ALL BRANCHES":
                     target_depts = all_btech_depts
-                elif "/" in branch_raw:
-                    target_depts = [b.strip() for b in branch_raw.split("/")]
+                elif "/" in branch_raw or "," in branch_raw:
+                    import re
+                    target_depts = [b.strip() for b in re.split(r'[/,]+', branch_raw) if b.strip()]
                 else:
                     target_depts = [branch_raw]
 
@@ -134,10 +135,11 @@ class StudentLoader:
     @staticmethod
     def _get_department(sheet_name: str) -> str:
         raw = sheet_name.split()[0].upper().replace(".", "")
-        if raw == "BARCH":
-            return "B.ARCH"
-        if raw == "EEE":
-            return "EE"
+        if raw == "BARCH": return "B.ARCH"
+        if raw in ["EEE", "EE"]: return "EE"
+        if raw in ["ECE", "EC"]: return "EC"
+        if raw in ["CSE", "CS"]: return "CS"
+        if raw in ["CHE", "CH"]: return "CH"
         return raw
 
     @staticmethod
