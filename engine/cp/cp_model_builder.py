@@ -58,8 +58,7 @@ class CPModelBuilder:
         for r_idx in range(num_rooms):
             for g1_idx in range(num_groups):
                 for g2_idx in range(num_groups):
-                    if g1_idx == g2_idx:
-                        continue
+                    # We no longer skip g1 == g2, because a single group cannot span adjacent streams.
                     key1 = subject_conflict_key(groups[g1_idx].subject_code, groups[g1_idx].department, groups[g1_idx].subject_name)
                     key2 = subject_conflict_key(groups[g2_idx].subject_code, groups[g2_idx].department, groups[g2_idx].subject_name)
 

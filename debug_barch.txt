@@ -1,0 +1,21 @@
+('B.ARCH', 4): 6 exams
+  29-01-2026 23ARB405 Climate and Built form - II
+  29-01-2026 23ARB404 Building Materials and Construction Techniques IV (*Drawing)
+  30-01-2026 23ACC406 Theory of Structures - IV
+  02-02-2026 23AEC407 Building Services - II
+  03-02-2026 23ARS402 History of Architecture and Culture - III
+  03-02-2026 23ARS403 Landscape Design and Site Planning
+('B.ARCH', 6): 6 exams
+  29-01-2026 22ARS601 History of Architecture and Culture - V
+  30-01-2026 22ARS602 Specifications, Cost Estimation and Budgeting
+  30-01-2026 22ARC602 Building Services - IV
+  02-02-2026 22ARC601 Theory of Structures - VI
+  03-02-2026  Elective-II
+  03-02-2026 22ARB601 Building Materials and Construction Techniques VI (*Drawing)
+('B.ARCH', 8): 6 exams
+  29-01-2026 22ARS801 Human Settlement Planning
+  29-01-2026 22ARP801 Research Methodology
+  30-01-2026 22ARS802 Building Economics and Sociology
+  02-02-2026 22ARS803 Environmental Science for Architecture
+  02-02-2026 22ARS804 Interior Design (*Drawing)
+  03-02-2026  Elective-IV

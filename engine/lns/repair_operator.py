@@ -35,8 +35,7 @@ class RepairOperator:
                     for s_idx, stream_name in enumerate(streams_map):
                         val = solver.Value(assign[(g_idx, local_r_idx, s_idx)])
                         if val > 0:
-                            allocated_students = group.allocate_students(val)
-                            room.assign_to_stream(stream_name, group, len(allocated_students))
+                            room.assign_to_stream(stream_name, group, val)
             return True
 
         return False

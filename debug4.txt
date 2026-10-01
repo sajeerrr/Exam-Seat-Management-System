@@ -1,0 +1,9 @@
+22ARB601: 73 students - Building Materials and Construction Techniques VI (*Drawing)
+23ARS403: 80 students - Landscape Design and Site Planning
+22CET801: 146 students - Quantity Surveying and Valuation
+22CHT801: 69 students - Chemical Process Equipment Design II
+22CST801: 147 students - Distributed Computing
+22ECT801: 146 students - Wireless Communication
+22EET801: 141 students - Electrical System Design and Estimation
+22ERT801: 62 students - Power System Engineering
+22MET801: 215 students - Mechatronics

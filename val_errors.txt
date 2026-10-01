@@ -1,0 +1,7 @@
+- Room 101: Adjacent streams A and B share subject {'23ARB404'}
+  - Room 101: Adjacent streams B and C share subject {'23ARB404'}
+  - Room 105: Adjacent streams A and B share subject {'23ARB404'}
+  - Room 105: Adjacent streams B and C share subject {'23ARB404'}
+
+-----------------------------------------------------------------
+Do you want to generate output in Excel? (yes/no):

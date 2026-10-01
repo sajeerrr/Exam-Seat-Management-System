@@ -43,6 +43,10 @@ class StudentLoader:
                     code = str(exam["subject_code"] or "").strip()
                     subj_name = str(exam["subject_name"] or "").strip()
 
+                    # Skip elective courses to prevent adjacent column clash issues
+                    if "elective" in code.lower() or "elective" in subj_name.lower():
+                        continue
+
                     students.append(
                         Student(
                             register_no=reg_no,
