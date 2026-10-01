@@ -1,0 +1,185 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projects\S3 project\Seat Manager
+plugins: anyio-4.13.0
+collecting ... collected 12 items
+
+tests/test_abc_invariant.py::TestAbcInvariant::test_aba_steal_rejected FAILED [  8%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_genuine_abc_accepted PASSED [ 16%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute FAILED [ 25%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_max_abc_rooms_cases PASSED [ 33%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_reserved_tail_enforcement PASSED [ 41%]
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_aba_to_abc_conversion PASSED [ 50%]
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_student_conservation PASSED [ 58%]
+tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_allocation_with_global_planner_integration FAILED [ 66%]
+tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_planner_abc_target_and_bottlenecks PASSED [ 75%]
+tests/test_global_planner_scenarios.py::TestGlobalPatternPlannerScenarios::test_bottleneck_reservation_and_abc_targets FAILED [ 83%]
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end PASSED [ 91%]
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion PASSED [100%]
+
+================================== FAILURES ===================================
+__________________ TestAbcInvariant.test_aba_steal_rejected ___________________
+
+self = <test_abc_invariant.TestAbcInvariant testMethod=test_aba_steal_rejected>
+
+    def test_aba_steal_rejected(self):
+        c1 = Classroom(room_no="101", rows=5, benches_per_row=3, seats_per_bench=3)
+        room101 = RoomAllocation(c1)
+    
+        students_me = [Student(register_no=f"ME_{i}", name=f"ME_{i}", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="AN") for i in range(45)]
+        students_cs = [Student(register_no=f"CS_{i}", name=f"CS_{i}", department="CS", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="AN") for i in range(45)]
+        students_ec = [Student(register_no=f"EC_{i}", name=f"EC_{i}", department="EC", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="AN") for i in range(45)]
+    
+        g1 = Group(group_id="G1", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="AN", students=students_me, allocated_count=0)
+        g2 = Group(group_id="G2", department="CS", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="AN", students=students_cs, allocated_count=0)
+        g3 = Group(group_id="G3", department="EC", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="AN", students=students_ec, allocated_count=0)
+    
+        groups = [g1, g2, g3]
+        context = AllocationContext(groups=groups, room_allocations=[room101], remaining_pool=RemainingPool(groups))
+        invariant = AbcInvariant(context, stream_capacity=15)
+        context.abc_invariant = invariant
+    
+        self.assertEqual(invariant.target_abc, 3)
+    
+        # ABA candidate: A=ME(15), B=CS(15), C=ME(15)
+        cand = Candidate(
+            room_index=0,
+            assignments=[
+                CandidateAssignment("A", "G1", 15),
+                CandidateAssignment("B", "G2", 15),
+                CandidateAssignment("C", "G1", 15),
+            ],
+            heuristic_name="test",
+            decision_level=1
+        )
+    
+>       self.assertFalse(invariant.allows(context, cand))
+E       AssertionError: True is not false
+
+tests\test_abc_invariant.py:58: AssertionError
+_____________ TestAbcInvariant.test_invariant_holds_after_execute _____________
+
+self = <test_abc_invariant.TestAbcInvariant testMethod=test_invariant_holds_after_execute>
+
+    def test_invariant_holds_after_execute(self):
+        c1 = Classroom(room_no="101", rows=5, benches_per_row=3, seats_per_bench=3)
+        c2 = Classroom(room_no="105", rows=5, benches_per_row=3, seats_per_bench=3)
+        rooms = [RoomAllocation(c1), RoomAllocation(c2)]
+    
+        students_me = [Student(register_no=f"ME_{i}", name=f"ME_{i}", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="AN") for i in range(30)]
+        students_cs = [Student(register_no=f"CS_{i}", name=f"CS_{i}", department="CS", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="AN") for i in range(30)]
+        students_ec = [Student(register_no=f"EC_{i}", name=f"EC_{i}", department="EC", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="AN") for i in range(30)]
+    
+        groups = [
+            Group(group_id="G1", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="AN", students=students_me, allocated_count=0),
+            Group(group_id="G2", department="CS", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="AN", students=students_cs, allocated_count=0),
+            Group(group_id="G3", department="EC", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="AN", students=students_ec, allocated_count=0),
+        ]
+        context = AllocationContext(groups=groups, room_allocations=rooms, remaining_pool=RemainingPool(groups))
+        ctx, seat_plan = AllocationService().execute(context)
+>       self.assertTrue(ctx.abc_invariant.holds(ctx))
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'holds'
+
+tests\test_abc_invariant.py:135: AttributeError
+__ TestGlobalPatternPlanner.test_allocation_with_global_planner_integration ___
+
+self = <test_global_pattern_planner.TestGlobalPatternPlanner testMethod=test_allocation_with_global_planner_integration>
+
+    def test_allocation_with_global_planner_integration(self):
+        c1 = Classroom(room_no="204", rows=5, benches_per_row=3, seats_per_bench=3)
+        room204 = RoomAllocation(c1)
+    
+        students_me = [Student(register_no=f"ME_{i}", name=f"ME_{i}", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN") for i in range(15)]
+        students_el = [Student(register_no=f"EL_{i}", name=f"EL_{i}", department="EL", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN") for i in range(15)]
+        students_ce = [Student(register_no=f"CE_{i}", name=f"CE_{i}", department="CE", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN") for i in range(15)]
+    
+        g1 = Group(group_id="G1", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN", students=students_me, allocated_count=0)
+        g2 = Group(group_id="G2", department="EL", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN", students=students_el, allocated_count=0)
+        g3 = Group(group_id="G3", department="CE", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN", students=students_ce, allocated_count=0)
+    
+        groups = [g1, g2, g3]
+        context = AllocationContext(
+            groups=groups,
+            room_allocations=[room204],
+            remaining_pool=RemainingPool(groups)
+        )
+    
+        ctx, seat_plan = AllocationService().execute(context)
+        self.assertIsNotNone(ctx)
+        self.assertIsNotNone(seat_plan)
+>       self.assertEqual(len(seat_plan.seats), 45)
+E       AssertionError: 0 != 45
+
+tests\test_global_pattern_planner.py:61: AssertionError
+_ TestGlobalPatternPlannerScenarios.test_bottleneck_reservation_and_abc_targets _
+
+self = <test_global_planner_scenarios.TestGlobalPatternPlannerScenarios testMethod=test_bottleneck_reservation_and_abc_targets>
+
+    def test_bottleneck_reservation_and_abc_targets(self):
+        c1 = Classroom(room_no="201", rows=5, benches_per_row=3, seats_per_bench=3)
+        c2 = Classroom(room_no="202", rows=5, benches_per_row=3, seats_per_bench=3)
+        room201 = RoomAllocation(c1)
+        room202 = RoomAllocation(c2)
+    
+        # Bottleneck department ARCH with only 10 students (< 15 stream capacity)
+        students_arch = [Student(register_no=f"ARCH_{i}", name=f"ARCH_{i}", department="ARCH", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN") for i in range(10)]
+        students_me = [Student(register_no=f"ME_{i}", name=f"ME_{i}", department="ME", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN") for i in range(30)]
+        students_el = [Student(register_no=f"EL_{i}", name=f"EL_{i}", department="EL", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN") for i in range(30)]
+    
+        g1 = Group(group_id="G1", department="ARCH", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN", students=students_arch, allocated_count=0)
+        g2 = Group(group_id="G2", department="ME", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN", students=students_me, allocated_count=0)
+        g3 = Group(group_id="G3", department="EL", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN", students=students_el, allocated_count=0)
+    
+        groups = [g1, g2, g3]
+        context = AllocationContext(
+            groups=groups,
+            room_allocations=[room201, room202],
+            remaining_pool=RemainingPool(groups)
+        )
+    
+        planner = GlobalPatternPlanner()
+        plan = planner.plan(context)
+    
+        self.assertIn("ARCH", plan.bottleneck_departments)
+>       self.assertGreaterEqual(plan.target_abc_rooms, 1)
+E       AssertionError: 0 not greater than or equal to 1
+
+tests\test_global_planner_scenarios.py:39: AssertionError
+============================== warnings summary ===============================
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ["Room 101: Adjacent streams A and B share subject {'SUB1', 'SUB2'}", "Room 101: Adjacent streams B and C share subject {'SUB1', 'SUB2'}", "Room 105: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(
+
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ["Room 101: Adjacent streams A and B share subject {'SUB1', 'SUB2'}", "Room 101: Adjacent streams B and C share subject {'SUB1', 'SUB2'}", "Room 105: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_aba_to_abc_conversion
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ['Duplicate student: ME2_0', 'Duplicate student: ME2_1', 'Duplicate student: ME2_2', 'Duplicate student: ME2_3', 'Duplicate student: ME2_4', 'Duplicate student: ME2_5', 'Duplicate student: ME2_6', 'Duplicate student: ME2_7', 'Duplicate student: ME2_8', 'Duplicate student: ME2_9', 'Duplicate student: ME2_10', 'Duplicate student: ME2_11', 'Duplicate student: ME2_12', 'Duplicate student: ME2_13', 'Duplicate student: ME2_14']
+    warnings.warn(
+
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ["Room 101: Adjacent streams A and B share subject {'SUB1', 'SUB2'}", "Room 101: Adjacent streams B and C share subject {'SUB1', 'SUB2'}", "Room 102: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(
+
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ["Room 101: Adjacent streams A and B share subject {'SUB1', 'SUB2'}", "Room 101: Adjacent streams B and C share subject {'SUB1', 'SUB2'}", "Room 102: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ['G1 has 67 unallocated student(s)', 'G2 has 17 unallocated student(s)', 'G3 has 10 unallocated student(s)']
+    warnings.warn(
+
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ['G1 has 67 unallocated student(s)', 'G2 has 17 unallocated student(s)', 'G3 has 10 unallocated student(s)']
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_abc_invariant.py::TestAbcInvariant::test_aba_steal_rejected
+FAILED tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+FAILED tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_allocation_with_global_planner_integration
+FAILED tests/test_global_planner_scenarios.py::TestGlobalPatternPlannerScenarios::test_bottleneck_reservation_and_abc_targets
+=================== 4 failed, 8 passed, 7 warnings in 1.66s ===================

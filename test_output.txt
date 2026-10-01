@@ -1,0 +1,44 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projects\S3 project\Seat Manager
+plugins: anyio-4.13.0
+collecting ... collected 4 items / 3 errors
+
+=================================== ERRORS ====================================
+________________ ERROR collecting tests/test_abc_invariant.py _________________
+ImportError while importing test module 'D:\Projects\S3 project\Seat Manager\tests\test_abc_invariant.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_abc_invariant.py:2: in <module>
+    from engine.adaptive.invariant import max_abc_rooms, AbcInvariant
+E   ModuleNotFoundError: No module named 'engine.adaptive.invariant'
+____________ ERROR collecting tests/test_global_pattern_planner.py ____________
+ImportError while importing test module 'D:\Projects\S3 project\Seat Manager\tests\test_global_pattern_planner.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_global_pattern_planner.py:8: in <module>
+    from engine.adaptive.global_pattern_planner import GlobalPatternPlanner
+E   ModuleNotFoundError: No module named 'engine.adaptive.global_pattern_planner'
+___________ ERROR collecting tests/test_global_planner_scenarios.py ___________
+ImportError while importing test module 'D:\Projects\S3 project\Seat Manager\tests\test_global_planner_scenarios.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_global_planner_scenarios.py:8: in <module>
+    from engine.adaptive.global_pattern_planner import GlobalPatternPlanner
+E   ModuleNotFoundError: No module named 'engine.adaptive.global_pattern_planner'
+=========================== short test summary info ===========================
+ERROR tests/test_abc_invariant.py
+ERROR tests/test_global_pattern_planner.py
+ERROR tests/test_global_planner_scenarios.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 3 errors during collection !!!!!!!!!!!!!!!!!!!
+============================== 3 errors in 0.63s ==============================

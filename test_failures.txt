@@ -1,0 +1,74 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\SAJEER\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Projects\S3 project\Seat Manager
+plugins: anyio-4.13.0
+collecting ... collected 12 items
+
+tests/test_abc_invariant.py::TestAbcInvariant::test_aba_steal_rejected FAILED [  8%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_genuine_abc_accepted PASSED [ 16%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute FAILED [ 25%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_max_abc_rooms_cases PASSED [ 33%]
+tests/test_abc_invariant.py::TestAbcInvariant::test_reserved_tail_enforcement PASSED [ 41%]
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_aba_to_abc_conversion PASSED [ 50%]
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_student_conservation PASSED [ 58%]
+tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_allocation_with_global_planner_integration FAILED [ 66%]
+tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_planner_abc_target_and_bottlenecks PASSED [ 75%]
+tests/test_global_planner_scenarios.py::TestGlobalPatternPlannerScenarios::test_bottleneck_reservation_and_abc_targets FAILED [ 83%]
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end PASSED [ 91%]
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion PASSED [100%]
+
+================================== FAILURES ===================================
+__________________ TestAbcInvariant.test_aba_steal_rejected ___________________
+tests\test_abc_invariant.py:58: in test_aba_steal_rejected
+    self.assertFalse(invariant.allows(context, cand))
+E   AssertionError: True is not false
+_____________ TestAbcInvariant.test_invariant_holds_after_execute _____________
+tests\test_abc_invariant.py:135: in test_invariant_holds_after_execute
+    self.assertTrue(ctx.abc_invariant.holds(ctx))
+                    ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'NoneType' object has no attribute 'holds'
+__ TestGlobalPatternPlanner.test_allocation_with_global_planner_integration ___
+tests\test_global_pattern_planner.py:61: in test_allocation_with_global_planner_integration
+    self.assertEqual(len(seat_plan.seats), 45)
+E   AssertionError: 0 != 45
+_ TestGlobalPatternPlannerScenarios.test_bottleneck_reservation_and_abc_targets _
+tests\test_global_planner_scenarios.py:39: in test_bottleneck_reservation_and_abc_targets
+    self.assertGreaterEqual(plan.target_abc_rooms, 1)
+E   AssertionError: 0 not greater than or equal to 1
+============================== warnings summary ===============================
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ["Room 101: Adjacent streams A and B share subject {'SUB2', 'SUB1'}", "Room 101: Adjacent streams B and C share subject {'SUB2', 'SUB1'}", "Room 105: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(
+
+tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ["Room 101: Adjacent streams A and B share subject {'SUB2', 'SUB1'}", "Room 101: Adjacent streams B and C share subject {'SUB2', 'SUB1'}", "Room 105: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+tests/test_global_abc.py::TestGlobalAbcOptimization::test_aba_to_abc_conversion
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ['Duplicate student: ME2_0', 'Duplicate student: ME2_1', 'Duplicate student: ME2_2', 'Duplicate student: ME2_3', 'Duplicate student: ME2_4', 'Duplicate student: ME2_5', 'Duplicate student: ME2_6', 'Duplicate student: ME2_7', 'Duplicate student: ME2_8', 'Duplicate student: ME2_9', 'Duplicate student: ME2_10', 'Duplicate student: ME2_11', 'Duplicate student: ME2_12', 'Duplicate student: ME2_13', 'Duplicate student: ME2_14']
+    warnings.warn(
+
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ["Room 101: Adjacent streams A and B share subject {'SUB2', 'SUB1'}", "Room 101: Adjacent streams B and C share subject {'SUB2', 'SUB1'}", "Room 102: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(
+
+tests/test_hybrid_engine.py::TestHybridEngine::test_hybrid_allocation_end_to_end
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ["Room 101: Adjacent streams A and B share subject {'SUB2', 'SUB1'}", "Room 101: Adjacent streams B and C share subject {'SUB2', 'SUB1'}", "Room 102: Adjacent streams A and B share subject {'SUB1'}"]
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion
+  D:\Projects\S3 project\Seat Manager\engine\adaptive\local_optimizer.py:199: UserWarning: LocalOptimizer introduced constraint violations: ['G1 has 67 unallocated student(s)', 'G2 has 17 unallocated student(s)', 'G3 has 10 unallocated student(s)']
+    warnings.warn(
+
+tests/test_reservation_enforcement.py::TestReservationEnforcement::test_reservation_prevents_premature_depletion
+  D:\Projects\S3 project\Seat Manager\engine\allocators\hyper_heuristic_allocator.py:43: UserWarning: Final hybrid allocation validation errors: ['G1 has 67 unallocated student(s)', 'G2 has 17 unallocated student(s)', 'G3 has 10 unallocated student(s)']
+    warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_abc_invariant.py::TestAbcInvariant::test_aba_steal_rejected
+FAILED tests/test_abc_invariant.py::TestAbcInvariant::test_invariant_holds_after_execute
+FAILED tests/test_global_pattern_planner.py::TestGlobalPatternPlanner::test_allocation_with_global_planner_integration
+FAILED tests/test_global_planner_scenarios.py::TestGlobalPatternPlannerScenarios::test_bottleneck_reservation_and_abc_targets
+=================== 4 failed, 8 passed, 7 warnings in 1.30s ===================

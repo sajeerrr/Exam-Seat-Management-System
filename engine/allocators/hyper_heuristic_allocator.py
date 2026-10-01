@@ -28,6 +28,7 @@ class HyperHeuristicAllocator:
             # Fallback: use existing hyper-heuristic as construction
             context = self.adaptive_engine.execute(context)
         else:
+            cp_context.abc_invariant = getattr(context, "abc_invariant", None)
             context = cp_context
 
         # Phase 2: Hyper-Heuristic Refinement
