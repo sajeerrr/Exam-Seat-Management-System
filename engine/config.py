@@ -84,3 +84,23 @@ class AllocationThresholds:
     # Tiny remainder penalty threshold
     TINY_REMAINDER_THRESHOLD: int = 5
     TINY_REMAINDER_PENALTY: float = 8.0
+
+
+class CPSolverConfig:
+    """Configuration for the CP-SAT solver (Phase 1)."""
+    TIME_LIMIT_SECONDS: float = 10.0
+    NUM_WORKERS: int = 4
+    ABC_BONUS: int = 100
+    FRAGMENTATION_PENALTY: int = 50
+    UTILIZATION_BONUS: int = 10
+
+
+class LNSConfig:
+    """Configuration for Large Neighborhood Search (Phase 3)."""
+    MAX_ITERATIONS: int = 20
+    TIME_LIMIT_SECONDS: float = 30.0
+    DESTROY_SIZE_MIN: int = 1
+    DESTROY_SIZE_MAX: int = 3
+    REPAIR_TIME_LIMIT: float = 3.0
+    ACCEPTANCE_THRESHOLD: float = 0.0
+
