@@ -36,12 +36,14 @@ from .parsers.student_pdf_parser import parse_student_pdf
 from .parsers.classroom_parser import parse_classroom_excel
 from .parsers.timetable_parser import parse_timetable_excel
 from .parsers.timetable_pdf_parser import parse_timetable_pdf
+from .parsers.elective_parser import parse_elective_file
 
 from .services.import_service import (
     import_students,
     import_classrooms,
     import_timetable,
 )
+from .services.elective_import_service import import_elective_data
 from .services.registration_service import (
     create_all_exam_registrations,
 )
@@ -521,6 +523,7 @@ def upload_file(request, session_id):
         UploadedFile.FileKind.STUDENT_LIST,
         UploadedFile.FileKind.CLASSROOM_LIST,
         UploadedFile.FileKind.TIMETABLE,
+        UploadedFile.FileKind.ELECTIVE_LIST,
     }
 
     if file_kind not in valid_kinds:
@@ -767,6 +770,42 @@ def review_session(request, session_id):
 
     exam_days_count = len(timetable_days)
 
+    # Elective Groups for session (prefetch subjects and student registrations)
+    elective_groups = (
+        ElectiveGroup.objects.filter(session=session)
+        .prefetch_related(
+            Prefetch(
+                "subjects",
+                queryset=ElectiveSubject.objects.prefetch_related("student_registrations").order_by("subject_code"),
+            )
+        )
+        .order_by("department_code", "elective_label")
+    )
+
+    elective_depts = defaultdict(list)
+    total_elective_subjects = 0
+    total_elective_students = 0
+
+    for eg in elective_groups:
+        elective_depts[eg.department_code].append(eg)
+        for subj in eg.subjects.all():
+            total_elective_subjects += 1
+            total_elective_students += subj.student_registrations.count()
+
+    elective_dept_list = []
+    for dept_code in sorted(elective_depts.keys()):
+        groups = elective_depts[dept_code]
+        dept_name = groups[0].department_name or dept_code
+        dept_students = sum(
+            s.student_registrations.count() for g in groups for s in g.subjects.all()
+        )
+        elective_dept_list.append({
+            "department_code": dept_code,
+            "department_name": dept_name,
+            "groups": groups,
+            "total_students": dept_students,
+        })
+
     return render(
         request,
         "exam_allocator/review_session.html",
@@ -779,6 +818,10 @@ def review_session(request, session_id):
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,
             "exam_days_count": exam_days_count,
+            "elective_dept_list": elective_dept_list,
+            "elective_groups_count": elective_groups.count(),
+            "elective_subjects_count": total_elective_subjects,
+            "elective_students_count": total_elective_students,
         },
     )
 
