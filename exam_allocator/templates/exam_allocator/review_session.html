@@ -958,12 +958,10 @@
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
                     <span>🏛️</span>
-                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{
-                        dept.department_code }})</span>
+                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{ dept.department_code }})</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es"
-                        }}</span>
+                    <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es" }}</span>
                     <span class="chevron">▼</span>
                 </div>
             </div>
@@ -1008,8 +1006,7 @@
                 {% for slot in day.slots %}
                 <div class="tt-session-card">
                     <div class="tt-session-header">
-                        <span class="session-chip {% if slot.session == 'FN' %}fn{% else %}an{% endif %}">{{
-                            slot.session }}</span>
+                        <span class="session-chip {% if slot.session == 'FN' %}fn{% else %}an{% endif %}">{{ slot.session }}</span>
                         <span class="tt-session-header-text">
                             {% if slot.session == 'FN' %}
                             Forenoon
