@@ -1,5 +1,5 @@
 {% extends "exam_allocator/base.html" %}
-{% block title %}Review — {{ session.name }} — ExamSeat{% endblock %}
+{% block title %}Dashboard — {{ session.name }} — ExamSeat{% endblock %}
 {% block extra_head %}
 <meta name="description" content="Review imported data for {{ session.name }}: departments, timetable, and classrooms.">
 {% endblock %}
@@ -901,9 +901,7 @@
         <div class="breadcrumb">
             <a href="{% url 'exam_allocator:session_list' %}">All Sessions</a>
             <span class="sep">›</span>
-            <a href="{% url 'exam_allocator:session_detail' session.session_id %}">{{ session.name }}</a>
-            <span class="sep">›</span>
-            <span class="cur">Review</span>
+            <span class="cur">Dashboard ({{ session.name }})</span>
         </div>
         <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sec"
             style="font-size:12.5px; padding:8px 16px;">📥 Import More Data</a>
@@ -918,9 +916,9 @@
 
     <!-- HERO -->
     <div class="hero">
-        <div class="hero-icon">🔍</div>
+        <div class="hero-icon">📊</div>
         <div>
-            <h1>Review: {{ session.name }}</h1>
+            <h1>Dashboard: {{ session.name }}</h1>
             <p>Inspect and correct imported data before running seat allocation. All edits are saved to the session
                 database immediately.</p>
         </div>
@@ -960,10 +958,12 @@
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
                     <span>🏛️</span>
-                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{                         dept.department_code }})</span>
+                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{
+                        dept.department_code }})</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="sec-card-meta">{{ dept.classes.count }} class{% if dept.classes.count != 1 %}es{% endif %}</span>
+                    <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es"
+                        }}</span>
                     <span class="chevron">▼</span>
                 </div>
             </div>
@@ -1002,8 +1002,16 @@
                 {% for slot in day.slots %}
                 <div class="tt-session-card">
                     <div class="tt-session-header">
-                        <span class="session-chip {% if slot.session == 'FN' %}fn{% else %}an{% endif %}">{{                             slot.session }}</span>
-                        <span class="tt-session-header-text">{% if slot.session == 'FN' %}Forenoon{% else %}Afternoon{% endif %} Session</span>
+                        <span class="session-chip {% if slot.session == 'FN' %}fn{% else %}an{% endif %}">{{
+                            slot.session }}</span>
+                        <span class="tt-session-header-text">
+                            {% if slot.session == 'FN' %}
+                            Forenoon
+                            {% else %}
+                            Afternoon
+                            {% endif %}
+                            Session
+                        </span>
                         <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">{{ slot.exams|length }}
                             exam{% if slot.exams|length != 1 %}s{% endif %}</span>
                     </div>

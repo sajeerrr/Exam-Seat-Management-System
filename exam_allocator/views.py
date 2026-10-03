@@ -47,6 +47,9 @@ from .services.registration_service import (
 )
 
 
+
+
+
 @ensure_csrf_cookie
 def session_list(request):
 
@@ -160,50 +163,9 @@ def create_session(request):
 
 
 def session_detail(request, session_id):
-
-    session = get_object_or_404(
-        AllocationSession,
-        session_id=session_id,
-    )
-
-    departments_count = session.departments.count()
-
-    classes_count = Class.objects.filter(department__session=session).count()
-
-    students_count = Student.objects.filter(
-        student_class__department__session=session
-    ).count()
-
-    # Each exam record corresponds to one timetable row (subject + date + session).
-    # We count subjects the same way so both stats are consistent and equal.
-    exams_count = Exam.objects.filter(subject__session=session).count()
-    subjects_count = exams_count  # one subject entry per exam slot
-
-    rooms_count = session.rooms.count()
-
-    registrations_count = ExamRegistration.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    allocations_count = Allocation.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    return render(
-        request,
-        "exam_allocator/session_detail.html",
-        {
-            "session": session,
-            "departments_count": departments_count,
-            "classes_count": classes_count,
-            "students_count": students_count,
-            "subjects_count": subjects_count,
-            "exams_count": exams_count,
-            "rooms_count": rooms_count,
-            "registrations_count": registrations_count,
-            "allocations_count": allocations_count,
-        },
-    )
+    # The intermediate session dashboard is no longer needed; 
+    # redirect directly to the review dashboard instead.
+    return redirect("exam_allocator:review_session", session_id=session_id)
 
 
 def exam_list(request, session_id=None):
