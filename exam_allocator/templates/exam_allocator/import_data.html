@@ -2,11 +2,16 @@
 
 {% block title %}Import Data — {{ session.name }} — ExamSeat{% endblock %}
 
-{% block extra_head %}<meta name="description" content="Upload student lists, timetable files, and classroom files for {{ session.name }}.">{% endblock %}
+{% block extra_head %}
+<meta name="description" content="Upload student lists, timetable files, and classroom files for {{ session.name }}.">{% endblock %}
 
 {% block extra_css %}
 <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
 
     body {
         font-family: 'Inter', sans-serif;
@@ -22,7 +27,7 @@
         right: -10%;
         width: 55vw;
         height: 55vw;
-        background: radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
         pointer-events: none;
         z-index: 0;
     }
@@ -35,7 +40,10 @@
         padding: 40px 24px 80px;
     }
 
-    a { text-decoration: none; color: inherit; }
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
 
     /* ── NAV ─────────────────────────────────── */
     .top-nav {
@@ -60,9 +68,13 @@
         transition: color 0.2s;
     }
 
-    .nav-breadcrumb a:hover { color: var(--accent-light); }
+    .nav-breadcrumb a:hover {
+        color: var(--accent-light);
+    }
 
-    .nav-breadcrumb .sep { opacity: 0.4; }
+    .nav-breadcrumb .sep {
+        opacity: 0.4;
+    }
 
     .nav-breadcrumb .current {
         color: var(--text-primary);
@@ -84,8 +96,15 @@
     }
 
     @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(16px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .hero-icon {
@@ -114,7 +133,9 @@
     }
 
     /* ── FLASH MESSAGES ──────────────────────── */
-    .messages-container { margin-bottom: 24px; }
+    .messages-container {
+        margin-bottom: 24px;
+    }
 
     .flash-msg {
         padding: 14px 18px;
@@ -138,13 +159,13 @@
 
     .flash-msg.warning {
         background: var(--warning-bg);
-        border-color: rgba(217,119,6,0.2);
+        border-color: rgba(217, 119, 6, 0.2);
         color: var(--warning);
     }
 
     .flash-msg:not(.success):not(.error):not(.warning) {
-        background: rgba(99,102,241,0.1);
-        border-color: rgba(99,102,241,0.25);
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.25);
         color: var(--accent-light);
     }
 
@@ -169,9 +190,17 @@
         animation: fadeUp 0.5s ease both;
     }
 
-    .upload-card:nth-child(1) { animation-delay: 0.05s; }
-    .upload-card:nth-child(2) { animation-delay: 0.1s; }
-    .upload-card:nth-child(3) { animation-delay: 0.15s; }
+    .upload-card:nth-child(1) {
+        animation-delay: 0.05s;
+    }
+
+    .upload-card:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .upload-card:nth-child(3) {
+        animation-delay: 0.15s;
+    }
 
     .upload-card:hover {
         border-color: var(--border-hover);
@@ -196,9 +225,17 @@
         flex-shrink: 0;
     }
 
-    .card-icon.student { background: rgba(99,102,241,0.12); }
-    .card-icon.timetable { background: rgba(16,185,129,0.12); }
-    .card-icon.classroom { background: rgba(245,158,11,0.12); }
+    .card-icon.student {
+        background: rgba(99, 102, 241, 0.12);
+    }
+
+    .card-icon.timetable {
+        background: rgba(16, 185, 129, 0.12);
+    }
+
+    .card-icon.classroom {
+        background: rgba(245, 158, 11, 0.12);
+    }
 
     .card-title {
         font-size: 16px;
@@ -234,12 +271,12 @@
     .drop-zone:hover,
     .drop-zone.drag-over {
         border-color: var(--accent);
-        background: rgba(99,102,241,0.05);
+        background: rgba(99, 102, 241, 0.05);
     }
 
     .drop-zone.has-files {
         border-color: var(--success);
-        background: rgba(5,150,105,0.05);
+        background: rgba(5, 150, 105, 0.05);
     }
 
     .drop-zone input[type="file"] {
@@ -298,9 +335,9 @@
     .btn-upload {
         width: 100%;
         padding: 12px;
-        background: rgba(99,102,241,0.12);
+        background: rgba(99, 102, 241, 0.12);
         color: var(--accent-light);
-        border: 1px solid rgba(99,102,241,0.25);
+        border: 1px solid rgba(99, 102, 241, 0.25);
         border-radius: 9px;
         font-size: 13px;
         font-weight: 700;
@@ -314,34 +351,36 @@
     }
 
     .btn-upload:hover {
-        background: rgba(99,102,241,0.22);
+        background: rgba(99, 102, 241, 0.22);
         border-color: var(--accent);
         color: var(--accent);
         transform: translateY(-1px);
     }
 
-    .btn-upload:active { transform: translateY(0); }
+    .btn-upload:active {
+        transform: translateY(0);
+    }
 
     .btn-upload.timetable-style {
-        background: rgba(16,185,129,0.1);
+        background: rgba(16, 185, 129, 0.1);
         color: #059669;
-        border-color: rgba(5,150,105,0.25);
+        border-color: rgba(5, 150, 105, 0.25);
     }
 
     .btn-upload.timetable-style:hover {
-        background: rgba(16,185,129,0.2);
+        background: rgba(16, 185, 129, 0.2);
         border-color: var(--success);
         color: var(--success);
     }
 
     .btn-upload.classroom-style {
-        background: rgba(245,158,11,0.1);
+        background: rgba(245, 158, 11, 0.1);
         color: var(--warning);
-        border-color: rgba(217,119,6,0.2);
+        border-color: rgba(217, 119, 6, 0.2);
     }
 
     .btn-upload.classroom-style:hover {
-        background: rgba(245,158,11,0.2);
+        background: rgba(245, 158, 11, 0.2);
         border-color: #d97706;
         color: #b45309;
     }
@@ -386,8 +425,8 @@
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: rgba(99,102,241,0.1);
-        border: 1px solid rgba(99,102,241,0.2);
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -449,7 +488,7 @@
 
     .btn-primary-lg:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 32px rgba(99,102,241,0.45);
+        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45);
         color: white;
     }
 
@@ -499,10 +538,12 @@
     .log-table td {
         padding: 10px 10px;
         font-size: 13px;
-        border-bottom: 1px solid rgba(99,102,241,0.06);
+        border-bottom: 1px solid rgba(99, 102, 241, 0.06);
     }
 
-    .log-table tr:last-child td { border-bottom: none; }
+    .log-table tr:last-child td {
+        border-bottom: none;
+    }
 
     .badge {
         display: inline-flex;
@@ -527,14 +568,28 @@
     }
 
     .badge-processing {
-        background: rgba(99,102,241,0.1);
+        background: rgba(99, 102, 241, 0.1);
         color: var(--accent-light);
-        border: 1px solid rgba(99,102,241,0.2);
+        border: 1px solid rgba(99, 102, 241, 0.2);
     }
 
-    .badge-student { background: rgba(99,102,241,0.1); color: var(--accent-light); border: 1px solid rgba(99,102,241,0.2); }
-    .badge-timetable { background: rgba(5,150,105,0.1); color: var(--success); border: 1px solid var(--success-border); }
-    .badge-classroom { background: rgba(245,158,11,0.1); color: var(--warning); border: 1px solid rgba(217,119,6,0.2); }
+    .badge-student {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent-light);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+
+    .badge-timetable {
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--success);
+        border: 1px solid var(--success-border);
+    }
+
+    .badge-classroom {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--warning);
+        border: 1px solid rgba(217, 119, 6, 0.2);
+    }
 
     .empty-log {
         text-align: center;
@@ -545,14 +600,30 @@
 
     /* ── RESPONSIVE ──────────────────────────── */
     @media (max-width: 960px) {
-        .upload-grid { grid-template-columns: 1fr; }
-        .tips-grid { grid-template-columns: 1fr; }
+        .upload-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .tips-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 600px) {
-        .page-hero { flex-direction: column; align-items: flex-start; }
-        .bottom-actions { flex-direction: column; }
-        .btn-primary-lg, .btn-secondary { width: 100%; justify-content: center; }
+        .page-hero {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .bottom-actions {
+            flex-direction: column;
+        }
+
+        .btn-primary-lg,
+        .btn-secondary {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}
@@ -574,11 +645,11 @@
 
     <!-- FLASH MESSAGES -->
     {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="flash-msg {{ message.tags }}">{{ message }}</div>
-            {% endfor %}
-        </div>
+    <div class="messages-container">
+        {% for message in messages %}
+        <div class="flash-msg {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
     {% endif %}
 
     <!-- PAGE HERO -->
@@ -586,7 +657,8 @@
         <div class="hero-icon">📥</div>
         <div class="hero-text">
             <h1>Import Data for {{ session.name }}</h1>
-            <p>Upload student lists, exam timetable files, and classroom data. Multiple files can be selected for each category.</p>
+            <p>Upload student lists, exam timetable files, and classroom data. Multiple files can be selected for each
+                category.</p>
         </div>
     </div>
 
@@ -599,16 +671,19 @@
                 <div class="card-icon student">👥</div>
                 <div>
                     <div class="card-title">Student Lists</div>
-                    <div class="card-desc">Upload one or more Excel (.xlsx) or PDF files containing student roll numbers, names, and class assignments.</div>
+                    <div class="card-desc">Upload one or more Excel (.xlsx) or PDF files containing student roll
+                        numbers, names, and class assignments.</div>
                 </div>
             </div>
 
-            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}" enctype="multipart/form-data" id="form-student">
+            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                enctype="multipart/form-data" id="form-student">
                 {% csrf_token %}
                 <input type="hidden" name="file_kind" value="STUDENT">
 
                 <div class="drop-zone" id="dz-student" onclick="document.getElementById('fi-student').click()">
-                    <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-student" style="display:none">
+                    <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-student"
+                        style="display:none">
                     <div class="drop-icon">📄</div>
                     <div class="drop-label">Click or drag files here</div>
                     <div class="drop-sublabel">Accepts .xlsx, .xls, .pdf • Multiple files OK</div>
@@ -627,16 +702,19 @@
                 <div class="card-icon timetable">🗓️</div>
                 <div>
                     <div class="card-title">Exam Timetable</div>
-                    <div class="card-desc">Upload one or more timetable files. Multiple files will be merged — useful when departments have separate timetables.</div>
+                    <div class="card-desc">Upload one or more timetable files. Multiple files will be merged — useful
+                        when departments have separate timetables.</div>
                 </div>
             </div>
 
-            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}" enctype="multipart/form-data" id="form-timetable">
+            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                enctype="multipart/form-data" id="form-timetable">
                 {% csrf_token %}
                 <input type="hidden" name="file_kind" value="TIMETABLE">
 
                 <div class="drop-zone" id="dz-timetable" onclick="document.getElementById('fi-timetable').click()">
-                    <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-timetable" style="display:none">
+                    <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-timetable"
+                        style="display:none">
                     <div class="drop-icon">📅</div>
                     <div class="drop-label">Click or drag files here</div>
                     <div class="drop-sublabel">Accepts .xlsx, .xls, .pdf • Multiple files OK</div>
@@ -655,11 +733,13 @@
                 <div class="card-icon classroom">🏫</div>
                 <div>
                     <div class="card-title">Classroom Data</div>
-                    <div class="card-desc">Upload an Excel file listing each exam room with its number, building, bench count, and seating capacity.</div>
+                    <div class="card-desc">Upload an Excel file listing each exam room with its number, building, bench
+                        count, and seating capacity.</div>
                 </div>
             </div>
 
-            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}" enctype="multipart/form-data" id="form-classroom">
+            <form method="post" action="{% url 'exam_allocator:upload_file' session.session_id %}"
+                enctype="multipart/form-data" id="form-classroom">
                 {% csrf_token %}
                 <input type="hidden" name="file_kind" value="CLASSROOM">
 
@@ -685,15 +765,18 @@
         <div class="tips-grid">
             <div class="tip-item">
                 <div class="tip-bullet">S</div>
-                <div><strong>Student files</strong> — Each file can cover one or more classes. Department/class is parsed automatically from sheet names or column headers.</div>
+                <div><strong>Student files</strong> — Each file can cover one or more classes. Department/class is
+                    parsed automatically from sheet names or column headers.</div>
             </div>
             <div class="tip-item">
                 <div class="tip-bullet">T</div>
-                <div><strong>Timetable files</strong> — Upload files from each department separately; duplicate subjects are handled gracefully and merged.</div>
+                <div><strong>Timetable files</strong> — Upload files from each department separately; duplicate subjects
+                    are handled gracefully and merged.</div>
             </div>
             <div class="tip-item">
                 <div class="tip-bullet">C</div>
-                <div><strong>Classroom files</strong> — One file is sufficient. Go to the Review page after import to add, remove, or adjust rooms manually.</div>
+                <div><strong>Classroom files</strong> — One file is sufficient. Go to the Review page after import to
+                    add, remove, or adjust rooms manually.</div>
             </div>
         </div>
     </div>
@@ -719,20 +802,20 @@
                     <td>{{ f.original_filename }}</td>
                     <td>
                         {% if f.file_kind == 'STUDENT' %}
-                            <span class="badge badge-student">👥 Students</span>
+                        <span class="badge badge-student">👥 Students</span>
                         {% elif f.file_kind == 'TIMETABLE' %}
-                            <span class="badge badge-timetable">🗓️ Timetable</span>
+                        <span class="badge badge-timetable">🗓️ Timetable</span>
                         {% else %}
-                            <span class="badge badge-classroom">🏫 Classroom</span>
+                        <span class="badge badge-classroom">🏫 Classroom</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if f.status == 'VALIDATED' %}
-                            <span class="badge badge-success">✓ Success</span>
+                        <span class="badge badge-success">✓ Success</span>
                         {% elif f.status == 'FAILED' %}
-                            <span class="badge badge-error" title="{{ f.error_log }}">✗ Failed</span>
+                        <span class="badge badge-error" title="{{ f.error_log }}">✗ Failed</span>
                         {% else %}
-                            <span class="badge badge-processing">⟳ {{ f.get_status_display }}</span>
+                        <span class="badge badge-processing">⟳ {{ f.get_status_display }}</span>
                         {% endif %}
                     </td>
                     <td style="color:var(--text-muted); font-size:12px;">{{ f.uploaded_at|date:"d M Y, H:i" }}</td>
@@ -745,10 +828,16 @@
 
     <!-- BOTTOM ACTIONS -->
     <div class="bottom-actions">
-        <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary" id="btn-back-session">
+        <button onclick="importAllFiles()" class="btn-primary-lg" id="btn-import-all"
+            style="background: linear-gradient(135deg, #10b981, #059669); margin-right: auto; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);">
+            🚀 Import All Selected Files
+        </button>
+        <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary"
+            id="btn-back-session">
             ← Back to Session
         </a>
-        <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-primary-lg" id="btn-go-review">
+        <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-primary-lg"
+            id="btn-go-review">
             Review Imported Data →
         </a>
     </div>
@@ -817,6 +906,46 @@
             }
         });
     });
+
+    // ── IMPORT ALL FILES ──────────────────────
+    async function importAllFiles() {
+        let promises = [];
+        let hasFiles = false;
+
+        ['student', 'timetable', 'classroom'].forEach(kind => {
+            const form = document.getElementById('form-' + kind);
+            const fi = document.getElementById('fi-' + kind);
+            if (fi && fi.files.length > 0 && form) {
+                hasFiles = true;
+                promises.push(
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new FormData(form),
+                    })
+                );
+            }
+        });
+
+        if (!hasFiles) {
+            alert('Please select at least one file to import.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-import-all');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Importing Data...';
+        btn.disabled = true;
+
+        try {
+            await Promise.all(promises);
+            window.location.reload();
+        } catch (error) {
+            console.error('Import failed:', error);
+            alert('An error occurred during import. Check the console for details.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
 </script>
 
 {% endblock %}
