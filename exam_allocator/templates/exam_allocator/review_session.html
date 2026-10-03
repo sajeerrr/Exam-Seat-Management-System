@@ -890,6 +890,28 @@
             align-items: flex-start;
         }
     }
+
+    .btn-pill-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 24px;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .btn-pill-back:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--border-hover);
+        color: var(--text-primary);
+    }
+
 </style>
 {% endblock %}
 
@@ -1078,7 +1100,7 @@
 
     <!-- BOTTOM BAR -->
     <div class="bottom-bar">
-        <a href="{% url 'exam_allocator:session_list' %}" class="btn-secondary" style="margin-right: 12px;">← All Sessions</a>
+        <a href="{% url 'exam_allocator:session_list' %}" class="btn-pill-back" style="margin-right: 12px;">← All Sessions</a>
             <div style="flex-grow: 1;"></div>
         <form method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
     {% csrf_token %}
