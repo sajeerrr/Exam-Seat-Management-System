@@ -1,7 +1,7 @@
 """
 Elective list parser module.
 
-Supports parsing elective student lists in Excel (.xlsx, .xlsm) and PDF formats.
+Supports parsing elective student lists in Excel (.xlsx, .xlsm, .xls) and PDF formats.
 Extracts departments, elective groups, subjects, and student enrollments.
 """
 
@@ -14,9 +14,12 @@ import re
 from openpyxl import load_workbook
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz
 except ImportError:
-    fitz = None
+    try:
+        import fitz
+    except ImportError:
+        fitz = None
 
 
 class ElectiveExcelParseError(Exception):
@@ -42,7 +45,7 @@ class ElectiveSubjectRecord:
 class ElectiveGroupRecord:
     department_code: str
     department_name: str
-    elective_label: str  # e.g., "Elective 1", "Professional Elective"
+    elective_label: str  # e.g., "Programme Elective III", "Elective (802)"
     subjects: list[ElectiveSubjectRecord] = field(default_factory=list)
 
 
@@ -51,6 +54,165 @@ class ElectiveExtractionResult:
     source_file: str
     groups: list[ElectiveGroupRecord]
     issues: list[str] = field(default_factory=list)
+
+
+def split_subject_header(s: str) -> tuple[str, str]:
+    """
+    Split subject string into (subject_code, subject_name).
+    E.g. '22ECE 803.2  REAL TIME OPERATING SYSTEMS' -> ('22ECE803.2', 'REAL TIME OPERATING SYSTEMS')
+    """
+    s = s.strip()
+    if s.lower().startswith("sub:"):
+        s = s[4:].strip()
+
+    # Pattern: course code followed by separator and subject name
+    m = re.match(r"^([0-9]{2}[A-Z]{2,5}\s*[0-9\._A-Z]+)\s*[-:]?\s*(.+)$", s)
+    if m:
+        code = m.group(1).replace(" ", "").strip()
+        name = m.group(2).strip()
+        return code, name
+
+    # If no standard prefix code found, use first few tokens as code
+    clean_s = s.strip()
+    if len(clean_s) > 30:
+        return clean_s[:25].strip(), clean_s
+    return clean_s, clean_s
+
+
+def derive_dept_code(sub_code: str, file_name: str, sheet_name: str = "") -> str:
+    """
+    Derive department code from subject code, filename, or sheet name.
+    """
+    # Try course code prefix: e.g. 22MEE802 -> ME, 22ECE803 -> EC, 22CSE802 -> CSE
+    m = re.match(r"^[0-9]{2}([A-Z]{2,4})[0-9]", sub_code.replace(" ", ""))
+    if m:
+        c = m.group(1).upper()
+        mapping = {
+            "MEE": "ME",
+            "ECE": "EC",
+            "CSE": "CSE",
+            "EEE": "EEE",
+            "CEE": "CE",
+            "CHE": "CHE",
+            "ARE": "B.ARCH",
+        }
+        if c in mapping:
+            return mapping[c]
+        return c
+
+    # Try from filename
+    fn = file_name.upper()
+    for d in ["B.ARCH", "BARCH", "CHE", "CSE", "ECE", "EEE", "ME", "CE", "EC", "EL"]:
+        if fn.startswith(d + "_") or fn.startswith(d + ".") or f"_{d}_" in fn or fn.startswith(d):
+            return "B.ARCH" if "ARCH" in d else d
+
+    # Try from sheet name
+    sn = sheet_name.upper()
+    for d in ["B.ARCH", "BARCH", "CHE", "CSE", "ECE", "EEE", "ME", "CE", "EC", "EL"]:
+        if d in sn:
+            return "B.ARCH" if "ARCH" in d else d
+
+    return "GEN"
+
+
+def derive_dept_name(code: str) -> str:
+    dept_map = {
+        "CE": "Civil Engineering",
+        "ME": "Mechanical Engineering",
+        "EEE": "Electrical & Electronics Engineering",
+        "EC": "Electronics & Communication Engineering",
+        "ECE": "Electronics & Communication Engineering",
+        "CSE": "Computer Science & Engineering",
+        "CHE": "Chemical Engineering",
+        "B.ARCH": "Architecture",
+        "EL": "Electrical & Computer Engineering",
+    }
+    return dept_map.get(code.upper(), f"{code} Department")
+
+
+def derive_group_label(sub_code: str, sheet_name: str = "", file_name: str = "") -> str:
+    """
+    Derive elective group label e.g. 'Programme Elective III', 'Programme Elective IV'.
+    """
+    m = re.search(r"([0-9]{2}[A-Z]{2,5})\s*([0-9]{3})", sub_code)
+    if m:
+        num = m.group(2)
+        if num == "801":
+            return "Programme Elective I (801)"
+        if num == "802":
+            return "Programme Elective II / III (802)"
+        if num == "803":
+            return "Programme Elective IV (803)"
+        if num == "804":
+            return "Programme Elective V (804)"
+        return f"Elective ({num})"
+
+    for text in [sheet_name, file_name]:
+        m_pe = re.search(r"(PE[-_\s]*[IV0-9]+)", text, re.IGNORECASE)
+        if m_pe:
+            return m_pe.group(1).upper().replace("_", "-")
+        m_prog = re.search(r"Programme[-_\s]*Electives?[-_\s]*([IV0-9]+)", text, re.IGNORECASE)
+        if m_prog:
+            return f"PE-{m_prog.group(1).upper()}"
+
+    return "Electives"
+
+
+def detect_subject_banner(vals: list) -> str | None:
+    """
+    Detect whether a row in Excel is a subject title banner.
+    """
+    if 1 <= len(vals) <= 3:
+        for v in vals:
+            vs = str(v).strip()
+            # Ignore headers/metadata
+            if any(k in vs.upper() for k in [
+                "TKM COLLEGE", "REPORT TAKEN", "KARICODE", "SL NO", "ROLL NO",
+                "STUDENT LIST - CHE", "TOTAL COUNT", "FACULTY ADVISOR", "DURATION"
+            ]):
+                continue
+            if re.match(r"^(?:22[A-Z0-9\.\-_]+|Sub:)", vs):
+                return vs
+            if any(k in vs.upper() for k in [
+                "ENTREPRENEURSHIP", "BIOMEDICAL ENGINEERING", "DEEP LEARNING",
+                "REAL TIME OPERATING SYSTEMS", "MODERN COMMUNICATION SYSTEMS",
+                "QUALITY MANAGEMENT", "AIR QUALITY MANAGEMENT", "ENERGY MANAGEMENT",
+                "SMART GRID", "COMPOSITE MATERIALS", "TECHNOLOGY MANAGEMENT",
+                "POWER PLANT ENGINEERING", "EMBEDDED SYSTEMS", "NETWORK SECURITY",
+                "ARCHITECTURAL CONSERVATION", "CONTEMPORARY ARCHITECTURE", "GREEN BUILDINGS",
+                "DISASTER MITIGATION"
+            ]):
+                return vs
+    return None
+
+
+def extract_student_from_vals(vals: list) -> tuple[str | None, str | None]:
+    """
+    Extract (roll_number, student_name) from Excel row values.
+    """
+    roll = None
+    for c in vals:
+        cs = str(c).strip()
+        # Roll numbers at TKM typically start with B22, TKM22, L22, etc. and are 7-12 chars
+        if re.match(r"^[A-Z0-9]{7,12}$", cs) and any(cs.startswith(p) for p in ["B2", "TKM", "L2", "B21", "B20"]):
+            roll = cs
+            break
+
+    if not roll:
+        return None, None
+
+    name = None
+    for c in vals:
+        if isinstance(c, str):
+            cs = c.strip()
+            if cs != roll and len(cs) >= 3 and not cs.isdigit():
+                low = cs.lower()
+                if not any(low.startswith(p) for p in ["sl no", "roll no", "uni reg", "sub:", "deep learning", "smart grid"]):
+                    if not re.match(r"^[A-Z0-9]{7,12}$", cs):
+                        name = cs
+                        break
+
+    return roll, name or roll
 
 
 def parse_elective_file(file_path: str) -> ElectiveExtractionResult:
@@ -62,7 +224,7 @@ def parse_elective_file(file_path: str) -> ElectiveExtractionResult:
         raise ElectiveExcelParseError(f"File not found: {file_path}")
 
     suffix = path.suffix.lower()
-    if suffix in {".xlsx", ".xlsm"}:
+    if suffix in {".xlsx", ".xlsm", ".xls"}:
         return _parse_elective_excel(path)
     elif suffix == ".pdf":
         return _parse_elective_pdf(path)
@@ -76,101 +238,78 @@ def _parse_elective_excel(path: Path) -> ElectiveExtractionResult:
     except Exception as exc:
         raise ElectiveExcelParseError(f"Could not open Excel workbook: {exc}") from exc
 
-    groups: list[ElectiveGroupRecord] = []
+    # groups_dict: (dept_code, elective_label) -> dict of subject_code -> ElectiveSubjectRecord
+    groups_dict: dict[tuple[str, str], dict[str, ElectiveSubjectRecord]] = {}
     issues: list[str] = []
 
     try:
         for worksheet in workbook.worksheets:
-            if worksheet.title.strip().lower() in {"master overview", "overview"}:
+            sname = worksheet.title.strip()
+            if sname.lower() in {"master overview", "overview", "summary"}:
                 continue
 
-            try:
-                sheet_groups, sheet_issues = _parse_elective_sheet(worksheet)
-                groups.extend(sheet_groups)
-                issues.extend(sheet_issues)
-            except Exception as exc:
-                issues.append(f"Sheet '{worksheet.title}': {exc}")
+            current_sub: str | None = None
+
+            for row in worksheet.iter_rows(values_only=True):
+                vals = [c for c in row if c is not None and str(c).strip()]
+                if not vals:
+                    continue
+
+                sb = detect_subject_banner(vals)
+                if sb:
+                    current_sub = sb
+                    continue
+
+                roll, name = extract_student_from_vals(vals)
+                if roll:
+                    assigned_sub = current_sub
+                    # Check if 4th column has explicit subject name (e.g. EL.xlsx)
+                    if len(vals) >= 4 and any(k in str(vals[3]).upper() for k in ["DEEP LEARNING", "SMART GRID"]):
+                        assigned_sub = str(vals[3]).strip()
+
+                    if not assigned_sub:
+                        assigned_sub = "GENERAL-ELECTIVE"
+
+                    code, sname_clean = split_subject_header(assigned_sub)
+                    dept = derive_dept_code(code, path.name, sname)
+                    grp_lbl = derive_group_label(code, sname, path.name)
+
+                    key = (dept, grp_lbl)
+                    if key not in groups_dict:
+                        groups_dict[key] = {}
+
+                    if code not in groups_dict[key]:
+                        groups_dict[key][code] = ElectiveSubjectRecord(
+                            subject_code=code,
+                            subject_name=sname_clean,
+                            students=[],
+                        )
+
+                    # Deduplicate students in the same subject
+                    if not any(s.roll_number == roll for s in groups_dict[key][code].students):
+                        groups_dict[key][code].students.append(
+                            ElectiveStudentRecord(roll_number=roll, student_name=name)
+                        )
     finally:
         workbook.close()
 
-    if not groups:
-        raise ElectiveExcelParseError("No elective groups or subjects found in Excel workbook.")
+    if not groups_dict:
+        raise ElectiveExcelParseError("No valid elective student records found in Excel workbook.")
+
+    group_records = []
+    for (dept, grp_lbl), subjects in groups_dict.items():
+        group_records.append(ElectiveGroupRecord(
+            department_code=dept,
+            department_name=derive_dept_name(dept),
+            elective_label=grp_lbl,
+            subjects=list(subjects.values()),
+        ))
 
     return ElectiveExtractionResult(
         source_file=path.name,
-        groups=groups,
+        groups=group_records,
         issues=issues,
     )
-
-
-def _parse_elective_sheet(worksheet):
-    rows = list(worksheet.iter_rows(values_only=True))
-    if not rows:
-        return [], ["Sheet is empty."]
-
-    # Simple heuristic to extract elective data from Excel sheets
-    # Can handle tables structured with Subject Code, Subject Name, Roll No, Student Name
-    dept_code = worksheet.title.strip()
-    elective_label = "Elective"
-
-    subjects_dict: dict[str, ElectiveSubjectRecord] = {}
-    issues: list[str] = []
-
-    header_idx = None
-    headers = []
-    for i, row in enumerate(rows):
-        row_strs = [str(x).strip().lower() if x is not None else "" for x in row]
-        if "roll no" in row_strs or "student name" in row_strs or "subject code" in row_strs:
-            header_idx = i
-            headers = row_strs
-            break
-
-    if header_idx is None:
-        # Fallback: treat rows as simple list
-        header_idx = 0
-        headers = ["roll no", "student name", "subject code", "subject name"]
-
-    idx_roll = headers.index("roll no") if "roll no" in headers else (-1 if "roll no" not in headers else 0)
-    idx_name = headers.index("student name") if "student name" in headers else 1
-    idx_code = headers.index("subject code") if "subject code" in headers else (headers.index("course code") if "course code" in headers else -1)
-    idx_subname = headers.index("subject name") if "subject name" in headers else -1
-
-    for r_num, row in enumerate(rows[header_idx + 1:], start=header_idx + 2):
-        if not any(x is not None and str(x).strip() for x in row):
-            continue
-
-        def get_val(idx):
-            if idx != -1 and idx < len(row) and row[idx] is not None:
-                return str(row[idx]).strip()
-            return ""
-
-        roll = get_val(idx_roll)
-        name = get_val(idx_name)
-        code = get_val(idx_code) or "ELECTIVE-SUB"
-        subname = get_val(idx_subname) or code
-
-        if not roll or not name:
-            continue
-
-        if code not in subjects_dict:
-            subjects_dict[code] = ElectiveSubjectRecord(
-                subject_code=code,
-                subject_name=subname,
-                students=[]
-            )
-
-        subjects_dict[code].students.append(
-            ElectiveStudentRecord(roll_number=roll, student_name=name)
-        )
-
-    group = ElectiveGroupRecord(
-        department_code=dept_code,
-        department_name=dept_code,
-        elective_label=elective_label,
-        subjects=list(subjects_dict.values())
-    )
-
-    return [group], issues
 
 
 def _parse_elective_pdf(path: Path) -> ElectiveExtractionResult:
@@ -182,61 +321,119 @@ def _parse_elective_pdf(path: Path) -> ElectiveExtractionResult:
     except Exception as exc:
         raise ElectiveExcelParseError(f"Could not open PDF file: {exc}") from exc
 
-    text_content = ""
-    for page in doc:
-        text_content += page.get_text() + "\n"
-    doc.close()
+    groups_dict: dict[tuple[str, str], dict[str, ElectiveSubjectRecord]] = {}
+    issues: list[str] = []
 
-    # Basic PDF text parsing heuristic for elective lists
-    subjects_dict: dict[str, ElectiveSubjectRecord] = {}
-    current_subject = "GENERAL-ELECTIVE"
-    current_subname = "General Elective Subject"
+    try:
+        current_sub_code = "GENERAL-ELECTIVE"
+        current_sub_name = "General Elective"
 
-    lines = text_content.splitlines()
-    for line in lines:
-        line_str = line.strip()
-        if not line_str:
-            continue
+        for page in doc:
+            page_text = page.get_text()
 
-        # Check if line looks like a subject heading
-        if "subject" in line_str.lower() or "course:" in line_str.lower():
-            current_subject = line_str[:30]
-            current_subname = line_str
-            continue
+            # Check page-level subject banner
+            m_page = re.search(
+                r"(?:STUDENT LIST\s*[-]?\s*)?([0-9]{2}[A-Z]{2,5}[0-9\._A-Z]+)\s*[-:]\s*([A-Z\s&_]+)",
+                page_text,
+                re.IGNORECASE,
+            )
+            if m_page:
+                current_sub_code = m_page.group(1).strip()
+                current_sub_name = m_page.group(2).strip()
 
-        # Check for roll number pattern (e.g., numbers/alphanumerics like KKE23CS001)
-        match = re.match(r"^([A-Z0-9\-]+)\s+(.+)$", line_str)
-        if match:
-            roll = match.group(1)
-            name = match.group(2)
-            if len(roll) >= 4 and not roll.lower().startswith("page"):
-                if current_subject not in subjects_dict:
-                    subjects_dict[current_subject] = ElectiveSubjectRecord(
-                        subject_code=current_subject,
-                        subject_name=current_subname,
-                        students=[]
+            tabs = page.find_tables()
+            if tabs.tables:
+                for t in tabs.tables:
+                    data = t.extract()
+                    for row in data:
+                        vals = [c for c in row if c is not None and str(c).strip()]
+                        if not vals:
+                            continue
+
+                        # Check if row is subject banner
+                        for v in vals:
+                            vs = str(v).strip()
+                            m_sub = re.search(
+                                r"(?:STUDENT LIST\s*[-]?\s*)?([0-9]{2}[A-Z]{2,5}[0-9\._A-Z]+)\s*[-:]\s*([A-Z\s&_]+)",
+                                vs,
+                                re.IGNORECASE,
+                            )
+                            if m_sub:
+                                current_sub_code = m_sub.group(1).strip()
+                                current_sub_name = m_sub.group(2).strip()
+                                break
+
+                        roll, name = extract_student_from_vals(vals)
+                        if roll:
+                            dept = derive_dept_code(current_sub_code, path.name)
+                            grp_lbl = derive_group_label(current_sub_code, "", path.name)
+                            key = (dept, grp_lbl)
+                            if key not in groups_dict:
+                                groups_dict[key] = {}
+                            if current_sub_code not in groups_dict[key]:
+                                groups_dict[key][current_sub_code] = ElectiveSubjectRecord(
+                                    subject_code=current_sub_code,
+                                    subject_name=current_sub_name,
+                                    students=[],
+                                )
+                            if not any(s.roll_number == roll for s in groups_dict[key][current_sub_code].students):
+                                groups_dict[key][current_sub_code].students.append(
+                                    ElectiveStudentRecord(roll_number=roll, student_name=name)
+                                )
+            else:
+                # Text-line based fallback
+                lines = [l.strip() for l in page_text.splitlines() if l.strip()]
+                for i, line in enumerate(lines):
+                    m_sub = re.search(
+                        r"(?:STUDENT LIST\s*[-]?\s*)?([0-9]{2}[A-Z]{2,5}[0-9\._A-Z]+)\s*[-:]\s*([A-Z\s&_]+)",
+                        line,
+                        re.IGNORECASE,
                     )
-                subjects_dict[current_subject].students.append(
-                    ElectiveStudentRecord(roll_number=roll, student_name=name)
-                )
+                    if m_sub:
+                        current_sub_code = m_sub.group(1).strip()
+                        current_sub_name = m_sub.group(2).strip()
+                        continue
 
-    if not subjects_dict:
-        # Fallback if no structured rows matched
-        subjects_dict["ELECTIVE-1"] = ElectiveSubjectRecord(
-            subject_code="ELECTIVE-1",
-            subject_name="Elective Subject 1",
-            students=[]
-        )
+                    if re.match(r"^[A-Z0-9]{7,12}$", line) and any(line.startswith(p) for p in ["B2", "TKM", "L2"]):
+                        roll = line
+                        name = ""
+                        for j in range(i + 1, min(i + 5, len(lines))):
+                            cand = lines[j]
+                            if not cand.isdigit() and len(cand) > 1 and not re.match(r"^[A-Z0-9]{7,12}$", cand) and not cand.startswith("TKM22"):
+                                name = cand
+                                break
+                        dept = derive_dept_code(current_sub_code, path.name)
+                        grp_lbl = derive_group_label(current_sub_code, "", path.name)
+                        key = (dept, grp_lbl)
+                        if key not in groups_dict:
+                            groups_dict[key] = {}
+                        if current_sub_code not in groups_dict[key]:
+                            groups_dict[key][current_sub_code] = ElectiveSubjectRecord(
+                                subject_code=current_sub_code,
+                                subject_name=current_sub_name,
+                                students=[],
+                            )
+                        if not any(s.roll_number == roll for s in groups_dict[key][current_sub_code].students):
+                            groups_dict[key][current_sub_code].students.append(
+                                ElectiveStudentRecord(roll_number=roll, student_name=name or roll)
+                            )
+    finally:
+        doc.close()
 
-    group = ElectiveGroupRecord(
-        department_code="GEN",
-        department_name="General Department",
-        elective_label="Elective Group",
-        subjects=list(subjects_dict.values())
-    )
+    if not groups_dict:
+        raise ElectiveExcelParseError("No valid elective student records found in PDF file.")
+
+    group_records = []
+    for (dept, grp_lbl), subjects in groups_dict.items():
+        group_records.append(ElectiveGroupRecord(
+            department_code=dept,
+            department_name=derive_dept_name(dept),
+            elective_label=grp_lbl,
+            subjects=list(subjects.values()),
+        ))
 
     return ElectiveExtractionResult(
         source_file=path.name,
-        groups=[group],
-        issues=[]
+        groups=group_records,
+        issues=issues,
     )
