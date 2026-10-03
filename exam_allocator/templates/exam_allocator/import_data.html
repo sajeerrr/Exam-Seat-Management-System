@@ -209,9 +209,11 @@
 
     .card-header {
         display: flex;
-        align-items: flex-start;
-        gap: 14px;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
         margin-bottom: 18px;
+        text-align: center;
     }
 
     .card-icon {
@@ -242,12 +244,14 @@
         font-weight: 700;
         margin-bottom: 4px;
         color: var(--text-primary);
+        align-self: center;
+        margin-top: 10px;
     }
 
-    .card-desc {
-        font-size: 12.5px;
-        color: var(--text-secondary);
-        line-height: 1.5;
+    .upload-card form {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
     }
 
     /* ── DROP ZONE ───────────────────────────── */
@@ -266,6 +270,7 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
+        flex-grow: 1;
     }
 
     .drop-zone:hover,
@@ -657,8 +662,7 @@
         <div class="hero-icon">📥</div>
         <div class="hero-text">
             <h1>Import Data for {{ session.name }}</h1>
-            <p>Upload student lists, exam timetable files, and classroom data. Multiple files can be selected for each
-                category.</p>
+
         </div>
     </div>
 
@@ -671,8 +675,7 @@
                 <div class="card-icon student">👥</div>
                 <div>
                     <div class="card-title">Student Lists</div>
-                    <div class="card-desc">Upload one or more Excel (.xlsx) or PDF files containing student roll
-                        numbers, names, and class assignments.</div>
+
                 </div>
             </div>
 
@@ -686,7 +689,7 @@
                         style="display:none">
                     <div class="drop-icon">📄</div>
                     <div class="drop-label">Click or drag files here</div>
-                    <div class="drop-sublabel">Accepts .xlsx, .xls, .pdf • Multiple files OK</div>
+
                     <div class="file-list" id="fl-student"></div>
                 </div>
 
@@ -702,8 +705,7 @@
                 <div class="card-icon timetable">🗓️</div>
                 <div>
                     <div class="card-title">Exam Timetable</div>
-                    <div class="card-desc">Upload one or more timetable files. Multiple files will be merged — useful
-                        when departments have separate timetables.</div>
+
                 </div>
             </div>
 
@@ -717,7 +719,7 @@
                         style="display:none">
                     <div class="drop-icon">📅</div>
                     <div class="drop-label">Click or drag files here</div>
-                    <div class="drop-sublabel">Accepts .xlsx, .xls, .pdf • Multiple files OK</div>
+
                     <div class="file-list" id="fl-timetable"></div>
                 </div>
 
@@ -733,8 +735,7 @@
                 <div class="card-icon classroom">🏫</div>
                 <div>
                     <div class="card-title">Classroom Data</div>
-                    <div class="card-desc">Upload an Excel file listing each exam room with its number, building, bench
-                        count, and seating capacity.</div>
+
                 </div>
             </div>
 
@@ -747,7 +748,7 @@
                     <input type="file" name="file" accept=".xlsx,.xls" id="fi-classroom" style="display:none">
                     <div class="drop-icon">🏛️</div>
                     <div class="drop-label">Click or drag file here</div>
-                    <div class="drop-sublabel">Accepts .xlsx, .xls only</div>
+
                     <div class="file-list" id="fl-classroom"></div>
                 </div>
 
@@ -757,28 +758,6 @@
             </form>
         </div>
 
-    </div>
-
-    <!-- TIPS -->
-    <div class="tips-card">
-        <div class="tips-header">💡 Import Tips</div>
-        <div class="tips-grid">
-            <div class="tip-item">
-                <div class="tip-bullet">S</div>
-                <div><strong>Student files</strong> — Each file can cover one or more classes. Department/class is
-                    parsed automatically from sheet names or column headers.</div>
-            </div>
-            <div class="tip-item">
-                <div class="tip-bullet">T</div>
-                <div><strong>Timetable files</strong> — Upload files from each department separately; duplicate subjects
-                    are handled gracefully and merged.</div>
-            </div>
-            <div class="tip-item">
-                <div class="tip-bullet">C</div>
-                <div><strong>Classroom files</strong> — One file is sufficient. Go to the Review page after import to
-                    add, remove, or adjust rooms manually.</div>
-            </div>
-        </div>
     </div>
 
     {% if uploaded_files %}
