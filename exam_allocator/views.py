@@ -277,37 +277,20 @@ def generate_registrations(request, session_id):
 
 
 def generate_session_allocation(request, session_id):
-
     session = get_object_or_404(
         AllocationSession,
         session_id=session_id,
     )
-
     if request.method != "POST":
-        return JsonResponse(
-            {
-                "success": False,
-                "error": "Only POST requests are allowed.",
-            },
-            status=405,
-        )
+        return JsonResponse({"success": False, "error": "Only POST requests are allowed."}, status=405)
 
     try:
+        from exam_allocator.services.registration_service import create_all_exam_registrations
+        from exam_allocator.services.session_allocation_service import run_session_allocation
+        create_all_exam_registrations(session)
         run_session_allocation(session)
-
-    except SessionAllocationError as exc:
-        # Allocation partially failed. Show a warning but still redirect to
-        # the results page so the user can see whatever was successfully allocated.
-        messages.warning(
-            request,
-            f"Allocation completed with warnings: {exc}",
-        )
-
     except Exception as exc:
-        messages.warning(
-            request,
-            f"Allocation encountered an error: {exc}",
-        )
+        messages.warning(request, f"Allocation encountered an error: {exc}")
 
     return redirect(
         "exam_allocator:session_allocation_result",
@@ -316,252 +299,120 @@ def generate_session_allocation(request, session_id):
 
 
 def session_allocation_result(request, session_id):
-
-    session = get_object_or_404(
-        AllocationSession,
-        session_id=session_id,
-    )
-
-    allocations = list(
-        Allocation.objects.filter(exam__subject__session=session)
-        .select_related(
-            "exam",
-            "exam__subject",
-            "registration__student",
-            "room",
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    
+    # Fetch available Date-Session slots globally
+    from exam_allocator.models import Exam, Allocation
+    exam_slots = Exam.objects.filter(subject__session=session).order_by('exam_date', 'session').values('exam_date', 'session').distinct()
+    
+    slots = []
+    for slot in exam_slots:
+        slots.append({
+            'date': slot['exam_date'],
+            'shift': slot['session']
+        })
+        
+    date_filter = request.GET.get('date')
+    shift_filter = request.GET.get('shift')
+    
+    selected_slot = None
+    if date_filter and shift_filter:
+        for s in slots:
+            if str(s['date']) == date_filter and s['shift'] == shift_filter:
+                selected_slot = s
+                break
+                
+    if not selected_slot and slots:
+        selected_slot = slots[0]
+        
+    rooms_data = {}
+    
+    if selected_slot:
+        # Fetch ALL allocations in this slot
+        allocations = (
+            Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=selected_slot['date'],
+                exam__session=selected_slot['shift']
+            )
+            .select_related(
+                "registration__student",
+                "registration__student__student_class",
+                "registration__student__student_class__department",
+                "room",
+            )
+            .order_by("room__room_number", "bench_number", "seat_number")
         )
-        .order_by(
-            "exam__exam_date",
-            "exam__session",
-            "room__room_number",
-            "bench_number",
-            "seat_number",
-        )
-    )
-
-    # ---------------------------------------------------------
-    # GROUP ALLOCATIONS BY EXAMINATION SLOT
-    # ---------------------------------------------------------
-
-    slot_map = {}
-
-    for allocation in allocations:
-
-        slot_key = (
-            allocation.exam.exam_date,
-            allocation.exam.session,
-        )
-
-        if slot_key not in slot_map:
-            slot_map[slot_key] = {
-                "date": allocation.exam.exam_date,
-                "session": allocation.exam.session,
-                "rooms": {},
+        
+        # Group by room
+        from collections import defaultdict
+        room_allocs = defaultdict(list)
+        for a in allocations:
+            room_allocs[a.room].append(a)
+            
+        def get_stream_summary(allocs, seat_num):
+            seat_allocs = [a for a in allocs if a.seat_number == seat_num]
+            if not seat_allocs:
+                return "None"
+            
+            seat_allocs.sort(key=lambda x: x.bench_number)
+            summary = []
+            
+            # The excel has abbreviations like ME, CS. Usually it's department_code
+            current_dept = seat_allocs[0].registration.student.student_class.department.department_code
+            start_bench = seat_allocs[0].bench_number
+            prev_bench = start_bench
+            
+            for a in seat_allocs[1:]:
+                dept = a.registration.student.student_class.department.department_code
+                current_num = a.bench_number
+                
+                if dept != current_dept or current_num != prev_bench + 1:
+                    if start_bench == prev_bench:
+                        summary.append(f"{start_bench} {current_dept}")
+                    else:
+                        summary.append(f"{start_bench}-{prev_bench} {current_dept}")
+                    current_dept = dept
+                    start_bench = current_num
+                prev_bench = current_num
+                
+            if start_bench == prev_bench:
+                summary.append(f"{start_bench} {current_dept}")
+            else:
+                summary.append(f"{start_bench}-{prev_bench} {current_dept}")
+                
+            return ", ".join(summary)
+            
+        for room, allocs in room_allocs.items():
+            rooms_data[room.room_number] = {
+                'room_number': room.room_number,
+                'total_students': len(allocs),
+                'stream_a': get_stream_summary(allocs, 1),
+                'stream_b': get_stream_summary(allocs, 2),
+                'stream_c': get_stream_summary(allocs, 3),
+                'exam_date': selected_slot['date'],
+                'session': selected_slot['shift'],
             }
 
-        room_number = allocation.room.room_number
+    # sort rooms numerically
+    def try_int(val):
+        try:
+            return (0, int(val))
+        except ValueError:
+            return (1, val)
 
-        if room_number not in slot_map[slot_key]["rooms"]:
-            slot_map[slot_key]["rooms"][room_number] = {
-                "room": allocation.room,
-                "benches": {},
-            }
-
-        bench_number = allocation.bench_number
-
-        if bench_number not in slot_map[slot_key]["rooms"][room_number]["benches"]:
-            slot_map[slot_key]["rooms"][room_number]["benches"][bench_number] = {
-                1: None,
-                2: None,
-                3: None,
-            }
-
-        slot_map[slot_key]["rooms"][room_number]["benches"][bench_number][
-            allocation.seat_number
-        ] = allocation
-
-    # ---------------------------------------------------------
-    # BUILD TEMPLATE DATA
-    #
-    # Classroom structure:
-    #
-    # SET 1 | SET 2 | SET 3 | SET 4 | SET 5
-    #   1       4       7      10      13
-    #   2       5       8      11      14
-    #   3       6       9      12      15
-    #
-    # Each set therefore contains 3 benches.
-    # ---------------------------------------------------------
-
-    slot_views = []
-
-    for slot_key in sorted(slot_map.keys()):
-
-        slot_data = slot_map[slot_key]
-
-        room_views = []
-
-        for room_number in sorted(
-            slot_data["rooms"].keys(),
-            key=lambda value: str(value),
-        ):
-
-            room_data = slot_data["rooms"][room_number]
-            room = room_data["room"]
-
-            # -------------------------------------------------
-            # ALWAYS DISPLAY THE STANDARD 15-BENCH STRUCTURE
-            # -------------------------------------------------
-
-            highest_allocated_bench = max(
-                room_data["benches"].keys(),
-                default=0,
-            )
-
-            total_benches = max(
-                15,
-                room.benches,
-                highest_allocated_bench,
-            )
-
-            bench_views = []
-
-            for bench_number in range(1, total_benches + 1):
-
-                seat_map = room_data["benches"].get(
-                    bench_number,
-                    {
-                        1: None,
-                        2: None,
-                        3: None,
-                    },
-                )
-
-                seats = []
-
-                for seat_number in [1, 2, 3]:
-
-                    seats.append(
-                        {
-                            "number": seat_number,
-                            "allocation": seat_map.get(seat_number),
-                        }
-                    )
-
-                bench_views.append(
-                    {
-                        "number": bench_number,
-                        "seats": seats,
-                    }
-                )
-
-                # -------------------------------------------------
-            # BUILD CLASSROOM ROWS
-            #
-            # Three benches across each row.
-            #
-            # Row 1:  Bench 1   Bench 2   Bench 3
-            # Row 2:  Bench 4   Bench 5   Bench 6
-            # Row 3:  Bench 7   Bench 8   Bench 9
-            # Row 4:  Bench 10  Bench 11  Bench 12
-            # Row 5:  Bench 13  Bench 14  Bench 15
-            #
-            # Numbering runs LEFT -> RIGHT,
-            # then TOP -> BOTTOM.
-            # -------------------------------------------------
-
-            rows = []
-
-            for row_start in range(0, total_benches, 3):
-
-                rows.append(
-                    {
-                        "benches": bench_views[row_start : row_start + 3],
-                    }
-                )
-
-            room_views.append(
-                {
-                    "room": room,
-                    "capacity": room.capacity,
-                    "benches": total_benches,
-                    "rows": rows,
-                    "students": sum(
-                        1
-                        for bench in bench_views
-                        for seat in bench["seats"]
-                        if seat["allocation"] is not None
-                    ),
-                }
-            )
-
-        slot_views.append(
-            {
-                "date": slot_data["date"],
-                "session": slot_data["session"],
-                "rooms": room_views,
-                "classrooms_used": len(room_views),
-                "students": sum(room_view["students"] for room_view in room_views),
-            }
-        )
-
-        # ---------------------------------------------------------
-    # BUILD ONE FLAT CLASSROOM LIST
-    #
-    # The screen viewer will navigate through these classrooms
-    # without changing pages.
-    # ---------------------------------------------------------
-
-    classroom_views = []
-
-    for slot in slot_views:
-
-        for room_view in slot["rooms"]:
-
-            classroom_views.append(
-                {
-                    "date": slot["date"],
-                    "session": slot["session"],
-                    "room": room_view["room"],
-                    "capacity": room_view["capacity"],
-                    "benches": room_view["benches"],
-                    "rows": room_view["rows"],
-                    "students": room_view["students"],
-                }
-            )
-
-    seating_arrangements_count = len(classroom_views)
-    # ---------------------------------------------------------
-    # PROGRESS INFORMATION
-    # ---------------------------------------------------------
-
-    registrations_count = ExamRegistration.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    exams_count = Exam.objects.filter(subject__session=session).count()
-
-    rooms_count = Room.objects.filter(session=session).count()
-
-    students_allocated = len(allocations)
+    sorted_rooms = [rooms_data[k] for k in sorted(rooms_data.keys(), key=try_int)]
 
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
         {
             "session": session,
-            "allocations": allocations,
-            "allocations_count": len(allocations),
-            "slot_views": slot_views,
-            "classroom_views": classroom_views,
-            "seating_arrangements_count": seating_arrangements_count,
-            "registrations_count": registrations_count,
-            "exams_count": exams_count,
-            "rooms_count": rooms_count,
-            "students_allocated": students_allocated,
+            "slots": slots,
+            "selected_slot": selected_slot,
+            "rooms": sorted_rooms,
         },
     )
-
 
 def generate_allocation(request, exam_id):
 
