@@ -26,3 +26,6 @@ class AllocationService:
 
         # CRITICAL: Must return tuple (context, seat_plan)
         return context, seat_plan
+
+
+
