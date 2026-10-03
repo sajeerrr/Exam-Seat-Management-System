@@ -77,7 +77,7 @@ def import_elective_data(session: AllocationSession, result: ElectiveExtractionR
 
                 dept_code = stud_rec.department
                 if not dept_code and student and student.student_class and student.student_class.department:
-                    dept_code = student.student_class.department.dept_code
+                    dept_code = student.student_class.department.department_code
 
                 class_name = stud_rec.class_name
                 if not class_name and student and student.student_class:
