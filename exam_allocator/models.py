@@ -86,6 +86,10 @@ class Student(models.Model):
     )
     roll_number = models.CharField(max_length=50)
     student_name = models.CharField(max_length=150)
+    
+    admission_no = models.CharField(max_length=50, blank=True)
+    uni_reg_no = models.CharField(max_length=50, blank=True)
+    gender = models.CharField(max_length=20, blank=True)
 
     class Meta:
         constraints = [

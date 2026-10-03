@@ -1,10 +1,58 @@
-{% extends "exam_allocator/base.html" %}
-{% block title %}Dashboard — {{ session.name }} — ExamSeat{% endblock %}
-{% block extra_head %}
-<meta name="description" content="Review imported data for {{ session.name }}: departments, timetable, and classrooms.">
-{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — h — ExamSeat</title>
+    
+<meta name="description" content="Review imported data for h: departments, timetable, and classrooms.">
 
-{% block extra_css %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-primary:     #f0f4ff;
+            --bg-secondary:   #e8eeff;
+            --bg-card:        rgba(255,255,255,0.75);
+            --bg-card-hover:  rgba(255,255,255,0.95);
+            --border:         rgba(99,102,241,0.15);
+            --border-hover:   rgba(99,102,241,0.5);
+            --accent:         #4f46e5;
+            --accent-light:   #6366f1;
+            --accent-glow:    rgba(99,102,241,0.15);
+            --text-primary:   #1e1b4b;
+            --text-secondary: #475569;
+            --text-muted:     #94a3b8;
+            --success:        #059669;
+            --success-bg:     rgba(5,150,105,0.1);
+            --success-border: rgba(5,150,105,0.25);
+            --warning:        #d97706;
+            --warning-bg:     rgba(217,119,6,0.1);
+            --error:          #dc2626;
+            --error-bg:       rgba(220,38,38,0.08);
+            --error-border:   rgba(220,38,38,0.2);
+            --end-seat:       rgba(5,150,105,0.12);
+            --mid-seat:       rgba(99,102,241,0.03);
+            --shadow-card:    rgba(99,102,241,0.1);
+            --blob-a:         rgba(99,102,241,0.08);
+            --blob-b:         rgba(16,185,129,0.05);
+            --bg-sunken:      rgba(99,102,241,0.05);
+            --bg-nav-bar:     rgba(99,102,241,0.07);
+            --bg-interactive: rgba(99,102,241,0.07);
+            --bg-interactive-hover: rgba(99,102,241,0.14);
+            --radius:         14px;
+            --radius-sm:      8px;
+        }
+
+        /* ══ GLOBAL RESET ═══════════════════════════════════════════ */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { font-family: 'Inter', sans-serif; }
+
+    </style>
+
+    
 <style>
     * {
         box-sizing: border-box;
@@ -891,32 +939,31 @@
         }
     }
 </style>
-{% endblock %}
 
-{% block content %}
+</head>
+<body>
+
+
+
 <div class="pw">
 
     <!-- BREADCRUMB -->
     <nav class="top-nav">
         <div class="breadcrumb">
-            <a href="{% url 'exam_allocator:session_list' %}">All Sessions</a>
+            <a href="/">All Sessions</a>
             <span class="sep">›</span>
-            <span class="cur">Dashboard ({{ session.name }})</span>
+            <span class="cur">Dashboard (h)</span>
         </div>
     </nav>
 
     <!-- MESSAGES -->
-    {% if messages %}
-    <div class="msgs">
-        {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
-    </div>
-    {% endif %}
+    
 
     <!-- HERO -->
     <div class="hero">
         <div class="hero-icon">📊</div>
         <div>
-            <h1>Dashboard: {{ session.name }}</h1>
+            <h1>Dashboard: h</h1>
             <p>Inspect and correct imported data before running seat allocation. All edits are saved to the session
                 database immediately.</p>
         </div>
@@ -925,19 +972,19 @@
     <!-- STATS BAND -->
     <div class="stats-band">
         <div class="stat-card">
-            <div class="stat-num">{{ departments_count }}</div>
+            <div class="stat-num">1</div>
             <div class="stat-lbl">Departments</div>
         </div>
         <div class="stat-card">
-            <div class="stat-num">{{ students_count }}</div>
+            <div class="stat-num">35</div>
             <div class="stat-lbl">Students</div>
         </div>
         <div class="stat-card">
-            <div class="stat-num">{{ rooms_count }}</div>
+            <div class="stat-num">0</div>
             <div class="stat-lbl">Rooms</div>
         </div>
         <div class="stat-card">
-            <div class="stat-num">{{ exam_days_count }}</div>
+            <div class="stat-num">0</div>
             <div class="stat-lbl">Exam Days</div>
         </div>
     </div>
@@ -951,127 +998,60 @@
 
     <!-- ══ PANEL: DEPARTMENTS ══════════════════════════════════════════════ -->
     <div class="panel active" id="panel-dept">
-        {% for dept in departments %}
+        
         <div class="sec-card">
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
                     <span>🏛️</span>
-                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{                         dept.department_code }})</span>
+                    ARCHITECTURE <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{
+                        dept.department_code }})</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es"                         }}</span>
+                    <span class="sec-card-meta">1 class{{ dept.classes.count|pluralize:"es"
+                        }}</span>
                     <span class="chevron">▼</span>
                 </div>
             </div>
             <div class="sec-card-body collapsed">
                 <div class="class-list">
-                    {% for cls in dept.classes.all %}
-                    <div class="class-row" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
-                        <span class="class-name">{{ cls.class_name }}</span>
-                        <span class="class-count">{{ cls.students.count }} students</span>
+                    
+                    <div class="class-row" onclick="toggleStudentPanel(86, this)">
+                        <span class="class-name">B.Arch 2K21A</span>
+                        <span class="class-count">35 students</span>
                         <span class="class-arrow">›</span>
                     </div>
-                    <div id="sp-{{ cls.class_id }}" class="student-panel" style="display:none;">
+                    <div id="sp-86" class="student-panel" style="display:none;">
                         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Loading students…</div>
                     </div>
-                    {% empty %}
-                    <div style="padding:16px 20px;color:var(--text-muted);font-size:13px;">No classes in this
-                        department.</div>
-                    {% endfor %}
+                    
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="no-rooms" style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;">No
-            departments imported yet. Go to Import Data to upload student files.</div>
-        {% endfor %}
+        
     </div>
 
     <!-- ══ PANEL: TIMETABLE ════════════════════════════════════════════════ -->
     <div class="panel" id="panel-tt">
-        {% for day in timetable_days %}
-        <div class="tt-date-block">
-            <div class="tt-date-header">
-                <div class="date-chip">📅 {{ day.date|date:"l, d F Y" }}</div>
-            </div>
-            <div class="tt-sessions">
-                {% for slot in day.slots %}
-                <div class="tt-session-card">
-                    <div class="tt-session-header">
-                        <span class="session-chip {% if slot.session == 'FN' %}fn{% else %}an{% endif %}">{{                             slot.session }}</span>
-                        <span class="tt-session-header-text">
-                            {% if slot.session == 'FN' %}
-                            Forenoon
-                            {% else %}
-                            Afternoon
-                            {% endif %}
-                            Session
-                        </span>
-                        <span style="margin-left:auto;font-size:12px;color:var(--text-muted);">{{ slot.exams|length }}
-                            exam{% if slot.exams|length != 1 %}s{% endif %}</span>
-                    </div>
-                    {% for exam in slot.exams %}
-                    <div class="tt-exam-row">
-                        <div class="tt-exam-subject">{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}
-                        </div>
-                        <div class="tt-exam-targets">
-                            {% for target in exam.targets.all %}
-                            <span class="tt-target-chip"
-                                onclick="showTargetStudents({{ exam.exam_id }}, '{{ target.branch_code }}', '{{ target.slot }}', this)">
-                                {{ target.branch_code }}{% if target.slot %}/{{ target.slot }}{% endif %}
-                            </span>
-                            {% empty %}
-                            <span style="font-size:11px;color:var(--text-muted);">No targets</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="tt-empty">No exams</div>
-                    {% endfor %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% empty %}
+        
         <div class="no-rooms">No timetable data imported yet. Go to Import Data to upload timetable files.</div>
-        {% endfor %}
+        
     </div>
 
     <!-- ══ PANEL: CLASSROOMS ═══════════════════════════════════════════════ -->
     <div class="panel" id="panel-rooms">
         <div class="rooms-toolbar">
-            <div class="rooms-toolbar-title">🏫 Exam Rooms ({{ rooms|length }} total)</div>
+            <div class="rooms-toolbar-title">🏫 Exam Rooms (0 total)</div>
             <button class="btn-add-room" onclick="openRoomModal(null)" id="add-room-btn">+ Add Room</button>
         </div>
-        {% if rooms %}
-        <div class="rooms-grid" id="rooms-grid">
-            {% for room in rooms %}
-            <div class="room-card" id="room-card-{{ room.room_id }}">
-                <div class="room-number">{{ room.room_number }}</div>
-                <div class="room-building">{{ room.building }}</div>
-                <div class="room-caps">
-                    <span class="room-cap cap">Cap: {{ room.capacity }}</span>
-                    <span class="room-cap bench">Benches: {{ room.benches }}</span>
-                </div>
-                <div class="room-actions">
-                    <button class="room-btn"
-                        onclick="openRoomModal({{ room.room_id }},'{{ room.room_number|escapejs }}','{{ room.building|escapejs }}',{{ room.capacity }},{{ room.benches }})">✏️
-                        Edit</button>
-                    <button class="room-btn del"
-                        onclick="deleteRoom({{ room.room_id }}, '{{ room.room_number|escapejs }}')">🗑️ Delete</button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
+        
         <div class="no-rooms" id="no-rooms-msg">No classrooms imported yet. Add one manually or go to Import Data.</div>
-        {% endif %}
+        
     </div>
 
     <!-- BOTTOM BAR -->
     <div class="bottom-bar">
         <div style="flex-grow: 1;"></div>
-        <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-prim"
+        <a href="/session/10/" class="btn-prim"
             id="btn-goto-allocate">Proceed to Allocation →</a>
     </div>
 
@@ -1155,8 +1135,8 @@
 </div>
 
 <script>
-    const SESSION_ID = {{ session.session_id }};
-    const CSRF = '{{ csrf_token }}';
+    const SESSION_ID = 10;
+    const CSRF = '2zXDG3HVbDS3pgHMcMvlTKS2DJvzd002XxhYUy1EyQWPV4blgFypw90M6IE0qY4h';
 
     /* ── TABS ───────────────────────────────── */
     function switchTab(name) {
@@ -1329,4 +1309,9 @@
 
     function escJS(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
 </script>
-{% endblock %}
+
+
+
+
+</body>
+</html>

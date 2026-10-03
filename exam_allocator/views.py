@@ -928,11 +928,18 @@ def api_class_students(request, class_id):
     cls = get_object_or_404(Class, class_id=class_id)
     students = list(
         cls.students.all().order_by("roll_number").values(
-            "student_id", "roll_number", "student_name"
+            "student_id", "roll_number", "student_name", "admission_no", "uni_reg_no", "gender"
         )
     )
     data = [
-        {"id": s["student_id"], "roll_number": s["roll_number"], "student_name": s["student_name"]}
+        {
+            "id": s["student_id"],
+            "roll_number": s["roll_number"],
+            "student_name": s["student_name"],
+            "admission_no": s["admission_no"],
+            "uni_reg_no": s["uni_reg_no"],
+            "gender": s["gender"],
+        }
         for s in students
     ]
     return JsonResponse(data, safe=False)
@@ -951,6 +958,10 @@ def api_edit_student(request, student_id):
         body = json.loads(request.body)
         roll = body.get("roll_number", "").strip()
         name = body.get("student_name", "").strip()
+        adm = body.get("admission_no", "").strip()
+        reg = body.get("uni_reg_no", "").strip()
+        gender = body.get("gender", "").strip()
+        
         if not roll or not name:
             return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
 
@@ -964,8 +975,18 @@ def api_edit_student(request, student_id):
 
         student.roll_number = roll
         student.student_name = name
-        student.save(update_fields=["roll_number", "student_name"])
-        return JsonResponse({"success": True, "roll_number": student.roll_number, "student_name": student.student_name})
+        student.admission_no = adm
+        student.uni_reg_no = reg
+        student.gender = gender
+        student.save(update_fields=["roll_number", "student_name", "admission_no", "uni_reg_no", "gender"])
+        return JsonResponse({
+            "success": True, 
+            "roll_number": student.roll_number, 
+            "student_name": student.student_name,
+            "admission_no": student.admission_no,
+            "uni_reg_no": student.uni_reg_no,
+            "gender": student.gender
+        })
     except Exception as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=500)
 

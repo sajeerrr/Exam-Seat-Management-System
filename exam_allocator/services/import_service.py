@@ -129,6 +129,9 @@ def import_students(student_result, session):
                 roll_number=roll_number,
                 defaults={
                     "student_name": student_record.name.strip(),
+                    "admission_no": student_record.admission_no or "",
+                    "uni_reg_no": student_record.uni_reg_no or "",
+                    "gender": student_record.gender or "",
                 },
             )
 
@@ -140,10 +143,26 @@ def import_students(student_result, session):
                 # Keep the database synchronized if the name
                 # changed in a newer Excel file.
                 new_name = student_record.name.strip()
-
+                update_fields = []
+                
                 if new_name and student.student_name != new_name:
                     student.student_name = new_name
-                    student.save(update_fields=["student_name"])
+                    update_fields.append("student_name")
+                
+                if student_record.admission_no and student.admission_no != student_record.admission_no:
+                    student.admission_no = student_record.admission_no
+                    update_fields.append("admission_no")
+                    
+                if student_record.uni_reg_no and student.uni_reg_no != student_record.uni_reg_no:
+                    student.uni_reg_no = student_record.uni_reg_no
+                    update_fields.append("uni_reg_no")
+                    
+                if student_record.gender and student.gender != student_record.gender:
+                    student.gender = student_record.gender
+                    update_fields.append("gender")
+                    
+                if update_fields:
+                    student.save(update_fields=update_fields)
 
     return {
         "departments_created": departments_created,
