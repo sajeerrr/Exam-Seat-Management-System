@@ -872,6 +872,249 @@ def upload_file(request, session_id):
         )
 
     return redirect(
-        "exam_allocator:session_detail",
+        "exam_allocator:import_data",
         session_id=session.session_id,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IMPORT DATA PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def import_data(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    uploaded_files = (
+        session.uploaded_files.all().order_by("-uploaded_at")
+    )
+    return render(
+        request,
+        "exam_allocator/import_data.html",
+        {
+            "session": session,
+            "uploaded_files": uploaded_files,
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REVIEW SESSION PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def review_session(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+
+    # Departments (prefetch classes)
+    departments = (
+        Department.objects.filter(session=session)
+        .prefetch_related("classes__students")
+        .order_by("department_code")
+    )
+
+    departments_count = departments.count()
+    students_count = Student.objects.filter(
+        student_class__department__session=session
+    ).count()
+    rooms = Room.objects.filter(session=session).order_by("room_number")
+    rooms_count = rooms.count()
+
+    # Build timetable structure grouped by date → FN/AN
+    exams_qs = (
+        Exam.objects.filter(subject__session=session)
+        .select_related("subject")
+        .prefetch_related("targets")
+        .order_by("exam_date", "session", "subject__subject_code")
+    )
+
+    date_map = defaultdict(lambda: {"FN": [], "AN": []})
+    for exam in exams_qs:
+        date_map[exam.exam_date][exam.session].append(exam)
+
+    timetable_days = []
+    for date in sorted(date_map.keys()):
+        slots = []
+        for sess_label in ["FN", "AN"]:
+            if date_map[date][sess_label]:
+                slots.append({
+                    "session": sess_label,
+                    "exams": date_map[date][sess_label],
+                })
+        timetable_days.append({"date": date, "slots": slots})
+
+    exam_days_count = len(timetable_days)
+
+    return render(
+        request,
+        "exam_allocator/review_session.html",
+        {
+            "session": session,
+            "departments": departments,
+            "departments_count": departments_count,
+            "students_count": students_count,
+            "rooms": rooms,
+            "rooms_count": rooms_count,
+            "timetable_days": timetable_days,
+            "exam_days_count": exam_days_count,
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: GET STUDENTS FOR A CLASS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_class_students(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    students = list(
+        cls.students.all().order_by("roll_number").values(
+            "student_id", "roll_number", "student_name"
+        )
+    )
+    data = [
+        {"id": s["student_id"], "roll_number": s["roll_number"], "student_name": s["student_name"]}
+        for s in students
+    ]
+    return JsonResponse(data, safe=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: EDIT STUDENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+import json
+
+@require_POST
+def api_edit_student(request, student_id):
+    student = get_object_or_404(Student, student_id=student_id)
+    try:
+        body = json.loads(request.body)
+        roll = body.get("roll_number", "").strip()
+        name = body.get("student_name", "").strip()
+        if not roll or not name:
+            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+        # Check uniqueness within class (excluding self)
+        if (
+            Student.objects.filter(student_class=student.student_class, roll_number=roll)
+            .exclude(pk=student_id)
+            .exists()
+        ):
+            return JsonResponse({"success": False, "error": f"Roll number '{roll}' already exists in this class."}, status=400)
+
+        student.roll_number = roll
+        student.student_name = name
+        student.save(update_fields=["roll_number", "student_name"])
+        return JsonResponse({"success": True, "roll_number": student.roll_number, "student_name": student.student_name})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: ADD ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_add_room(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    try:
+        body = json.loads(request.body)
+        room_number = body.get("room_number", "").strip()
+        building = body.get("building", "").strip()
+        capacity = int(body.get("capacity", 0))
+        benches = int(body.get("benches", 0))
+        if not room_number or not building or capacity < 1 or benches < 1:
+            return JsonResponse({"success": False, "error": "All fields are required and must be valid."}, status=400)
+
+        if Room.objects.filter(session=session, room_number=room_number).exists():
+            return JsonResponse({"success": False, "error": f"Room '{room_number}' already exists in this session."}, status=400)
+
+        room = Room.objects.create(
+            session=session,
+            room_number=room_number,
+            building=building,
+            capacity=capacity,
+            benches=benches,
+        )
+        return JsonResponse({"success": True, "room_id": room.room_id})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: EDIT ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_room(request, room_id):
+    room = get_object_or_404(Room, room_id=room_id)
+    try:
+        body = json.loads(request.body)
+        room_number = body.get("room_number", "").strip()
+        building = body.get("building", "").strip()
+        capacity = int(body.get("capacity", 0))
+        benches = int(body.get("benches", 0))
+        if not room_number or not building or capacity < 1 or benches < 1:
+            return JsonResponse({"success": False, "error": "All fields are required and must be valid."}, status=400)
+
+        # Check uniqueness within session (excluding self)
+        if (
+            Room.objects.filter(session=room.session, room_number=room_number)
+            .exclude(pk=room_id)
+            .exists()
+        ):
+            return JsonResponse({"success": False, "error": f"Room '{room_number}' already exists in this session."}, status=400)
+
+        room.room_number = room_number
+        room.building = building
+        room.capacity = capacity
+        room.benches = benches
+        room.save(update_fields=["room_number", "building", "capacity", "benches"])
+        return JsonResponse({"success": True})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: DELETE ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_delete_room(request, room_id):
+    room = get_object_or_404(Room, room_id=room_id)
+    try:
+        # Cannot delete if it has allocations
+        if room.allocations.exists():
+            return JsonResponse(
+                {"success": False, "error": "Cannot delete a room that has existing seat allocations."},
+                status=400,
+            )
+        room.delete()
+        return JsonResponse({"success": True})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: TARGET STUDENTS FOR TIMETABLE DRILL-DOWN
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_exam_target_students(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    branch = request.GET.get("branch", "").strip()
+    slot = request.GET.get("slot", "").strip()
+
+    # Find matching classes: department_code matches branch_code, semester matches subject semester
+    students_qs = Student.objects.filter(
+        student_class__department__session=exam.subject.session,
+        student_class__department__department_code=branch,
+        student_class__semester=exam.subject.semester,
+    ).select_related("student_class__department").order_by("roll_number")
+
+    data = [
+        {
+            "roll_number": s.roll_number,
+            "student_name": s.student_name,
+            "class_name": s.student_class.class_name,
+        }
+        for s in students_qs
+    ]
+    return JsonResponse(data, safe=False)
