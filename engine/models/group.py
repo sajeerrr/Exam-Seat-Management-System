@@ -54,5 +54,16 @@ class Group:
         self.allocated_count = allocated_count
 
     def deallocate(self, count: int):
-        """Reverse allocation of `count` students (for LNS destroy)."""
-        self.allocated_count = max(0, self.allocated_count - count)
+        """Reverse allocation of `count` students (for LNS destroy).
+
+        This method both reduces the allocated_count and removes the students
+        from the group's students list to prevent duplicate allocations.
+        """
+        # Remove students from the end of the list to maintain consistency
+        start_index = self.allocated_count - count
+        if start_index < 0:
+            start_index = 0
+
+        # Remove the last 'count' students (since we allocated from the beginning)
+        self.students = self.students[:start_index]
+        self.allocated_count = start_index

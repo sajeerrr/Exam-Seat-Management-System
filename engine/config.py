@@ -90,9 +90,13 @@ class CPSolverConfig:
     """Configuration for the CP-SAT solver (Phase 1)."""
     TIME_LIMIT_SECONDS: float = 10.0
     NUM_WORKERS: int = 4
-    ABC_BONUS: int = 100
-    FRAGMENTATION_PENALTY: int = 50
-    UTILIZATION_BONUS: int = 10
+    # Weights for the CP-SAT objective
+    ABC_BONUS: int = 200      # Reward for ABC room (3 distinct depts, one per stream)
+    ABA_BONUS: int = 100      # Reward for ABA room (A==C != B, one dept per stream)
+    STREAM_OCCUPANCY_BONUS: int = 10  # Reward per occupied stream
+    ROOM_USAGE_PENALTY: int = 5     # Penalty per room used (to encourage consolidation)
+    UTILIZATION_BONUS: int = 1      # Reward for total utilization (less important now)
+    FRAGMENTATION_PENALTY: int = 20   # Penalty for fragmentation (extra rooms per dept)
 
 
 class LNSConfig:
