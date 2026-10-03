@@ -828,12 +828,8 @@
 
     <!-- BOTTOM ACTIONS -->
     <div class="bottom-actions">
-        <button onclick="importAllFiles()" class="btn-primary-lg" id="btn-import-all"
-            style="background: linear-gradient(135deg, #10b981, #059669); margin-right: auto; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);">
-            🚀 Import All Selected Files
-        </button>
         <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary"
-            id="btn-back-session">
+            id="btn-back-session" style="margin-right: auto;">
             ← Back to Session
         </a>
         <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-primary-lg"
@@ -906,46 +902,6 @@
             }
         });
     });
-
-    // ── IMPORT ALL FILES ──────────────────────
-    async function importAllFiles() {
-        let promises = [];
-        let hasFiles = false;
-
-        ['student', 'timetable', 'classroom'].forEach(kind => {
-            const form = document.getElementById('form-' + kind);
-            const fi = document.getElementById('fi-' + kind);
-            if (fi && fi.files.length > 0 && form) {
-                hasFiles = true;
-                promises.push(
-                    fetch(form.action, {
-                        method: 'POST',
-                        body: new FormData(form),
-                    })
-                );
-            }
-        });
-
-        if (!hasFiles) {
-            alert('Please select at least one file to import.');
-            return;
-        }
-
-        const btn = document.getElementById('btn-import-all');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '⏳ Importing Data...';
-        btn.disabled = true;
-
-        try {
-            await Promise.all(promises);
-            window.location.reload();
-        } catch (error) {
-            console.error('Import failed:', error);
-            alert('An error occurred during import. Check the console for details.');
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
 </script>
 
 {% endblock %}
