@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -20,6 +21,9 @@ from .models import (
     Student,
     Subject,
     UploadedFile,
+    ElectiveGroup,
+    ElectiveSubject,
+    ElectiveStudentRegistration,
 )
 from .services.allocation_workflow import (
     AllocationWorkflowError,
@@ -32,17 +36,24 @@ from .services.session_allocation_service import (
 )
 
 from .parsers.student_parser import parse_student_excel
+from .parsers.student_pdf_parser import parse_student_pdf
 from .parsers.classroom_parser import parse_classroom_excel
 from .parsers.timetable_parser import parse_timetable_excel
+from .parsers.timetable_pdf_parser import parse_timetable_pdf
+from .parsers.elective_parser import parse_elective_file
 
 from .services.import_service import (
     import_students,
     import_classrooms,
     import_timetable,
 )
+from .services.elective_import_service import import_elective_data
 from .services.registration_service import (
     create_all_exam_registrations,
 )
+
+
+
 
 
 @ensure_csrf_cookie
@@ -158,50 +169,9 @@ def create_session(request):
 
 
 def session_detail(request, session_id):
-
-    session = get_object_or_404(
-        AllocationSession,
-        session_id=session_id,
-    )
-
-    departments_count = session.departments.count()
-
-    classes_count = Class.objects.filter(department__session=session).count()
-
-    students_count = Student.objects.filter(
-        student_class__department__session=session
-    ).count()
-
-    # Each exam record corresponds to one timetable row (subject + date + session).
-    # We count subjects the same way so both stats are consistent and equal.
-    exams_count = Exam.objects.filter(subject__session=session).count()
-    subjects_count = exams_count  # one subject entry per exam slot
-
-    rooms_count = session.rooms.count()
-
-    registrations_count = ExamRegistration.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    allocations_count = Allocation.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    return render(
-        request,
-        "exam_allocator/session_detail.html",
-        {
-            "session": session,
-            "departments_count": departments_count,
-            "classes_count": classes_count,
-            "students_count": students_count,
-            "subjects_count": subjects_count,
-            "exams_count": exams_count,
-            "rooms_count": rooms_count,
-            "registrations_count": registrations_count,
-            "allocations_count": allocations_count,
-        },
-    )
+    # The intermediate session dashboard is no longer needed; 
+    # redirect directly to the review dashboard instead.
+    return redirect("exam_allocator:review_session", session_id=session_id)
 
 
 def exam_list(request, session_id=None):
@@ -313,37 +283,20 @@ def generate_registrations(request, session_id):
 
 
 def generate_session_allocation(request, session_id):
-
     session = get_object_or_404(
         AllocationSession,
         session_id=session_id,
     )
-
     if request.method != "POST":
-        return JsonResponse(
-            {
-                "success": False,
-                "error": "Only POST requests are allowed.",
-            },
-            status=405,
-        )
+        return JsonResponse({"success": False, "error": "Only POST requests are allowed."}, status=405)
 
     try:
+        from exam_allocator.services.registration_service import create_all_exam_registrations
+        from exam_allocator.services.session_allocation_service import run_session_allocation
+        create_all_exam_registrations(session)
         run_session_allocation(session)
-
-    except SessionAllocationError as exc:
-        # Allocation partially failed. Show a warning but still redirect to
-        # the results page so the user can see whatever was successfully allocated.
-        messages.warning(
-            request,
-            f"Allocation completed with warnings: {exc}",
-        )
-
     except Exception as exc:
-        messages.warning(
-            request,
-            f"Allocation encountered an error: {exc}",
-        )
+        messages.warning(request, f"Allocation encountered an error: {exc}")
 
     return redirect(
         "exam_allocator:session_allocation_result",
@@ -352,252 +305,132 @@ def generate_session_allocation(request, session_id):
 
 
 def session_allocation_result(request, session_id):
-
-    session = get_object_or_404(
-        AllocationSession,
-        session_id=session_id,
-    )
-
-    allocations = list(
-        Allocation.objects.filter(exam__subject__session=session)
-        .select_related(
-            "exam",
-            "exam__subject",
-            "registration__student",
-            "room",
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    
+    # Fetch available Date-Session slots globally
+    from exam_allocator.models import Exam, Allocation
+    exam_slots = Exam.objects.filter(subject__session=session).order_by('exam_date', 'session').values('exam_date', 'session').distinct()
+    
+    slots = []
+    for slot in exam_slots:
+        slots.append({
+            'date': slot['exam_date'],
+            'shift': slot['session']
+        })
+        
+    date_filter = request.GET.get('date')
+    shift_filter = request.GET.get('shift')
+    
+    selected_slot = None
+    if date_filter and shift_filter:
+        for s in slots:
+            if str(s['date']) == date_filter and s['shift'] == shift_filter:
+                selected_slot = s
+                break
+                
+    if not selected_slot and slots:
+        selected_slot = slots[0]
+        
+    rooms_data = {}
+    
+    missing_data_reason = ""
+    if selected_slot:
+        from exam_allocator.models import ExamRegistration
+        exams_in_slot = Exam.objects.filter(
+            subject__session=session,
+            exam_date=selected_slot['date'],
+            session=selected_slot['shift']
         )
-        .order_by(
-            "exam__exam_date",
-            "exam__session",
-            "room__room_number",
-            "bench_number",
-            "seat_number",
+        total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
+        if total_regs == 0:
+            missing_data_reason = "No students are currently registered for the exams during this specific slot. This typically happens because the student list Excel files for the matching classes (like Semester 8) were not uploaded in the Import Data step!"
+        
+        # Fetch ALL allocations in this slot
+        allocations = (
+            Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=selected_slot['date'],
+                exam__session=selected_slot['shift']
+            )
+            .select_related(
+                "registration__student",
+                "registration__student__student_class",
+                "registration__student__student_class__department",
+                "room",
+            )
+            .order_by("room__room_number", "bench_number", "seat_number")
         )
-    )
-
-    # ---------------------------------------------------------
-    # GROUP ALLOCATIONS BY EXAMINATION SLOT
-    # ---------------------------------------------------------
-
-    slot_map = {}
-
-    for allocation in allocations:
-
-        slot_key = (
-            allocation.exam.exam_date,
-            allocation.exam.session,
-        )
-
-        if slot_key not in slot_map:
-            slot_map[slot_key] = {
-                "date": allocation.exam.exam_date,
-                "session": allocation.exam.session,
-                "rooms": {},
+        
+        # Group by room
+        from collections import defaultdict
+        room_allocs = defaultdict(list)
+        for a in allocations:
+            room_allocs[a.room].append(a)
+            
+        def get_stream_summary(allocs, seat_num):
+            seat_allocs = [a for a in allocs if a.seat_number == seat_num]
+            if not seat_allocs:
+                return "None"
+            
+            seat_allocs.sort(key=lambda x: x.bench_number)
+            summary = []
+            
+            # The excel has abbreviations like ME, CS. Usually it's department_code
+            current_dept = seat_allocs[0].registration.student.student_class.department.department_code
+            start_bench = seat_allocs[0].bench_number
+            prev_bench = start_bench
+            
+            for a in seat_allocs[1:]:
+                dept = a.registration.student.student_class.department.department_code
+                current_num = a.bench_number
+                
+                if dept != current_dept or current_num != prev_bench + 1:
+                    if start_bench == prev_bench:
+                        summary.append(f"{start_bench} {current_dept}")
+                    else:
+                        summary.append(f"{start_bench}-{prev_bench} {current_dept}")
+                    current_dept = dept
+                    start_bench = current_num
+                prev_bench = current_num
+                
+            if start_bench == prev_bench:
+                summary.append(f"{start_bench} {current_dept}")
+            else:
+                summary.append(f"{start_bench}-{prev_bench} {current_dept}")
+                
+            return ", ".join(summary)
+            
+        for room, allocs in room_allocs.items():
+            rooms_data[room.room_number] = {
+                'room_number': room.room_number,
+                'total_students': len(allocs),
+                'stream_a': get_stream_summary(allocs, 1),
+                'stream_b': get_stream_summary(allocs, 2),
+                'stream_c': get_stream_summary(allocs, 3),
+                'exam_date': selected_slot['date'],
+                'session': selected_slot['shift'],
             }
 
-        room_number = allocation.room.room_number
+    # sort rooms numerically
+    def try_int(val):
+        try:
+            return (0, int(val))
+        except ValueError:
+            return (1, val)
 
-        if room_number not in slot_map[slot_key]["rooms"]:
-            slot_map[slot_key]["rooms"][room_number] = {
-                "room": allocation.room,
-                "benches": {},
-            }
-
-        bench_number = allocation.bench_number
-
-        if bench_number not in slot_map[slot_key]["rooms"][room_number]["benches"]:
-            slot_map[slot_key]["rooms"][room_number]["benches"][bench_number] = {
-                1: None,
-                2: None,
-                3: None,
-            }
-
-        slot_map[slot_key]["rooms"][room_number]["benches"][bench_number][
-            allocation.seat_number
-        ] = allocation
-
-    # ---------------------------------------------------------
-    # BUILD TEMPLATE DATA
-    #
-    # Classroom structure:
-    #
-    # SET 1 | SET 2 | SET 3 | SET 4 | SET 5
-    #   1       4       7      10      13
-    #   2       5       8      11      14
-    #   3       6       9      12      15
-    #
-    # Each set therefore contains 3 benches.
-    # ---------------------------------------------------------
-
-    slot_views = []
-
-    for slot_key in sorted(slot_map.keys()):
-
-        slot_data = slot_map[slot_key]
-
-        room_views = []
-
-        for room_number in sorted(
-            slot_data["rooms"].keys(),
-            key=lambda value: str(value),
-        ):
-
-            room_data = slot_data["rooms"][room_number]
-            room = room_data["room"]
-
-            # -------------------------------------------------
-            # ALWAYS DISPLAY THE STANDARD 15-BENCH STRUCTURE
-            # -------------------------------------------------
-
-            highest_allocated_bench = max(
-                room_data["benches"].keys(),
-                default=0,
-            )
-
-            total_benches = max(
-                15,
-                room.benches,
-                highest_allocated_bench,
-            )
-
-            bench_views = []
-
-            for bench_number in range(1, total_benches + 1):
-
-                seat_map = room_data["benches"].get(
-                    bench_number,
-                    {
-                        1: None,
-                        2: None,
-                        3: None,
-                    },
-                )
-
-                seats = []
-
-                for seat_number in [1, 2, 3]:
-
-                    seats.append(
-                        {
-                            "number": seat_number,
-                            "allocation": seat_map.get(seat_number),
-                        }
-                    )
-
-                bench_views.append(
-                    {
-                        "number": bench_number,
-                        "seats": seats,
-                    }
-                )
-
-                # -------------------------------------------------
-            # BUILD CLASSROOM ROWS
-            #
-            # Three benches across each row.
-            #
-            # Row 1:  Bench 1   Bench 2   Bench 3
-            # Row 2:  Bench 4   Bench 5   Bench 6
-            # Row 3:  Bench 7   Bench 8   Bench 9
-            # Row 4:  Bench 10  Bench 11  Bench 12
-            # Row 5:  Bench 13  Bench 14  Bench 15
-            #
-            # Numbering runs LEFT -> RIGHT,
-            # then TOP -> BOTTOM.
-            # -------------------------------------------------
-
-            rows = []
-
-            for row_start in range(0, total_benches, 3):
-
-                rows.append(
-                    {
-                        "benches": bench_views[row_start : row_start + 3],
-                    }
-                )
-
-            room_views.append(
-                {
-                    "room": room,
-                    "capacity": room.capacity,
-                    "benches": total_benches,
-                    "rows": rows,
-                    "students": sum(
-                        1
-                        for bench in bench_views
-                        for seat in bench["seats"]
-                        if seat["allocation"] is not None
-                    ),
-                }
-            )
-
-        slot_views.append(
-            {
-                "date": slot_data["date"],
-                "session": slot_data["session"],
-                "rooms": room_views,
-                "classrooms_used": len(room_views),
-                "students": sum(room_view["students"] for room_view in room_views),
-            }
-        )
-
-        # ---------------------------------------------------------
-    # BUILD ONE FLAT CLASSROOM LIST
-    #
-    # The screen viewer will navigate through these classrooms
-    # without changing pages.
-    # ---------------------------------------------------------
-
-    classroom_views = []
-
-    for slot in slot_views:
-
-        for room_view in slot["rooms"]:
-
-            classroom_views.append(
-                {
-                    "date": slot["date"],
-                    "session": slot["session"],
-                    "room": room_view["room"],
-                    "capacity": room_view["capacity"],
-                    "benches": room_view["benches"],
-                    "rows": room_view["rows"],
-                    "students": room_view["students"],
-                }
-            )
-
-    seating_arrangements_count = len(classroom_views)
-    # ---------------------------------------------------------
-    # PROGRESS INFORMATION
-    # ---------------------------------------------------------
-
-    registrations_count = ExamRegistration.objects.filter(
-        exam__subject__session=session
-    ).count()
-
-    exams_count = Exam.objects.filter(subject__session=session).count()
-
-    rooms_count = Room.objects.filter(session=session).count()
-
-    students_allocated = len(allocations)
+    sorted_rooms = [rooms_data[k] for k in sorted(rooms_data.keys(), key=try_int)]
 
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
         {
             "session": session,
-            "allocations": allocations,
-            "allocations_count": len(allocations),
-            "slot_views": slot_views,
-            "classroom_views": classroom_views,
-            "seating_arrangements_count": seating_arrangements_count,
-            "registrations_count": registrations_count,
-            "exams_count": exams_count,
-            "rooms_count": rooms_count,
-            "students_allocated": students_allocated,
+            "slots": slots,
+            "selected_slot": selected_slot,
+            "rooms": sorted_rooms,
+            "missing_data_reason": missing_data_reason,
         },
     )
-
 
 def generate_allocation(request, exam_id):
 
@@ -679,10 +512,10 @@ def upload_file(request, session_id):
             status=405,
         )
 
-    uploaded = request.FILES.get("file")
+    uploaded_files = request.FILES.getlist("file")
     file_kind = request.POST.get("file_kind", "").strip().upper()
 
-    if not uploaded:
+    if not uploaded_files:
         messages.error(request, "No file was uploaded.")
 
         return redirect(
@@ -694,6 +527,7 @@ def upload_file(request, session_id):
         UploadedFile.FileKind.STUDENT_LIST,
         UploadedFile.FileKind.CLASSROOM_LIST,
         UploadedFile.FileKind.TIMETABLE,
+        UploadedFile.FileKind.ELECTIVE_LIST,
     }
 
     if file_kind not in valid_kinds:
@@ -704,156 +538,476 @@ def upload_file(request, session_id):
             session_id=session.session_id,
         )
 
-    filename = uploaded.name.lower()
-
-    if filename.endswith(".xlsx"):
-        source_format = UploadedFile.SourceFormat.XLSX
-
-    elif filename.endswith(".pdf"):
-        source_format = UploadedFile.SourceFormat.PDF
-
-    elif filename.endswith((".png", ".jpg", ".jpeg")):
-        source_format = UploadedFile.SourceFormat.IMAGE
-
-    else:
-        messages.error(
-            request,
-            "Unsupported file format.",
-        )
-
-        return redirect(
-            "exam_allocator:session_detail",
-            session_id=session.session_id,
-        )
-
-    # ---------------------------------------------------------
-    # Create UploadedFile record
-    # ---------------------------------------------------------
-
-    record = UploadedFile.objects.create(
-        session=session,
-        file=uploaded,
-        original_filename=uploaded.name,
-        file_kind=file_kind,
-        source_format=source_format,
-        status=UploadedFile.Status.PROCESSING,
-    )
+    # Accumulators for aggregate statistics
+    total_stats = {
+        "students_created": 0,
+        "classes_created": 0,
+        "departments_created": 0,
+        "rooms_created": 0,
+        "exams_created": 0,
+        "subjects_created": 0,
+        "targets_created": 0,
+    }
+    
+    error_occurred = False
 
     try:
+        for uploaded in uploaded_files:
+            filename = uploaded.name.lower()
 
-        # -----------------------------------------------------
-        # Student List
-        # -----------------------------------------------------
+            if filename.endswith(".xlsx"):
+                source_format = UploadedFile.SourceFormat.XLSX
 
-        if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+            elif filename.endswith(".pdf"):
+                source_format = UploadedFile.SourceFormat.PDF
 
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Student List currently supports Excel (.xlsx) files only."
+            elif filename.endswith((".png", ".jpg", ".jpeg")):
+                source_format = UploadedFile.SourceFormat.IMAGE
+
+            else:
+                messages.error(
+                    request,
+                    f"Unsupported file format for {uploaded.name}.",
+                )
+                continue
+
+            # ---------------------------------------------------------
+            # Create UploadedFile record
+            # ---------------------------------------------------------
+
+            record = UploadedFile.objects.create(
+                session=session,
+                file=uploaded,
+                original_filename=uploaded.name,
+                file_kind=file_kind,
+                source_format=source_format,
+                status=UploadedFile.Status.PROCESSING,
+            )
+
+            try:
+                # -----------------------------------------------------
+                # Student List
+                # -----------------------------------------------------
+                if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+                    if source_format == UploadedFile.SourceFormat.XLSX:
+                        result = parse_student_excel(record.file.path)
+                    elif source_format == UploadedFile.SourceFormat.PDF:
+                        result = parse_student_pdf(record.file.path)
+                    else:
+                        raise ValueError(
+                            "Student List currently supports Excel (.xlsx) and PDF files only."
+                        )
+
+                    stats = import_students(
+                        result,
+                        session,
+                    )
+                    total_stats["students_created"] += stats.get("students_created", 0)
+                    total_stats["classes_created"] += stats.get("classes_created", 0)
+                    total_stats["departments_created"] += stats.get("departments_created", 0)
+
+                # -----------------------------------------------------
+                # Classroom List
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
+                    if source_format != UploadedFile.SourceFormat.XLSX:
+                        raise ValueError(
+                            "Classroom List currently supports Excel (.xlsx) files only."
+                        )
+
+                    result = parse_classroom_excel(record.file.path)
+                    stats = import_classrooms(
+                        result,
+                        session,
+                    )
+                    total_stats["rooms_created"] += stats.get("rooms_created", 0)
+
+                # -----------------------------------------------------
+                # Timetable
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.TIMETABLE:
+                    if source_format == UploadedFile.SourceFormat.XLSX:
+                        result = parse_timetable_excel(record.file.path)
+                    elif source_format == UploadedFile.SourceFormat.PDF:
+                        result = parse_timetable_pdf(record.file.path)
+                    else:
+                        raise ValueError(
+                            "Exam Timetable currently supports Excel (.xlsx) and PDF files only."
+                        )
+
+                    stats = import_timetable(
+                        result,
+                        session,
+                    )
+                    total_stats["exams_created"] += stats.get("exams_created", 0)
+                    total_stats["subjects_created"] += stats.get("subjects_created", 0)
+                    total_stats["targets_created"] += stats.get("targets_created", 0)
+
+                # -----------------------------------------------------
+                # Mark upload as successfully processed
+                # -----------------------------------------------------
+                record.status = UploadedFile.Status.VALIDATED
+                record.processed_at = timezone.now()
+                record.error_log = ""
+                record.save(
+                    update_fields=[
+                        "status",
+                        "processed_at",
+                        "error_log",
+                    ]
                 )
 
-            result = parse_student_excel(record.file.path)
-
-            stats = import_students(
-                result,
-                session,
-            )
-
-            message = (
-                f"Student list imported successfully: "
-                f"{stats['students_created']} students, "
-                f"{stats['classes_created']} classes, "
-                f"{stats['departments_created']} departments created."
-            )
-
-        # -----------------------------------------------------
-        # Classroom List
-        # -----------------------------------------------------
-
-        elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
-
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Classroom List currently supports Excel (.xlsx) files only."
+            except Exception as exc:
+                record.status = UploadedFile.Status.FAILED
+                record.processed_at = timezone.now()
+                record.error_log = str(exc)
+                record.save(
+                    update_fields=[
+                        "status",
+                        "processed_at",
+                        "error_log",
+                    ]
                 )
-
-            result = parse_classroom_excel(record.file.path)
-
-            stats = import_classrooms(
-                result,
-                session,
-            )
-
-            message = (
-                f"Classroom list imported successfully: "
-                f"{stats['rooms_created']} rooms created."
-            )
-
-        # -----------------------------------------------------
-        # Timetable
-        # -----------------------------------------------------
-
-        elif file_kind == UploadedFile.FileKind.TIMETABLE:
-
-            if source_format != UploadedFile.SourceFormat.XLSX:
-                raise ValueError(
-                    "Exam Timetable currently supports Excel (.xlsx) files only."
+                messages.error(
+                    request,
+                    f"Import failed for {uploaded.name}: {exc}",
                 )
+                error_occurred = True
 
-            result = parse_timetable_excel(record.file.path)
-
-            stats = import_timetable(
-                result,
-                session,
-            )
-
-            message = (
-                f"Timetable imported successfully: "
-                f"{stats['subjects_created']} subjects, "
-                f"{stats['exams_created']} exams, "
-                f"{stats['targets_created']} targets created."
-            )
-
-        # -----------------------------------------------------
-        # Mark upload as successfully processed
-        # -----------------------------------------------------
-
-        record.status = UploadedFile.Status.VALIDATED
-        record.processed_at = timezone.now()
-        record.error_log = ""
-        record.save(
-            update_fields=[
-                "status",
-                "processed_at",
-                "error_log",
-            ]
-        )
-
-        messages.success(
-            request,
-            message,
-        )
+        if not error_occurred or len(uploaded_files) > 1:
+            if file_kind == UploadedFile.FileKind.STUDENT_LIST:
+                message = (
+                    f"Student list imported: "
+                    f"{total_stats['students_created']} students, "
+                    f"{total_stats['classes_created']} classes, "
+                    f"{total_stats['departments_created']} departments created."
+                )
+            elif file_kind == UploadedFile.FileKind.CLASSROOM_LIST:
+                message = (
+                    f"Classroom list imported: "
+                    f"{total_stats['rooms_created']} rooms created."
+                )
+            elif file_kind == UploadedFile.FileKind.TIMETABLE:
+                message = (
+                    f"Timetable imported: "
+                    f"{total_stats['subjects_created']} subjects, "
+                    f"{total_stats['exams_created']} exams, "
+                    f"{total_stats['targets_created']} targets created."
+                )
+            if not error_occurred or total_stats["students_created"] > 0 or total_stats["rooms_created"] > 0 or total_stats["exams_created"] > 0:
+                messages.success(request, message)
 
     except Exception as exc:
-
-        record.status = UploadedFile.Status.FAILED
-        record.processed_at = timezone.now()
-        record.error_log = str(exc)
-
-        record.save(
-            update_fields=[
-                "status",
-                "processed_at",
-                "error_log",
-            ]
-        )
-
         messages.error(
             request,
-            f"Import failed: {exc}",
+            f"An unexpected error occurred during upload: {exc}",
         )
 
     return redirect(
-        "exam_allocator:session_detail",
+        "exam_allocator:import_data",
         session_id=session.session_id,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IMPORT DATA PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def import_data(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    uploaded_files = (
+        session.uploaded_files.all().order_by("-uploaded_at")
+    )
+    return render(
+        request,
+        "exam_allocator/import_data.html",
+        {
+            "session": session,
+            "uploaded_files": uploaded_files,
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REVIEW SESSION PAGE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def review_session(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+
+    # Departments (prefetch classes)
+    departments = (
+        Department.objects.filter(session=session)
+        .prefetch_related("classes__students")
+        .order_by("department_code")
+    )
+
+    departments_count = departments.count()
+    students_count = Student.objects.filter(
+        student_class__department__session=session
+    ).count()
+    rooms = Room.objects.filter(session=session).order_by("room_number")
+    rooms_count = rooms.count()
+
+    # Build timetable structure grouped by date → FN/AN
+    exams_qs = (
+        Exam.objects.filter(subject__session=session)
+        .select_related("subject")
+        .prefetch_related("targets")
+        .order_by("exam_date", "session", "subject__subject_code")
+    )
+
+    date_map = defaultdict(lambda: {"FN": [], "AN": []})
+    for exam in exams_qs:
+        date_map[exam.exam_date][exam.session].append(exam)
+
+    timetable_days = []
+    for date in sorted(date_map.keys()):
+        slots = []
+        for sess_label in ["FN", "AN"]:
+            if date_map[date][sess_label]:
+                slots.append({
+                    "session": sess_label,
+                    "exams": date_map[date][sess_label],
+                })
+        timetable_days.append({"date": date, "slots": slots})
+
+    exam_days_count = len(timetable_days)
+
+    # Elective Groups for session (prefetch subjects and student registrations)
+    elective_groups = (
+        ElectiveGroup.objects.filter(session=session)
+        .prefetch_related(
+            Prefetch(
+                "subjects",
+                queryset=ElectiveSubject.objects.prefetch_related("student_registrations").order_by("subject_code"),
+            )
+        )
+        .order_by("department_code", "elective_label")
+    )
+
+    elective_depts = defaultdict(list)
+    total_elective_subjects = 0
+    total_elective_students = 0
+
+    for eg in elective_groups:
+        elective_depts[eg.department_code].append(eg)
+        for subj in eg.subjects.all():
+            total_elective_subjects += 1
+            total_elective_students += subj.student_registrations.count()
+
+    elective_dept_list = []
+    for dept_code in sorted(elective_depts.keys()):
+        groups = elective_depts[dept_code]
+        dept_name = groups[0].department_name or dept_code
+        dept_students = sum(
+            s.student_registrations.count() for g in groups for s in g.subjects.all()
+        )
+        elective_dept_list.append({
+            "department_code": dept_code,
+            "department_name": dept_name,
+            "groups": groups,
+            "total_students": dept_students,
+        })
+
+    return render(
+        request,
+        "exam_allocator/review_session.html",
+        {
+            "session": session,
+            "departments": departments,
+            "departments_count": departments_count,
+            "students_count": students_count,
+            "rooms": rooms,
+            "rooms_count": rooms_count,
+            "timetable_days": timetable_days,
+            "exam_days_count": exam_days_count,
+            "elective_dept_list": elective_dept_list,
+            "elective_groups_count": elective_groups.count(),
+            "elective_subjects_count": total_elective_subjects,
+            "elective_students_count": total_elective_students,
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: GET STUDENTS FOR A CLASS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_class_students(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    students = list(
+        cls.students.all().order_by("roll_number").values(
+            "student_id", "roll_number", "student_name", "admission_no", "uni_reg_no", "gender"
+        )
+    )
+    data = [
+        {
+            "id": s["student_id"],
+            "roll_number": s["roll_number"],
+            "student_name": s["student_name"],
+            "admission_no": s["admission_no"],
+            "uni_reg_no": s["uni_reg_no"],
+            "gender": s["gender"],
+        }
+        for s in students
+    ]
+    return JsonResponse(data, safe=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: EDIT STUDENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+import json
+
+@require_POST
+def api_edit_student(request, student_id):
+    student = get_object_or_404(Student, student_id=student_id)
+    try:
+        body = json.loads(request.body)
+        roll = body.get("roll_number", "").strip()
+        name = body.get("student_name", "").strip()
+        adm = body.get("admission_no", "").strip()
+        reg = body.get("uni_reg_no", "").strip()
+        gender = body.get("gender", "").strip()
+        
+        if not roll or not name:
+            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+        # Check uniqueness within class (excluding self)
+        if (
+            Student.objects.filter(student_class=student.student_class, roll_number=roll)
+            .exclude(pk=student_id)
+            .exists()
+        ):
+            return JsonResponse({"success": False, "error": f"Roll number '{roll}' already exists in this class."}, status=400)
+
+        student.roll_number = roll
+        student.student_name = name
+        student.admission_no = adm
+        student.uni_reg_no = reg
+        student.gender = gender
+        student.save(update_fields=["roll_number", "student_name", "admission_no", "uni_reg_no", "gender"])
+        return JsonResponse({
+            "success": True, 
+            "roll_number": student.roll_number, 
+            "student_name": student.student_name,
+            "admission_no": student.admission_no,
+            "uni_reg_no": student.uni_reg_no,
+            "gender": student.gender
+        })
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: ADD ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_add_room(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    try:
+        body = json.loads(request.body)
+        room_number = body.get("room_number", "").strip()
+        building = body.get("building", "").strip()
+        capacity = int(body.get("capacity", 0))
+        benches = int(body.get("benches", 0))
+        if not room_number or not building or capacity < 1 or benches < 1:
+            return JsonResponse({"success": False, "error": "All fields are required and must be valid."}, status=400)
+
+        if Room.objects.filter(session=session, room_number=room_number).exists():
+            return JsonResponse({"success": False, "error": f"Room '{room_number}' already exists in this session."}, status=400)
+
+        room = Room.objects.create(
+            session=session,
+            room_number=room_number,
+            building=building,
+            capacity=capacity,
+            benches=benches,
+        )
+        return JsonResponse({"success": True, "room_id": room.room_id})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: EDIT ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_room(request, room_id):
+    room = get_object_or_404(Room, room_id=room_id)
+    try:
+        body = json.loads(request.body)
+        room_number = body.get("room_number", "").strip()
+        building = body.get("building", "").strip()
+        capacity = int(body.get("capacity", 0))
+        benches = int(body.get("benches", 0))
+        if not room_number or not building or capacity < 1 or benches < 1:
+            return JsonResponse({"success": False, "error": "All fields are required and must be valid."}, status=400)
+
+        # Check uniqueness within session (excluding self)
+        if (
+            Room.objects.filter(session=room.session, room_number=room_number)
+            .exclude(pk=room_id)
+            .exists()
+        ):
+            return JsonResponse({"success": False, "error": f"Room '{room_number}' already exists in this session."}, status=400)
+
+        room.room_number = room_number
+        room.building = building
+        room.capacity = capacity
+        room.benches = benches
+        room.save(update_fields=["room_number", "building", "capacity", "benches"])
+        return JsonResponse({"success": True})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: DELETE ROOM
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_delete_room(request, room_id):
+    room = get_object_or_404(Room, room_id=room_id)
+    try:
+        # Cannot delete if it has allocations
+        if room.allocations.exists():
+            return JsonResponse(
+                {"success": False, "error": "Cannot delete a room that has existing seat allocations."},
+                status=400,
+            )
+        room.delete()
+        return JsonResponse({"success": True})
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: TARGET STUDENTS FOR TIMETABLE DRILL-DOWN
+# ─────────────────────────────────────────────────────────────────────────────
+
+def api_exam_target_students(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    branch = request.GET.get("branch", "").strip()
+    slot = request.GET.get("slot", "").strip()
+
+    # Find matching classes: department_code matches branch_code, semester matches subject semester
+    students_qs = Student.objects.filter(
+        student_class__department__session=exam.subject.session,
+        student_class__department__department_code=branch,
+        student_class__semester=exam.subject.semester,
+    ).select_related("student_class__department").order_by("roll_number")
+
+    data = [
+        {
+            "roll_number": s.roll_number,
+            "student_name": s.student_name,
+            "class_name": s.student_class.class_name,
+        }
+        for s in students_qs
+    ]
+    return JsonResponse(data, safe=False)

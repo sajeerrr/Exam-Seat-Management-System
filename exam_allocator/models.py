@@ -86,6 +86,10 @@ class Student(models.Model):
     )
     roll_number = models.CharField(max_length=50)
     student_name = models.CharField(max_length=150)
+    
+    admission_no = models.CharField(max_length=50, blank=True)
+    uni_reg_no = models.CharField(max_length=50, blank=True)
+    gender = models.CharField(max_length=20, blank=True)
 
     class Meta:
         constraints = [
@@ -239,6 +243,7 @@ class UploadedFile(models.Model):
         STUDENT_LIST = "STUDENT", "Student List"
         CLASSROOM_LIST = "CLASSROOM", "Classroom List"
         TIMETABLE = "TIMETABLE", "Exam Timetable"
+        ELECTIVE_LIST = "ELECTIVE", "Elective List"
 
     class SourceFormat(models.TextChoices):
         PDF = "PDF", "PDF"
@@ -284,3 +289,78 @@ class ExamTarget(models.Model):
     branch_code = models.CharField(max_length=20, blank=True)
 
     slot = models.CharField(max_length=20, blank=True)
+
+
+class ElectiveGroup(models.Model):
+    group_id = models.AutoField(primary_key=True)
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="elective_groups",
+    )
+    department_code = models.CharField(max_length=20)
+    department_name = models.CharField(max_length=100, blank=True)
+    elective_label = models.CharField(max_length=100)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "department_code", "elective_label"],
+                name="unique_elective_group_per_session",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.department_code} - {self.elective_label}"
+
+
+class ElectiveSubject(models.Model):
+    elective_subject_id = models.AutoField(primary_key=True)
+    group = models.ForeignKey(
+        ElectiveGroup,
+        on_delete=models.CASCADE,
+        related_name="subjects",
+    )
+    subject_code = models.CharField(max_length=30)
+    subject_name = models.CharField(max_length=150)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["group", "subject_code"],
+                name="unique_elective_subject_per_group",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.subject_code} - {self.subject_name}"
+
+
+class ElectiveStudentRegistration(models.Model):
+    registration_id = models.AutoField(primary_key=True)
+    elective_subject = models.ForeignKey(
+        ElectiveSubject,
+        on_delete=models.CASCADE,
+        related_name="student_registrations",
+    )
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="elective_registrations",
+        null=True,
+        blank=True,
+    )
+    roll_number = models.CharField(max_length=50)
+    student_name = models.CharField(max_length=150)
+    source_file = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["elective_subject", "roll_number"],
+                name="unique_student_per_elective_subject",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.roll_number} -> {self.elective_subject.subject_code}"
