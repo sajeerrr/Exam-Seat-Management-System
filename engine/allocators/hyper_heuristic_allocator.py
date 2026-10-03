@@ -23,25 +23,43 @@ class HyperHeuristicAllocator:
         self.validator = AllocationValidator()
 
     def execute(self, context):
-        # Phase 1: CP Solver (with Sequential Room Packing fallback)
-        cp_context = self.cp_solver.solve(context.groups, context.room_allocations)
+        # Phase 1: Sequential Room Packing (reliable constructive baseline)
+        context = self.sequential_allocator.execute(context)
 
-        if cp_context is not None:
-            cp_context.abc_invariant = getattr(context, "abc_invariant", None)
-            context = cp_context
-        else:
-            context = self.sequential_allocator.execute(context)
+        # Check if complete; if not, try CP Solver fallback
+        unallocated = sum(g.remaining_count for g in context.groups)
+        if unallocated > 0:
+            snapshot = context.snapshot()
+            cp_context = self.cp_solver.solve(context.groups, context.room_allocations)
+            if cp_context is not None:
+                cp_val = self.validator.validate(cp_context)
+                cp_unalloc = sum(g.remaining_count for g in cp_context.groups)
+                if cp_val.success and cp_unalloc == 0:
+                    cp_context.abc_invariant = getattr(context, "abc_invariant", None)
+                    context = cp_context
+                else:
+                    context.restore(snapshot)
+            else:
+                context.restore(snapshot)
 
         # Phase 2: Hyper-Heuristic Refinement & Pattern Optimization
         context = self.pattern_optimizer.optimize(context)
         context = self.local_optimizer.optimize(context)
 
-        # Phase 3: LNS Optimization
-        context = self.lns_engine.optimize(context)
+        # Phase 3: LNS Optimization (optional/transactional)
+        snapshot_lns = context.snapshot()
+        try:
+            context = self.lns_engine.optimize(context)
+            res = self.validator.validate(context)
+            if not res.success or sum(g.remaining_count for g in context.groups) > 0:
+                context.restore(snapshot_lns)
+        except Exception:
+            context.restore(snapshot_lns)
 
-        # Final Validation Check (warnings only)
+        # Final Validation Check
         result = self.validator.validate(context)
-        if not result.success:
-            warnings.warn(f"Final hybrid allocation validation errors: {result.errors}")
+        if not result.success or sum(g.remaining_count for g in context.groups) > 0:
+            raise ValueError(f"ALLOCATION FAILED VALIDATION: {result.errors}")
 
         return context
+

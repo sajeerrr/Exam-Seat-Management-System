@@ -105,6 +105,11 @@ class SimpleAllocator:
         # 5. Final Strict Validation
         final_validation = self.validator.validate(context)
         if not final_validation.success or sum(g.remaining_count for g in context.groups) > 0:
+            context.restore(snapshot_before_balance)
+            final_validation = self.validator.validate(context)
+
+        if not final_validation.success or sum(g.remaining_count for g in context.groups) > 0:
             raise ValueError(f"ALLOCATION FAILED VALIDATION: {final_validation.errors}")
 
         return context
+
