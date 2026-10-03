@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -20,6 +21,9 @@ from .models import (
     Student,
     Subject,
     UploadedFile,
+    ElectiveGroup,
+    ElectiveSubject,
+    ElectiveStudentRegistration,
 )
 from .services.allocation_workflow import (
     AllocationWorkflowError,
