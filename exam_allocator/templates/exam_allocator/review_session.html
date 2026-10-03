@@ -1168,11 +1168,18 @@
 
     /* ── TABS ───────────────────────────────── */
     function switchTab(name) {
+        sessionStorage.setItem('reviewActiveTab', name);
         ['dept', 'tt', 'rooms'].forEach(t => {
             document.getElementById('tab-' + t).classList.toggle('active', t === name);
             document.getElementById('panel-' + t).classList.toggle('active', t === name);
         });
     }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const active = sessionStorage.getItem('reviewActiveTab');
+        if (active) switchTab(active);
+    });
+
 
     /* ── COLLAPSIBLE DEPT CARDS ─────────────── */
     function toggleCard(header) {
