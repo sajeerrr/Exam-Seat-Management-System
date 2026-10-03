@@ -555,7 +555,7 @@ def upload_file(request, session_id):
         for uploaded in uploaded_files:
             filename = uploaded.name.lower()
 
-            if filename.endswith(".xlsx"):
+            if filename.endswith((".xlsx", ".xlsm", ".xls")):
                 source_format = UploadedFile.SourceFormat.XLSX
 
             elif filename.endswith(".pdf"):
@@ -644,6 +644,42 @@ def upload_file(request, session_id):
                     total_stats["targets_created"] += stats.get("targets_created", 0)
 
                 # -----------------------------------------------------
+                # Elective List
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+                    if source_format not in (UploadedFile.SourceFormat.XLSX, UploadedFile.SourceFormat.PDF):
+                        raise ValueError(
+                            "Elective Data supports Excel (.xlsx, .xls, .xlsm) and PDF files only."
+                        )
+
+                    result = parse_elective_file(record.file.path)
+                    result.source_file = record.original_filename
+
+                    total_extracted_students = sum(
+                        len(subj.students) for g in result.groups for subj in g.subjects
+                    )
+                    if total_extracted_students == 0:
+                        raise ValueError("No valid elective student records were extracted from the file.")
+
+                    stats = import_elective_data(session, result)
+
+                    if stats.get("students_count", 0) == 0:
+                        raise ValueError("No valid elective records were saved to the database.")
+
+                    warning_count = len(result.issues)
+                    msg = (
+                        f"File: {record.original_filename}\n"
+                        f"Status: Success\n"
+                        f"Departments: {stats.get('departments_count', 0)}\n"
+                        f"Elective Groups: {stats.get('groups_count', 0)}\n"
+                        f"Subjects: {stats.get('subjects_count', 0)}\n"
+                        f"Students: {stats.get('students_count', 0)}\n"
+                        f"Warnings: {warning_count}\n"
+                        f"Errors: 0"
+                    )
+                    messages.success(request, msg)
+
+                # -----------------------------------------------------
                 # Mark upload as successfully processed
                 # -----------------------------------------------------
                 record.status = UploadedFile.Status.VALIDATED
@@ -668,13 +704,19 @@ def upload_file(request, session_id):
                         "error_log",
                     ]
                 )
-                messages.error(
-                    request,
-                    f"Import failed for {uploaded.name}: {exc}",
-                )
+                if file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+                    messages.error(
+                        request,
+                        f"File: {record.original_filename}\nStatus: Failed\nErrors: 1\nDetails: {exc}",
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f"Import failed for {uploaded.name}: {exc}",
+                    )
                 error_occurred = True
 
-        if not error_occurred or len(uploaded_files) > 1:
+        if file_kind != UploadedFile.FileKind.ELECTIVE_LIST and (not error_occurred or len(uploaded_files) > 1):
             if file_kind == UploadedFile.FileKind.STUDENT_LIST:
                 message = (
                     f"Student list imported: "
