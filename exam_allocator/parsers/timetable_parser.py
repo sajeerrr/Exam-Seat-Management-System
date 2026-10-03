@@ -43,14 +43,12 @@ class TimetableExtractionResult:
 
 
 HEADER_NAMES = {
-    "program",
-    "semester",
     "date",
     "session",
     "time",
-    "slot / branch",
+    "branch",
     "subject name",
-    "subject code",
+    "course code",
 }
 
 
@@ -101,6 +99,12 @@ def parse_timetable_excel(
 
             headers = _normalize_headers(rows[header_index])
 
+            parts = str(worksheet.title).strip().split()
+            prog = parts[0] if parts else "Unknown"
+            sem_str = parts[1] if len(parts) > 1 else ""
+            match = re.search(r"S?(\d+)", sem_str)
+            sem = int(match.group(1)) if match else 0
+
             for row_number, row in enumerate(
                 rows[header_index + 1 :],
                 start=header_index + 2,
@@ -113,6 +117,8 @@ def parse_timetable_excel(
                     exam = _parse_exam_row(
                         row=row,
                         headers=headers,
+                        default_program=prog,
+                        default_semester=sem,
                     )
 
                     if exam is not None:
@@ -176,7 +182,7 @@ def _normalize_header(value) -> str:
     return text
 
 
-def _parse_exam_row(row, headers) -> ExamRecord | None:
+def _parse_exam_row(row, headers, default_program, default_semester) -> ExamRecord | None:
 
     values = {}
 
@@ -190,9 +196,9 @@ def _parse_exam_row(row, headers) -> ExamRecord | None:
         else:
             values[header] = row[index]
 
-    program = _clean_text(values.get("program"))
+    program = default_program
 
-    semester = _parse_semester(values.get("semester"))
+    semester = default_semester
 
     exam_date = _parse_date(values.get("date"))
 
@@ -200,11 +206,15 @@ def _parse_exam_row(row, headers) -> ExamRecord | None:
 
     time = _clean_text(values.get("time"))
 
-    branch = _clean_text(values.get("slot / branch"))
+    branch_key = "branch" if "branch" in values else "slot / branch"
+    branch = _clean_text(values.get(branch_key))
+    if not branch:
+        branch = "ALL"
 
     subject_name = _clean_text(values.get("subject name"))
 
-    subject_code = _clean_text(values.get("subject code"))
+    code_key = "course code" if "course code" in values else "subject code"
+    subject_code = _clean_text(values.get(code_key))
 
     # Your requested fallback:
     # if there is no subject code, use subject name.
@@ -221,10 +231,7 @@ def _parse_exam_row(row, headers) -> ExamRecord | None:
     if not program:
         raise TimetableExcelParseError("Program is missing.")
 
-    if semester is None:
-        raise TimetableExcelParseError("Semester is missing.")
-
-    if exam_date is None:
+    if not exam_date:
         raise TimetableExcelParseError("Date is missing.")
 
     if not session:

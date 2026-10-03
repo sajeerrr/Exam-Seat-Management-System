@@ -61,6 +61,7 @@ class LocalOptimizer:
                         continue
 
                     target_room, target_stream_name = target
+                    snapshot = context.snapshot()
                     before = self.pattern_evaluator.score_context(context)
                     before_abc = self.pattern_evaluator.abc_count(context)
                     self._move_fragment(
@@ -74,11 +75,7 @@ class LocalOptimizer:
                     if after >= before and after_abc >= before_abc:
                         return True
 
-                    target_stream = target_room.get_stream(target_stream_name)
-                    del target_stream.students[-fragment["count"]:]
-                    source_stream.students[
-                        fragment["start"]:fragment["start"]
-                    ] = fragment["students"]
+                    context.restore(snapshot)
 
         return False
 
@@ -205,3 +202,50 @@ class LocalOptimizer:
             for warning in result.warnings:
                 warnings.warn(f"Allocation warning: {warning}", UserWarning)
         return context
+
+    def _measure_global_pattern_quality(self, context) -> dict:
+        """Return a snapshot of the current global allocation quality.
+
+        Returns a dict with the following keys:
+            - abc_count       (int):   rooms with perfect ABC pattern
+            - diversity_score (float): sum of per-room diversity scores
+            - repeated_count  (int):   total repeated-department count across rooms
+            - mixed_count     (int):   total mixed-column count across rooms
+            - fragmentation   (int):   dept-fragmentation count (extra rooms per dept)
+        """
+        from engine.adaptive.pattern_optimizer import PatternDetector
+        detector = PatternDetector()
+        used_rooms = [
+            room for room in context.room_allocations
+            if room.used_capacity > 0
+        ]
+
+        abc_count = sum(
+            1 for room in used_rooms if detector.detect(room) == "ABC"
+        )
+        diversity_score = sum(
+            detector.diversity_score(room) for room in used_rooms
+        )
+        repeated_count = sum(
+            detector.repeated_department_count(room) for room in used_rooms
+        )
+        mixed_count = sum(
+            detector.mixed_column_count(room) for room in used_rooms
+        )
+
+        # Fragmentation: number of extra rooms a department occupies.
+        rooms_by_dept: dict = {}
+        for idx, room in enumerate(context.room_allocations):
+            for dept in room.departments:
+                rooms_by_dept.setdefault(dept, set()).add(idx)
+        fragmentation = sum(
+            max(0, len(idxs) - 1) for idxs in rooms_by_dept.values()
+        )
+
+        return {
+            "abc_count": abc_count,
+            "diversity_score": diversity_score,
+            "repeated_count": repeated_count,
+            "mixed_count": mixed_count,
+            "fragmentation": fragmentation,
+        }
