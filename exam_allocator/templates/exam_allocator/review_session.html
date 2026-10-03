@@ -1078,7 +1078,8 @@
 
     <!-- BOTTOM BAR -->
     <div class="bottom-bar">
-        <div style="flex-grow: 1;"></div>
+        <a href="{% url 'exam_allocator:session_list' %}" class="btn-secondary" style="margin-right: 12px;">← All Sessions</a>
+            <div style="flex-grow: 1;"></div>
         <form method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
     {% csrf_token %}
     <button type="submit" class="btn-prim" id="btn-goto-allocate" onclick="this.innerHTML='⏳ Allocating Seats...'; this.style.pointerEvents='none';">Proceed to Allocation →</button>
