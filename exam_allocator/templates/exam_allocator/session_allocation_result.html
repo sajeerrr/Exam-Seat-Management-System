@@ -202,7 +202,11 @@
         {% if selected_slot %}
         <div class="empty-state">
             No allocations found for the selected slot.<br><br>
-            Please make sure you have successfully generated allocations.
+            {% if missing_data_reason %}
+                <strong style="color: #ef4444;">{{ missing_data_reason }}</strong>
+            {% else %}
+                Please make sure you have successfully generated allocations.
+            {% endif %}
         </div>
         {% endif %}
     {% endif %}

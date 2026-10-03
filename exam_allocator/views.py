@@ -327,7 +327,18 @@ def session_allocation_result(request, session_id):
         
     rooms_data = {}
     
+    missing_data_reason = ""
     if selected_slot:
+        from exam_allocator.models import ExamRegistration
+        exams_in_slot = Exam.objects.filter(
+            subject__session=session,
+            exam_date=selected_slot['date'],
+            session=selected_slot['shift']
+        )
+        total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
+        if total_regs == 0:
+            missing_data_reason = "No students are currently registered for the exams during this specific slot. This typically happens because the student list Excel files for the matching classes (like Semester 8) were not uploaded in the Import Data step!"
+        
         # Fetch ALL allocations in this slot
         allocations = (
             Allocation.objects.filter(
@@ -411,6 +422,7 @@ def session_allocation_result(request, session_id):
             "slots": slots,
             "selected_slot": selected_slot,
             "rooms": sorted_rooms,
+            "missing_data_reason": missing_data_reason,
         },
     )
 
