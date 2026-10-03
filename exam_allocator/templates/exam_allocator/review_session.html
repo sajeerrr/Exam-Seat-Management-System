@@ -1172,7 +1172,7 @@
         panel.style.display = 'block';
         if (loadedPanels.has(classId)) return;
         loadedPanels.add(classId);
-        fetch(`/allocator/api/class/${classId}/students/`)
+        fetch(`/api/class/${classId}/students/`)
             .then(r => r.json())
             .then(data => renderStudentTable(classId, data))
             .catch(() => { panel.innerHTML = '<div style="padding:12px;color:var(--error);font-size:13px;">Failed to load students.</div>'; });
@@ -1214,7 +1214,7 @@
         const errEl = document.getElementById('student-modal-error');
         if (!roll || !name) { errEl.textContent = 'Roll number and name are required.'; errEl.style.display = 'block'; return; }
         errEl.style.display = 'none';
-        fetch(`/allocator/api/student/${editingStudentId}/edit/`, {
+        fetch(`/api/student/${editingStudentId}/edit/`, {
             method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
             body: JSON.stringify({ roll_number: roll, student_name: name })
         }).then(r => r.json()).then(data => {
@@ -1236,7 +1236,7 @@
         document.getElementById('target-modal-title').textContent = title;
         document.getElementById('target-modal-body').innerHTML = '<div style="padding:16px;color:var(--text-muted);font-size:13px;">Loading…</div>';
         document.getElementById('target-modal').hidden = false;
-        fetch(`/allocator/api/exam/${examId}/target-students/?branch=${encodeURIComponent(branch)}&slot=${encodeURIComponent(slot)}`)
+        fetch(`/api/exam/${examId}/target-students/?branch=${encodeURIComponent(branch)}&slot=${encodeURIComponent(slot)}`)
             .then(r => r.json())
             .then(data => {
                 let html = '';
@@ -1275,7 +1275,7 @@
         const errEl = document.getElementById('room-modal-error');
         if (!number || !building || !capacity || !benches) { errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return; }
         errEl.style.display = 'none';
-        const url = editingRoomId ? `/allocator/api/room/${editingRoomId}/edit/` : `/allocator/api/session/${SESSION_ID}/rooms/add/`;
+        const url = editingRoomId ? `/api/room/${editingRoomId}/edit/` : `/api/session/${SESSION_ID}/rooms/add/`;
         fetch(url, {
             method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
             body: JSON.stringify({ room_number: number, building, capacity, benches })
@@ -1287,7 +1287,7 @@
 
     function deleteRoom(id, number) {
         if (!confirm(`Delete room "${number}"? This cannot be undone.`)) return;
-        fetch(`/allocator/api/room/${id}/delete/`, {
+        fetch(`/api/room/${id}/delete/`, {
             method: 'POST', headers: { 'X-CSRFToken': CSRF }
         }).then(r => r.json()).then(data => {
             if (data.success) {
