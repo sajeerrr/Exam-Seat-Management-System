@@ -146,297 +146,112 @@ def parse_student_excel(excel_path: str) -> StudentExtractionResult:
 
 
 def _parse_class_sheet(worksheet):
-    """
-    Parse one class worksheet.
-    """
-
-    rows = list(
-        worksheet.iter_rows(
-            values_only=True
-        )
-    )
-
+    rows = list(worksheet.iter_rows(values_only=True))
     if not rows:
-        raise StudentExcelParseError(
-            "Sheet is empty."
-        )
+        raise StudentExcelParseError("Sheet is empty.")
 
-    class_name = _extract_class_name(rows)
-
-    semester = _extract_semester(rows)
-
-    academic_year = _extract_academic_year(rows)
-
-    department_name = _extract_department_name(rows)
-
-    header_index = _find_roster_header(rows)
-
+    header_index = None
+    headers = []
+    
+    for i, row in enumerate(rows):
+        row_strs = [str(x).strip().lower() if x is not None else "" for x in row]
+        if "roll no" in row_strs and "student name" in row_strs:
+            header_index = i
+            headers = row_strs
+            break
+            
     if header_index is None:
-        raise StudentExcelParseError(
-            "Could not find student roster header."
-        )
+        raise StudentExcelParseError("Could not find student roster header.")
+        
+    idx_cls = headers.index("class / batch") if "class / batch" in headers else -1
+    idx_dept = headers.index("department") if "department" in headers else -1
+    idx_sem = headers.index("semester") if "semester" in headers else -1
+    
+    idx_slno = headers.index("sl no") if "sl no" in headers else -1
+    idx_adm = headers.index("admission no") if "admission no" in headers else -1
+    idx_roll = headers.index("roll no") if "roll no" in headers else -1
+    idx_reg = headers.index("university reg no") if "university reg no" in headers else -1
+    idx_name = headers.index("student name") if "student name" in headers else -1
+    idx_gender = headers.index("gender") if "gender" in headers else -1
+
+    if idx_roll == -1 or idx_name == -1:
+        raise StudentExcelParseError("Required columns (Roll No, Student Name) not found.")
 
     student_rows = rows[header_index + 1 :]
+    students: list[StudentRecord] = []
+    issues: list[str] = []
+    seen_roll_numbers: dict[str, int] = {}
+    
+    class_names = set()
+    departments = set()
+    semesters = set()
+    
+    for row_number, row in enumerate(student_rows, start=header_index + 2):
+        if not any(x is not None and str(x).strip() for x in row):
+            continue
+            
+        def safe_get(idx):
+            if idx != -1 and idx < len(row):
+                return _clean_value(row[idx])
+            return ""
 
-    students, issues = _parse_students(
-        student_rows=student_rows,
-        class_name=class_name,
-        semester=semester,
-        academic_year=academic_year,
-    )
-
+        cls_val = safe_get(idx_cls)
+        dept_val = safe_get(idx_dept)
+        sem_val_str = safe_get(idx_sem)
+        try:
+            sem_val = int(sem_val_str) if sem_val_str.isdigit() else (int(sem_val_str.replace("S", "")) if sem_val_str.startswith("S") and sem_val_str[1:].isdigit() else 0)
+        except:
+            sem_val = 0
+            
+        sl_no = safe_get(idx_slno)
+        adm_no = safe_get(idx_adm)
+        roll_no = safe_get(idx_roll)
+        reg_no = safe_get(idx_reg)
+        name = safe_get(idx_name)
+        gender = safe_get(idx_gender)
+        
+        if not roll_no:
+            continue
+            
+        if not name:
+            issues.append(f"Row {row_number} has no student name.")
+            continue
+            
+        if roll_no in seen_roll_numbers:
+            issues.append(f"Duplicate roll number '{roll_no}' at row {row_number}.")
+        else:
+            seen_roll_numbers[roll_no] = row_number
+            
+        if cls_val: class_names.add(cls_val)
+        if dept_val: departments.add(dept_val)
+        if sem_val: semesters.add(sem_val)
+        
+        st = StudentRecord(
+            sl_no=sl_no,
+            admission_no=adm_no,
+            roll_number=roll_no,
+            uni_reg_no=reg_no,
+            name=name,
+            gender=gender,
+            class_name=cls_val,
+            semester=sem_val,
+            academic_year="" # No academic year in new format
+        )
+        students.append(st)
+        
+    final_cls = list(class_names)[0] if class_names else "Unknown"
+    final_dept = list(departments)[0] if departments else "Unknown"
+    final_sem = list(semesters)[0] if semesters else 0
+    
     class_record = ClassRecord(
-        class_name=class_name,
-        semester=semester,
-        academic_year=academic_year,
-        department_name=department_name,
+        class_name=final_cls,
+        semester=final_sem,
+        academic_year="",
+        department_name=final_dept,
         students=students,
     )
 
     return class_record, students, issues
-
-
-def _extract_class_name(rows) -> str:
-    """
-    Example source:
-
-        Class Name: B.Arch 2K21A
-    """
-
-    for row in rows[:10]:
-        for cell in row:
-            if cell is None:
-                continue
-
-            text = str(cell).strip()
-
-            match = re.search(
-                r"Class Name\s*:\s*(.+)",
-                text,
-                re.IGNORECASE,
-            )
-
-            if match:
-                return match.group(1).strip()
-
-    raise StudentExcelParseError(
-        "Class Name was not found."
-    )
-
-
-def _extract_semester(rows) -> int:
-    """
-    Example source:
-
-        Semester: S10 (Xth Semester)
-
-    Returns:
-
-        10
-    """
-
-    for row in rows[:10]:
-        for cell in row:
-            if cell is None:
-                continue
-
-            text = str(cell).strip()
-
-            match = re.search(
-                r"Semester\s*:\s*S(\d+)",
-                text,
-                re.IGNORECASE,
-            )
-
-            if match:
-                return int(match.group(1))
-
-    raise StudentExcelParseError(
-        "Semester was not found."
-    )
-
-
-def _extract_academic_year(rows) -> str:
-    """
-    Example source:
-
-        Duration: 2021-2026
-
-    The duration is used as the academic-year value for now.
-    """
-
-    for row in rows[:10]:
-        for cell in row:
-            if cell is None:
-                continue
-
-            text = str(cell).strip()
-
-            match = re.search(
-                r"Duration\s*:\s*(\d{4}\s*-\s*\d{4})",
-                text,
-                re.IGNORECASE,
-            )
-
-            if match:
-                return match.group(1).replace(" ", "")
-
-    return ""
-
-
-def _extract_department_name(rows) -> str:
-    """
-    Example first row:
-
-        TKM COLLEGE OF ENGINEERING, KOLLAM-5
-        DEPARTMENT OF ARCHITECTURE
-    """
-
-    for row in rows[:3]:
-        for cell in row:
-            if cell is None:
-                continue
-
-            text = str(cell).strip()
-
-            match = re.search(
-                r"DEPARTMENT OF\s+(.+)",
-                text,
-                re.IGNORECASE,
-            )
-
-            if match:
-                return (
-                    "DEPARTMENT OF "
-                    + match.group(1).strip()
-                )
-
-    return ""
-
-
-def _find_roster_header(rows):
-    """
-    Find the row containing:
-
-        Sl. No.
-        Admission No
-        Roll No
-        Uni Reg No
-        Student Name
-        Gender
-    """
-
-    expected = [
-        value.lower()
-        for value in ROSTER_HEADER
-    ]
-
-    for index, row in enumerate(rows):
-
-        values = [
-            str(cell).strip().lower()
-            if cell is not None
-            else ""
-            for cell in row[:6]
-        ]
-
-        if values == expected:
-            return index
-
-    return None
-
-
-def _parse_students(
-    student_rows,
-    class_name: str,
-    semester: int,
-    academic_year: str,
-):
-    students: list[StudentRecord] = []
-    issues: list[str] = []
-
-    seen_roll_numbers: dict[str, int] = {}
-
-    for row_number, row in enumerate(
-        student_rows,
-        start=1,
-    ):
-
-        values = list(row[:6])
-
-        # Ignore completely empty rows.
-        if not any(
-            value is not None and str(value).strip()
-            for value in values
-        ):
-            continue
-
-        if len(values) < 6:
-            issues.append(
-                f"{class_name}: row {row_number} "
-                f"has fewer than 6 columns. Skipped."
-            )
-            continue
-
-        (
-            sl_no,
-            admission_no,
-            roll_number,
-            uni_reg_no,
-            student_name,
-            gender,
-        ) = values
-
-        sl_no = _clean_value(sl_no)
-        admission_no = _clean_value(admission_no)
-        roll_number = _clean_value(roll_number)
-        uni_reg_no = _clean_value(uni_reg_no)
-        student_name = _clean_value(student_name)
-        gender = _clean_value(gender)
-
-        # Stop if Excel contains another section/header.
-        if roll_number.lower() == "roll no":
-            continue
-
-        if not roll_number:
-            issues.append(
-                f"{class_name}: row {row_number} "
-                "has no roll number."
-            )
-
-        if not student_name:
-            issues.append(
-                f"{class_name}: row {row_number} "
-                "has no student name."
-            )
-
-        if roll_number:
-
-            if roll_number in seen_roll_numbers:
-                issues.append(
-                    f"{class_name}: duplicate roll number "
-                    f"'{roll_number}' at row {row_number}; "
-                    f"first seen at row "
-                    f"{seen_roll_numbers[roll_number]}."
-                )
-            else:
-                seen_roll_numbers[roll_number] = row_number
-
-        student = StudentRecord(
-            sl_no=sl_no,
-            admission_no=admission_no,
-            roll_number=roll_number,
-            uni_reg_no=uni_reg_no,
-            name=student_name,
-            gender=gender,
-            class_name=class_name,
-            semester=semester,
-            academic_year=academic_year,
-        )
-
-        students.append(student)
-
-    return students, issues
 
 
 def _clean_value(value) -> str:

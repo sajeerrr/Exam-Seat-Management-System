@@ -36,7 +36,7 @@ class HyperHeuristicAllocator:
         context = self.local_optimizer.optimize(context)
 
         # Phase 3: LNS Optimization
-        # context = self.lns_engine.optimize(context)
+        context = self.lns_engine.optimize(context)
 
         # Final Validation Check (warnings only)
         result = self.validator.validate(context)

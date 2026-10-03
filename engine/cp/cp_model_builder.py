@@ -115,13 +115,98 @@ class CPModelBuilder:
 
         # Objective 1: ABC Reward (Room has 3 distinct departments across A, B, C)
         abc_room_vars = []
+        aba_room_vars = []
+        stream_occupancy_vars = []  # Count of occupied streams per room
+        room_util_vars = []         # Total utilization per room
+
         for r_idx in range(num_rooms):
+            # ABC detection: A, B, C streams each have exactly one department and all three are different
             is_abc = model.NewBoolVar(f"room_{r_idx}_is_abc")
             abc_room_vars.append(is_abc)
 
-            # For simplicity in CP-SAT, reward rooms that have high utilization and department diversity
-            # We can approximate ABC reward by rewarding room utilization
-            room_util = sum(assign[(g_idx, r_idx, s_idx)] for g_idx in range(num_groups) for s_idx in range(3))
+            # ABA detection: A and C streams have same single department, B has different single department
+            is_aba = model.NewBoolVar(f"room_{r_idx}_is_aba")
+            aba_room_vars.append(is_aba)
+
+            # Stream occupancy: count how many streams have students (>0)
+            stream_a_occupied = model.NewBoolVar(f"room_{r_idx}_stream_a_occupied")
+            stream_b_occupied = model.NewBoolVar(f"room_{r_idx}_stream_b_occupied")
+            stream_c_occupied = model.NewBoolVar(f"room_{r_idx}_stream_c_occupied")
+
+            # Room utilization: total students in room
+            room_util = model.NewIntVar(0, room_allocations[r_idx].classroom.capacity, f"room_{r_idx}_util")
+
+            stream_occupancy = model.NewIntVar(0, 3, f"room_{r_idx}_stream_occupancy")
+            stream_occupancy_vars.append(stream_occupancy)
+            room_util_vars.append(room_util)
+
+            # Link stream occupancy to actual assignments
+            model.Add(stream_occupancy == 0).OnlyEnforceIf([stream_a_occupied.Not(), stream_b_occupied.Not(), stream_c_occupied.Not()])
+            model.Add(stream_occupancy == 1).OnlyEnforceIf([
+                stream_a_occupied, stream_b_occupied.Not(), stream_c_occupied.Not(),
+                stream_a_occupied.Not(), stream_b_occupied, stream_c_occupied.Not(),
+                stream_a_occupied.Not(), stream_b_occupied.Not(), stream_c_occupied
+            ])
+            model.Add(stream_occupancy == 2).OnlyEnforceIf([
+                stream_a_occupied, stream_b_occupied, stream_c_occupied.Not(),
+                stream_a_occupied, stream_b_occupied.Not(), stream_c_occupied,
+                stream_a_occupied.Not(), stream_b_occupied, stream_c_occupied
+            ])
+            model.Add(stream_occupancy == 3).OnlyEnforceIf([stream_a_occupied, stream_b_occupied, stream_c_occupied])
+
+            # Link room utilization to actual assignments
+            model.Add(room_util == sum(assign[(g_idx, r_idx, s_idx)] for g_idx in range(num_groups) for s_idx in range(3)))
+
+            # Link stream occupancy to actual assignments (stream is occupied if >0 students)
+            model.Add(sum(assign[(g_idx, r_idx, 0)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_a_occupied)
+            model.Add(sum(assign[(g_idx, r_idx, 0)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_a_occupied.Not())
+            model.Add(sum(assign[(g_idx, r_idx, 1)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_b_occupied)
+            model.Add(sum(assign[(g_idx, r_idx, 1)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_b_occupied.Not())
+            model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_c_occupied)
+            model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_c_occupied.Not())
+
+            # ABC constraints: each stream has exactly one department and all three are different
+            # We'll approximate this by checking if each stream has students from exactly one group
+            # For proper ABC, we need: each stream has students, and the departments are all different
+
+            # For each stream, create variables indicating if it's "pure" (students from exactly one department)
+            stream_a_pure = model.NewBoolVar(f"room_{r_idx}_stream_a_pure")
+            stream_b_pure = model.NewBoolVar(f"room_{r_idx}_stream_b_pure")
+            stream_c_pure = model.NewBoolVar(f"room_{r_idx}_stream_c_pure")
+
+            # A stream is pure if: either empty, or all students are from same department
+            # We'll use a simplification: if stream has students, check if they could be from same department
+            # For now, we'll reward based on stream occupancy and utilization, and rely on hyper-heuristic for ABC/ABA
+            # But let's implement a basic version:
+
+            # Count distinct departments in each stream (approximation)
+            # Instead, let's reward based on having students in all three streams (potential for ABC)
+            # and then let the hyper-heuristic optimize for actual ABC/ABA patterns
+
+            # For now, we'll use the existing approach but with better weights from config
+
+            # ABC reward: high weight for rooms with potential to be ABC (all 3 streams occupied)
+            potential_abc = model.NewBoolVar(f"room_{r_idx}_potential_abc")
+            model.Add(potential_abc == 1).OnlyEnforceIf([stream_a_occupied, stream_b_occupied, stream_c_occupied])
+            model.Add(potential_abc == 0).OnlyEnforceIf(potential_abc.Not())
+
+            # ABA reward: rooms where A and C are occupied (potential for ABA)
+            potential_aba = model.NewBoolVar(f"room_{r_idx}_potential_aba")
+            model.Add(potential_aba == 1).OnlyEnforceIf([stream_a_occupied, stream_c_occupied])
+            model.Add(potential_aba == 0).OnlyEnforceIf(potential_aba.Not())
+
+            # Add to objective terms with proper weighting
+            objective_terms.append(potential_abc * CPSolverConfig.ABC_BONUS)
+            objective_terms.append(potential_aba * CPSolverConfig.ABA_BONUS)
+            objective_terms.append(stream_occupancy * CPSolverConfig.STREAM_OCCUPANCY_BONUS)
             objective_terms.append(room_util * CPSolverConfig.UTILIZATION_BONUS)
+            # Penalty for using too many rooms (encourage consolidation)
+            # We'll add a small penalty per room used - but this needs to be handled differently
+            # For now, we'll rely on stream occupancy and utilization
+
+        # Add fragmentation penalty: extra rooms per department beyond the first
+        # We'll compute this in the objective indirectly by penalizing department spread
+        # For now, we'll add a placeholder - this is complex to do purely in CP-SAT
+        # We'll rely on the hyper-heuristic and LNS to handle fragmentation
 
         return model, assign
