@@ -61,6 +61,7 @@ class LocalOptimizer:
                         continue
 
                     target_room, target_stream_name = target
+                    snapshot = context.snapshot()
                     before = self.pattern_evaluator.score_context(context)
                     before_abc = self.pattern_evaluator.abc_count(context)
                     self._move_fragment(
@@ -74,11 +75,7 @@ class LocalOptimizer:
                     if after >= before and after_abc >= before_abc:
                         return True
 
-                    target_stream = target_room.get_stream(target_stream_name)
-                    del target_stream.students[-fragment["count"]:]
-                    source_stream.students[
-                        fragment["start"]:fragment["start"]
-                    ] = fragment["students"]
+                    context.restore(snapshot)
 
         return False
 
