@@ -211,6 +211,8 @@ def _parse_class_sheet(worksheet):
         gender = safe_get(idx_gender)
         
         if not roll_no:
+            roll_no = (reg_no or adm_no).strip()
+        if not roll_no:
             continue
             
         if not name:

@@ -357,3 +357,58 @@ class EditAndDeleteApiTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(Class.objects.filter(pk=cls.class_id).exists())
+
+
+class StudentPDFParserTests(TestCase):
+    def test_parse_student_pdf_with_missing_roll_number(self):
+        from exam_allocator.parsers.student_pdf_parser import parse_student_pdf
+        from exam_allocator.services.import_service import import_students
+        from pathlib import Path
+
+        pdf_path = Path("media/uploads/2026/10/04/B.Arch_2K21B.pdf")
+        if not pdf_path.exists():
+            self.skipTest("Sample PDF not found in uploads")
+
+        res = parse_student_pdf(str(pdf_path))
+        # Total students must be 36 (not 35)
+        self.assertEqual(len(res.students), 36)
+        last_student = res.students[-1]
+        self.assertEqual(last_student.sl_no, "36")
+        self.assertEqual(last_student.name, "LAKSHMI RAJESHKUMAR")
+        self.assertEqual(last_student.uni_reg_no, "TKM20AR032")
+        self.assertEqual(last_student.admission_no, "200097")
+        self.assertEqual(last_student.roll_number, "TKM20AR032")
+        self.assertEqual(last_student.gender, "Female")
+
+        # Test importing into session
+        session = AllocationSession.objects.create(name="Test Student Import Session")
+        result = import_students(res, session)
+        self.assertEqual(result["students_created"], 36)
+        self.assertTrue(Student.objects.filter(student_name="LAKSHMI RAJESHKUMAR").exists())
+
+    def test_parse_student_pdf_barch_2k22_a(self):
+        from exam_allocator.parsers.student_pdf_parser import parse_student_pdf
+        from exam_allocator.services.import_service import import_students
+        from pathlib import Path
+
+        pdf_path = Path("media/uploads/2026/10/04/B.Arch_2K22_A.pdf")
+        if not pdf_path.exists():
+            self.skipTest("Sample PDF not found in uploads")
+
+        res = parse_student_pdf(str(pdf_path))
+        # Total students must be 40 (not 39)
+        self.assertEqual(len(res.students), 40)
+        self.assertEqual(res.classes[0].semester, 8)  # VIIIth semester parsed as 8
+        last_student = res.students[-1]
+        self.assertEqual(last_student.sl_no, "40")
+        self.assertEqual(last_student.name, "AISWARIYA S S")
+        self.assertEqual(last_student.uni_reg_no, "KTE21AR004")
+        self.assertEqual(last_student.admission_no, "220172")
+        self.assertEqual(last_student.roll_number, "KTE21AR004")
+        self.assertEqual(last_student.gender, "Female")
+
+        session = AllocationSession.objects.create(name="Test Student Import Session 2")
+        result = import_students(res, session)
+        self.assertEqual(result["students_created"], 40)
+        self.assertTrue(Student.objects.filter(student_name="AISWARIYA S S").exists())
+

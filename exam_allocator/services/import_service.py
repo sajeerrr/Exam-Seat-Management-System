@@ -120,6 +120,8 @@ def import_students(student_result, session):
         for student_record in class_record.students:
 
             roll_number = student_record.roll_number.strip()
+            if not roll_number:
+                roll_number = (student_record.uni_reg_no or student_record.admission_no or "").strip()
 
             if not roll_number:
                 continue

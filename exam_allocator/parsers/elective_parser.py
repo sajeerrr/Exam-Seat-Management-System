@@ -84,7 +84,7 @@ class ElectiveExtractionResult:
 # --- Helper Functions & Normalization ---
 
 ROLL_REGEX = re.compile(
-    r"^(?:B\d{2}[A-Z]{2,4}\d{1,4}|TKM\d{2}[A-Z]{2,4}\d{2,4}|L\d{2}[A-Z]{2,4}\d{2,4}|B21MC\d{3})$",
+    r"^(?:B\d{2}[A-Z]{2,4}\d{1,4}|[A-Z]{3}\d{2}[A-Z]{2,4}\d{1,4}|L\d{2}[A-Z]{2,4}\d{1,4}|B21MC\d{3})$",
     re.IGNORECASE,
 )
 
@@ -225,8 +225,8 @@ def derive_dept_from_roll(roll: str) -> str:
         if code in mapping:
             return mapping[code]
 
-    # University register pattern: TKM22CS080, TKM22CH001
-    m_tkm = re.search(r"TKM\d{2}([A-Z]{2,3})", r)
+    # University register pattern: TKM22CS080, KTE21AR004, etc.
+    m_tkm = re.search(r"[A-Z]{3}\d{2}([A-Z]{2,3})", r)
     if m_tkm:
         code = m_tkm.group(1)
         mapping_tkm = {
