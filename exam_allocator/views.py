@@ -1075,3 +1075,335 @@ def api_exam_target_students(request, exam_id):
         for s in students_qs
     ]
     return JsonResponse(data, safe=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: BULK CLEAR CATEGORIES (FULL ELECTIVES, TIMETABLE, STUDENTS, ROOMS)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_clear_electives(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        ElectiveStudentRegistration.objects.filter(elective_subject__group__session=session).delete()
+        ElectiveSubject.objects.filter(group__session=session).delete()
+        ElectiveGroup.objects.filter(session=session).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.ELECTIVE_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_timetable(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        exam_ids = list(Exam.objects.filter(subject__session=session).values_list("exam_id", flat=True))
+        Allocation.objects.filter(exam_id__in=exam_ids).delete()
+        ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
+        ExamTarget.objects.filter(exam_id__in=exam_ids).delete()
+        Exam.objects.filter(pk__in=exam_ids).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.TIMETABLE).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_students(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        class_ids = list(Class.objects.filter(department__session=session).values_list("class_id", flat=True))
+        student_ids = list(Student.objects.filter(student_class_id__in=class_ids).values_list("student_id", flat=True))
+        Allocation.objects.filter(registration__student_id__in=student_ids).delete()
+        ExamRegistration.objects.filter(student_id__in=student_ids).delete()
+        Student.objects.filter(pk__in=student_ids).delete()
+        Class.objects.filter(pk__in=class_ids).delete()
+        Department.objects.filter(session=session).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.STUDENT_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_rooms(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        room_ids = list(Room.objects.filter(session=session).values_list("room_id", flat=True))
+        if Allocation.objects.filter(room_id__in=room_ids).exists():
+            return JsonResponse({"success": False, "error": "Cannot delete rooms because seat allocations exist."}, status=400)
+        Room.objects.filter(pk__in=room_ids).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.CLASSROOM_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_delete_uploaded_file(request, file_id):
+    record = get_object_or_404(UploadedFile, pk=file_id)
+    session = record.session
+    with transaction.atomic():
+        if record.file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+            ElectiveStudentRegistration.objects.filter(
+                elective_subject__group__session=session,
+                source_file=record.original_filename,
+            ).delete()
+            ElectiveSubject.objects.filter(
+                group__session=session,
+                student_registrations__isnull=True,
+            ).delete()
+            ElectiveGroup.objects.filter(
+                session=session,
+                subjects__isnull=True,
+            ).delete()
+        record.delete()
+    return JsonResponse({"success": True})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: ELECTIVE SUBJECT & REGISTRATION EDIT/DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_elective_subject(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    body = json.loads(request.body)
+    code = body.get("subject_code", "").strip()
+    name = body.get("subject_name", "").strip()
+    etype = body.get("elective_type", "").strip()
+    if not code or not name:
+        return JsonResponse({"success": False, "error": "Subject code and name are required."}, status=400)
+
+    subject.subject_code = code
+    subject.subject_name = name
+    if etype:
+        subject.elective_type = etype
+        group, _ = ElectiveGroup.objects.get_or_create(
+            session=subject.group.session,
+            elective_label=etype,
+            defaults={"department_code": "ELECTIVE", "department_name": "Electives"}
+        )
+        subject.group = group
+    subject.save()
+    return JsonResponse({
+        "success": True,
+        "subject_code": subject.subject_code,
+        "subject_name": subject.subject_name,
+        "elective_type": subject.elective_type,
+    })
+
+
+@require_POST
+def api_delete_elective_subject(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    group = subject.group
+    with transaction.atomic():
+        subject.student_registrations.all().delete()
+        subject.delete()
+        if not group.subjects.exists():
+            group.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_edit_elective_registration(request, registration_id):
+    reg = get_object_or_404(ElectiveStudentRegistration, registration_id=registration_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    dept = body.get("department", "").strip()
+    cname = body.get("class_name", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if (
+        ElectiveStudentRegistration.objects.filter(elective_subject=reg.elective_subject, roll_number__iexact=roll)
+        .exclude(pk=registration_id)
+        .exists()
+    ):
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' is already in this subject."}, status=400)
+
+    reg.roll_number = roll
+    reg.student_name = name
+    reg.department = dept
+    reg.class_name = cname
+    reg.save(update_fields=["roll_number", "student_name", "department", "class_name"])
+    return JsonResponse({
+        "success": True,
+        "roll_number": reg.roll_number,
+        "student_name": reg.student_name,
+        "department": reg.department,
+        "class_name": reg.class_name,
+    })
+
+
+@require_POST
+def api_delete_elective_registration(request, registration_id):
+    reg = get_object_or_404(ElectiveStudentRegistration, registration_id=registration_id)
+    reg.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_elective_student(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    dept = body.get("department", "").strip()
+    cname = body.get("class_name", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if ElectiveStudentRegistration.objects.filter(elective_subject=subject, roll_number__iexact=roll).exists():
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' is already in this subject."}, status=400)
+
+    reg = ElectiveStudentRegistration.objects.create(
+        elective_subject=subject,
+        roll_number=roll,
+        student_name=name,
+        department=dept,
+        class_name=cname,
+        source_file="Manual Entry",
+    )
+    return JsonResponse({
+        "success": True,
+        "registration_id": reg.registration_id,
+        "roll_number": reg.roll_number,
+        "student_name": reg.student_name,
+        "department": reg.department,
+        "class_name": reg.class_name,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: TIMETABLE EXAM EDIT, ADD & DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_exam(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    body = json.loads(request.body)
+    exam_date = body.get("exam_date", "").strip()
+    sess = body.get("session", "").strip()
+    slot = body.get("slot", "").strip()
+    if not exam_date or not sess:
+        return JsonResponse({"success": False, "error": "Exam date and session (FN/AN) are required."}, status=400)
+
+    exam.exam_date = exam_date
+    exam.session = sess
+    exam.save(update_fields=["exam_date", "session"])
+    if slot:
+        target = exam.targets.first()
+        if target:
+            target.slot = slot
+            target.save(update_fields=["slot"])
+        else:
+            ExamTarget.objects.create(exam=exam, branch_code="ALL", slot=slot)
+    return JsonResponse({
+        "success": True,
+        "exam_date": str(exam.exam_date),
+        "session": exam.session,
+        "slot": slot,
+    })
+
+
+@require_POST
+def api_delete_exam(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    with transaction.atomic():
+        exam.allocations.all().delete()
+        exam.registrations.all().delete()
+        exam.targets.all().delete()
+        exam.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_exam(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    body = json.loads(request.body)
+    sub_code = body.get("subject_code", "").strip()
+    sub_name = body.get("subject_name", "").strip()
+    exam_date = body.get("exam_date", "").strip()
+    sess = body.get("session", "").strip()
+    slot = body.get("slot", "").strip()
+    branch = body.get("branch", "").strip()
+    if not sub_code or not exam_date or not sess:
+        return JsonResponse({"success": False, "error": "Subject code, date, and session are required."}, status=400)
+
+    with transaction.atomic():
+        subject, _ = Subject.objects.get_or_create(
+            session=session,
+            subject_code=sub_code,
+            defaults={"subject_name": sub_name or sub_code, "semester": 8}
+        )
+        exam = Exam.objects.create(
+            subject=subject,
+            exam_date=exam_date,
+            session=sess,
+            duration=180,
+        )
+        if branch or slot:
+            ExamTarget.objects.create(
+                exam=exam,
+                branch_code=branch or "ALL",
+                slot=slot,
+            )
+    return JsonResponse({"success": True, "exam_id": exam.exam_id})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: STUDENT DELETE & CLASS ADD-STUDENT / DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_delete_student(request, student_id):
+    student = get_object_or_404(Student, student_id=student_id)
+    with transaction.atomic():
+        Allocation.objects.filter(registration__student=student).delete()
+        student.exam_registrations.all().delete()
+        student.elective_registrations.all().delete()
+        student.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_class_student(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    adm = body.get("admission_no", "").strip()
+    reg = body.get("uni_reg_no", "").strip()
+    gender = body.get("gender", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
+
+    student = Student.objects.create(
+        student_class=cls,
+        roll_number=roll,
+        student_name=name,
+        admission_no=adm,
+        uni_reg_no=reg,
+        gender=gender,
+    )
+    return JsonResponse({
+        "success": True,
+        "student_id": student.student_id,
+        "roll_number": student.roll_number,
+        "student_name": student.student_name,
+        "admission_no": student.admission_no,
+        "uni_reg_no": student.uni_reg_no,
+        "gender": student.gender,
+    })
+
+
+@require_POST
+def api_delete_class(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    with transaction.atomic():
+        stud_ids = list(cls.students.values_list("student_id", flat=True))
+        Allocation.objects.filter(registration__student_id__in=stud_ids).delete()
+        ExamRegistration.objects.filter(student_id__in=stud_ids).delete()
+        cls.students.all().delete()
+        cls.delete()
+    return JsonResponse({"success": True})
+

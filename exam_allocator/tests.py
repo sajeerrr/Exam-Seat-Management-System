@@ -214,3 +214,137 @@ class ElectiveSubjectGroupingTests(TestCase):
         self.assertContains(response, "B22ECA01")
         self.assertContains(response, "Alice Smith")
         self.assertContains(response, "ECE 2K22 A")
+
+
+class EditAndDeleteApiTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.session = AllocationSession.objects.create(name="CRUD Test Session")
+
+    def test_elective_subject_and_registration_crud(self):
+        # Create group and subject
+        grp = ElectiveGroup.objects.create(session=self.session, elective_label="Programme Elective III")
+        subj = ElectiveSubject.objects.create(group=grp, subject_code="22ECE803.1", subject_name="Sub A", elective_type="Programme Elective III")
+        reg = ElectiveStudentRegistration.objects.create(
+            elective_subject=subj, roll_number="B22ECA01", student_name="Student One", department="EC", class_name="EC A"
+        )
+
+        # 1. Edit elective subject
+        resp = self.client.post(
+            reverse("exam_allocator:api_edit_elective_subject", args=[subj.elective_subject_id]),
+            data={"subject_code": "22ECE803.1R", "subject_name": "Updated Sub A", "elective_type": "Programme Elective III"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        subj.refresh_from_db()
+        self.assertEqual(subj.subject_code, "22ECE803.1R")
+        self.assertEqual(subj.subject_name, "Updated Sub A")
+
+        # 2. Add student to elective subject
+        resp = self.client.post(
+            reverse("exam_allocator:api_add_elective_student", args=[subj.elective_subject_id]),
+            data={"roll_number": "B22ECA02", "student_name": "Student Two", "department": "EC", "class_name": "EC A"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(subj.student_registrations.count(), 2)
+
+        # 3. Edit elective student registration
+        resp = self.client.post(
+            reverse("exam_allocator:api_edit_elective_registration", args=[reg.registration_id]),
+            data={"roll_number": "B22ECA01-MOD", "student_name": "Student One Mod", "department": "EC", "class_name": "EC B"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        reg.refresh_from_db()
+        self.assertEqual(reg.roll_number, "B22ECA01-MOD")
+        self.assertEqual(reg.class_name, "EC B")
+
+        # 4. Delete elective registration
+        resp = self.client.post(
+            reverse("exam_allocator:api_delete_elective_registration", args=[reg.registration_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(ElectiveStudentRegistration.objects.filter(pk=reg.pk).exists())
+
+        # 5. Delete elective subject (cascades)
+        resp = self.client.post(
+            reverse("exam_allocator:api_delete_elective_subject", args=[subj.elective_subject_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(ElectiveSubject.objects.filter(pk=subj.pk).exists())
+
+    def test_clear_all_electives(self):
+        grp = ElectiveGroup.objects.create(session=self.session, elective_label="Group A")
+        subj = ElectiveSubject.objects.create(group=grp, subject_code="22CS801", subject_name="Sub CS", elective_type="Group A")
+        ElectiveStudentRegistration.objects.create(elective_subject=subj, roll_number="B22CS01", student_name="CS One")
+
+        resp = self.client.post(
+            reverse("exam_allocator:api_clear_electives", args=[self.session.session_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(ElectiveGroup.objects.filter(session=self.session).count(), 0)
+        self.assertEqual(ElectiveSubject.objects.filter(group__session=self.session).count(), 0)
+
+    def test_timetable_crud_and_clear(self):
+        # 1. Add Exam
+        resp = self.client.post(
+            reverse("exam_allocator:api_add_exam", args=[self.session.session_id]),
+            data={"subject_code": "22CST801", "subject_name": "Compilers", "exam_date": "2026-05-10", "session": "FN", "slot": "A", "branch": "CSE"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        exam_id = resp.json()["exam_id"]
+
+        # 2. Edit Exam
+        resp = self.client.post(
+            reverse("exam_allocator:api_edit_exam", args=[exam_id]),
+            data={"exam_date": "2026-05-12", "session": "AN", "slot": "B"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+
+        # 3. Clear Timetable
+        resp = self.client.post(
+            reverse("exam_allocator:api_clear_timetable", args=[self.session.session_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_student_and_class_crud(self):
+        dept = Department.objects.create(session=self.session, department_code="EC", department_name="ECE")
+        cls = Class.objects.create(department=dept, class_name="ECE A", semester=8)
+
+        # 1. Add student to class
+        resp = self.client.post(
+            reverse("exam_allocator:api_add_class_student", args=[cls.class_id]),
+            data={"roll_number": "B22ECA99", "student_name": "New Student", "admission_no": "A99", "uni_reg_no": "U99", "gender": "Female"},
+            content_type="application/json",
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        stud_id = resp.json()["student_id"]
+
+        # 2. Delete individual student
+        resp = self.client.post(
+            reverse("exam_allocator:api_delete_student", args=[stud_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Student.objects.filter(pk=stud_id).exists())
+
+        # 3. Delete class
+        resp = self.client.post(
+            reverse("exam_allocator:api_delete_class", args=[cls.class_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Class.objects.filter(pk=cls.class_id).exists())

@@ -93,8 +93,8 @@ KNOWN_SUBJECT_MAP = {
     "SMART GRID TECHNOLOGIES": ("22EEE802.3", "SMART GRID TECHNOLOGIES", "Programme Elective III"),
     "DATA MINING": ("22CSE803.5", "DATA MINING", "Programme Elective IV"),
     "SPECIAL ELECTRIC MACHINES": ("22EEE803.2", "SPECIAL ELECTRICAL MACHINES", "Programme Elective IV"),
-    "AIRPOLLUTION MONITORING & CONTROL": ("22CHE802.4", "Air Pollution Monitoring & Control", "Programme Elective III"),
-    "AIR POLLUTION MONITORING & CONTROL": ("22CHE802.4", "Air Pollution Monitoring & Control", "Programme Elective III"),
+    "SPECIAL ELECTRICAL MACHINES": ("22EEE803.2", "SPECIAL ELECTRICAL MACHINES", "Programme Elective IV"),
+    "AIRPOLLUTION MONITORING & CONTROL": ("22CHE802.4", "AIR QUALITY MANAGEMENT", "Programme Elective III"),
 }
 
 

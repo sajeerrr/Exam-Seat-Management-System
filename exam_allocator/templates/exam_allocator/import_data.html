@@ -834,11 +834,12 @@
                     <th>Type</th>
                     <th>Status</th>
                     <th>Time</th>
+                    <th style="width: 80px; text-align: right;">Action</th>
                 </tr>
             </thead>
             <tbody>
                 {% for f in uploaded_files %}
-                <tr>
+                <tr id="file-row-{{ f.id }}">
                     <td>{{ f.original_filename }}</td>
                     <td>
                         {% if f.file_kind == 'STUDENT' %}
@@ -861,6 +862,11 @@
                         {% endif %}
                     </td>
                     <td style="color:var(--text-muted); font-size:12px;">{{ f.uploaded_at|date:"d M Y, H:i" }}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-del-file" onclick="deleteUploadedFile({{ f.id }}, '{{ f.original_filename|escapejs }}', this)" title="Delete file and associated data" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:13px; padding:4px 8px; border-radius:6px; transition:all .2s ease;">
+                            🗑️ Delete
+                        </button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -941,10 +947,31 @@
             const btn = document.getElementById('submit-' + kind);
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = 'Uploading…';
-            }
         });
     });
+
+    function deleteUploadedFile(fileId, filename, btn) {
+        if (!confirm(`Are you sure you want to delete "${filename}" and its associated records?`)) return;
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+        fetch(`/api/uploaded-file/${fileId}/delete/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                const tr = document.getElementById('file-row-' + fileId);
+                if (tr) tr.remove();
+            } else {
+                alert('Delete failed: ' + (data.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.textContent = '🗑️ Delete';
+            }
+        }).catch(err => {
+            alert('Network error during delete.');
+            btn.disabled = false;
+            btn.textContent = '🗑️ Delete';
+        });
+    }
 </script>
 
 {% endblock %}
