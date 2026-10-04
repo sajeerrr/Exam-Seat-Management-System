@@ -84,7 +84,7 @@ class Student(models.Model):
     student_class = models.ForeignKey(
         Class, on_delete=models.PROTECT, related_name="students"
     )
-    roll_number = models.CharField(max_length=50)
+    roll_number = models.CharField(max_length=50, blank=True)
     student_name = models.CharField(max_length=150)
     
     admission_no = models.CharField(max_length=50, blank=True)
@@ -95,6 +95,7 @@ class Student(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["student_class", "roll_number"],
+                condition=~models.Q(roll_number=""),
                 name="unique_roll_number_per_class",
             )
         ]

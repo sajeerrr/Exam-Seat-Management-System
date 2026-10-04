@@ -377,14 +377,16 @@ class StudentPDFParserTests(TestCase):
         self.assertEqual(last_student.name, "LAKSHMI RAJESHKUMAR")
         self.assertEqual(last_student.uni_reg_no, "TKM20AR032")
         self.assertEqual(last_student.admission_no, "200097")
-        self.assertEqual(last_student.roll_number, "TKM20AR032")
+        self.assertEqual(last_student.roll_number, "")  # Kept blank as in PDF
         self.assertEqual(last_student.gender, "Female")
 
         # Test importing into session
         session = AllocationSession.objects.create(name="Test Student Import Session")
         result = import_students(res, session)
         self.assertEqual(result["students_created"], 36)
-        self.assertTrue(Student.objects.filter(student_name="LAKSHMI RAJESHKUMAR").exists())
+        lakshmi = Student.objects.get(student_name="LAKSHMI RAJESHKUMAR")
+        self.assertEqual(lakshmi.roll_number, "")  # Blank in database as well
+        self.assertEqual(lakshmi.uni_reg_no, "TKM20AR032")
 
     def test_parse_student_pdf_barch_2k22_a(self):
         from exam_allocator.parsers.student_pdf_parser import parse_student_pdf
@@ -404,11 +406,13 @@ class StudentPDFParserTests(TestCase):
         self.assertEqual(last_student.name, "AISWARIYA S S")
         self.assertEqual(last_student.uni_reg_no, "KTE21AR004")
         self.assertEqual(last_student.admission_no, "220172")
-        self.assertEqual(last_student.roll_number, "KTE21AR004")
+        self.assertEqual(last_student.roll_number, "")  # Kept blank as in PDF
         self.assertEqual(last_student.gender, "Female")
 
         session = AllocationSession.objects.create(name="Test Student Import Session 2")
         result = import_students(res, session)
         self.assertEqual(result["students_created"], 40)
-        self.assertTrue(Student.objects.filter(student_name="AISWARIYA S S").exists())
+        aiswariya = Student.objects.get(student_name="AISWARIYA S S")
+        self.assertEqual(aiswariya.roll_number, "")  # Blank in database as well
+        self.assertEqual(aiswariya.uni_reg_no, "KTE21AR004")
 

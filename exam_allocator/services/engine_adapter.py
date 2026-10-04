@@ -32,8 +32,9 @@ def django_registration_to_engine_student(registration):
     student_class = student.student_class
     department = student_class.department
 
+    reg_no = student.roll_number or student.uni_reg_no or student.admission_no or str(student.student_id)
     return EngineStudent(
-        register_no=student.roll_number,
+        register_no=reg_no,
         name=student.student_name,
         department=department.department_code,
         semester=student_class.semester,

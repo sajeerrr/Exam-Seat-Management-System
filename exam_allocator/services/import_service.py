@@ -120,20 +120,32 @@ def import_students(student_result, session):
         for student_record in class_record.students:
 
             roll_number = student_record.roll_number.strip()
-            if not roll_number:
-                roll_number = (student_record.uni_reg_no or student_record.admission_no or "").strip()
+            admission_no = (student_record.admission_no or "").strip()
+            uni_reg_no = (student_record.uni_reg_no or "").strip()
+            name = student_record.name.strip()
+            gender = (student_record.gender or "").strip()
 
-            if not roll_number:
+            if not name:
                 continue
 
+            # Lookup student: if roll_number exists, match by roll_number; otherwise by admission_no, uni_reg_no, or name
+            if roll_number:
+                lookup_kwargs = {"student_class": django_class, "roll_number": roll_number}
+            elif admission_no:
+                lookup_kwargs = {"student_class": django_class, "admission_no": admission_no}
+            elif uni_reg_no:
+                lookup_kwargs = {"student_class": django_class, "uni_reg_no": uni_reg_no}
+            else:
+                lookup_kwargs = {"student_class": django_class, "student_name": name}
+
             student, created = Student.objects.get_or_create(
-                student_class=django_class,
-                roll_number=roll_number,
+                **lookup_kwargs,
                 defaults={
-                    "student_name": student_record.name.strip(),
-                    "admission_no": student_record.admission_no or "",
-                    "uni_reg_no": student_record.uni_reg_no or "",
-                    "gender": student_record.gender or "",
+                    "roll_number": roll_number,
+                    "student_name": name,
+                    "admission_no": admission_no,
+                    "uni_reg_no": uni_reg_no,
+                    "gender": gender,
                 },
             )
 
@@ -142,25 +154,26 @@ def import_students(student_result, session):
             else:
                 students_existing += 1
 
-                # Keep the database synchronized if the name
-                # changed in a newer Excel file.
-                new_name = student_record.name.strip()
                 update_fields = []
                 
-                if new_name and student.student_name != new_name:
-                    student.student_name = new_name
+                if student.roll_number != roll_number:
+                    student.roll_number = roll_number
+                    update_fields.append("roll_number")
+
+                if name and student.student_name != name:
+                    student.student_name = name
                     update_fields.append("student_name")
                 
-                if student_record.admission_no and student.admission_no != student_record.admission_no:
-                    student.admission_no = student_record.admission_no
+                if admission_no and student.admission_no != admission_no:
+                    student.admission_no = admission_no
                     update_fields.append("admission_no")
                     
-                if student_record.uni_reg_no and student.uni_reg_no != student_record.uni_reg_no:
-                    student.uni_reg_no = student_record.uni_reg_no
+                if uni_reg_no and student.uni_reg_no != uni_reg_no:
+                    student.uni_reg_no = uni_reg_no
                     update_fields.append("uni_reg_no")
                     
-                if student_record.gender and student.gender != student_record.gender:
-                    student.gender = student_record.gender
+                if gender and student.gender != gender:
+                    student.gender = gender
                     update_fields.append("gender")
                     
                 if update_fields:

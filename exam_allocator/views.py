@@ -936,11 +936,12 @@ def api_edit_student(request, student_id):
         reg = body.get("uni_reg_no", "").strip()
         gender = body.get("gender", "").strip()
         
-        if not roll or not name:
-            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+        if not name:
+            return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-        # Check uniqueness within class (excluding self)
+        # Check uniqueness within class (excluding self) if roll is non-empty
         if (
+            roll and
             Student.objects.filter(student_class=student.student_class, roll_number=roll)
             .exclude(pk=student_id)
             .exists()
@@ -1382,10 +1383,10 @@ def api_add_class_student(request, class_id):
     adm = body.get("admission_no", "").strip()
     reg = body.get("uni_reg_no", "").strip()
     gender = body.get("gender", "").strip()
-    if not roll or not name:
-        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+    if not name:
+        return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+    if roll and Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
         return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
 
     student = Student.objects.create(

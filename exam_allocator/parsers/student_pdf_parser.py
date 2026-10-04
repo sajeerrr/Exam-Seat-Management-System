@@ -98,14 +98,11 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                                 name = str(r[col_map["name"]] or "").replace("\n", " ").strip() if col_map["name"] < len(r) else ""
                                 gender = str(r[col_map["gender"]] or "").strip() if col_map["gender"] < len(r) else ""
 
-                                # Fallback roll number to uni_reg_no or admission_no if roll number is missing
-                                eff_roll = roll or reg or adm or f"NO_ROLL_{c_sl}"
-
                                 table_students.append(
                                     StudentRecord(
                                         sl_no=c_sl,
                                         admission_no=adm,
-                                        roll_number=eff_roll,
+                                        roll_number=roll,  # Keep space blank if no roll number in PDF
                                         uni_reg_no=reg,
                                         name=name,
                                         gender=gender,
@@ -189,12 +186,11 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                     name = lines[i+4]
                     gender = lines[i+5]
 
-                    eff_roll = roll_number or uni_reg_no or admission_no or f"NO_ROLL_{sl_no}"
                     students.append(
                         StudentRecord(
                             sl_no=sl_no,
                             admission_no=admission_no,
-                            roll_number=eff_roll,
+                            roll_number=roll_number,
                             uni_reg_no=uni_reg_no,
                             name=name,
                             gender=gender,
@@ -210,16 +206,16 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                 elif i + 4 < len(lines) and lines[i+4].capitalize() in ["Male", "Female"]:
                     sl_no = line
                     admission_no = lines[i+1]
+                    roll_number = ""  # Keep blank as in PDF
                     uni_reg_no = lines[i+2]
                     name = lines[i+3]
                     gender = lines[i+4]
 
-                    eff_roll = uni_reg_no or admission_no or f"NO_ROLL_{sl_no}"
                     students.append(
                         StudentRecord(
                             sl_no=sl_no,
                             admission_no=admission_no,
-                            roll_number=eff_roll,
+                            roll_number=roll_number,
                             uni_reg_no=uni_reg_no,
                             name=name,
                             gender=gender,
@@ -240,12 +236,11 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                     name = f"{lines[i+4]} {lines[i+5]}"
                     gender = lines[i+6]
 
-                    eff_roll = roll_number or uni_reg_no or admission_no or f"NO_ROLL_{sl_no}"
                     students.append(
                         StudentRecord(
                             sl_no=sl_no,
                             admission_no=admission_no,
-                            roll_number=eff_roll,
+                            roll_number=roll_number,
                             uni_reg_no=uni_reg_no,
                             name=name,
                             gender=gender,
