@@ -1277,81 +1277,112 @@
                 </div>
             </div>
             <div class="sec-card-body">
-                <div class="class-list">
-                    {% for item in group_data.subjects %}
-                    <div class="class-row" id="elective-sub-row-{{ item.subject.elective_subject_id }}" onclick="toggleElectivePanel('sub-{{ item.subject.elective_subject_id }}', this)">
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;">
-                            <span class="class-name" id="sub-code-{{ item.subject.elective_subject_id }}" style="font-weight: 700; font-family: monospace; color: var(--text-primary);">{{ item.subject.subject_code }}</span>
-                            <span id="sub-name-{{ item.subject.elective_subject_id }}" style="color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">{{ item.subject.subject_name }}</span>
-                            {% for dept in item.departments %}
-                            <span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:6px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);">
-                                {{ dept }}
-                            </span>
-                            {% endfor %}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="class-count" id="sub-count-{{ item.subject.elective_subject_id }}">{{ item.reg_count }} student{{ item.reg_count|pluralize }}</span>
-                            <button class="row-act-btn" onclick="event.stopPropagation(); openEditElectiveSubjectModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}', '{{ item.subject.subject_name|escapejs }}', '{{ group_data.elective_label|escapejs }}')">✏️ Edit</button>
-                            <button class="row-act-btn del" onclick="event.stopPropagation(); deleteElectiveSubject({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">🗑️</button>
-                            <span class="class-arrow">›</span>
-                        </div>
-                    </div>
-                    <div id="sp-sub-{{ item.subject.elective_subject_id }}" class="student-panel" style="display: none;">
-                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-                            <button class="btn-sm-primary" onclick="openAddElectiveStudentModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">+ Add Student</button>
-                        </div>
-                        <div class="stud-table-wrap">
-                            <table class="stud-table" id="elective-table-{{ item.subject.elective_subject_id }}">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 45px;">#</th>
-                                        <th style="width: 130px;">Roll No</th>
-                                        <th>Student Name</th>
-                                        <th style="width: 100px;">Department</th>
-                                        <th style="width: 120px;">Class</th>
-                                        <th style="width: 160px;">Source File</th>
-                                        <th style="width: 110px; text-align:right;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for reg in item.registrations %}
-                                    <tr id="reg-row-{{ reg.registration_id }}" {% if reg.is_unresolved %}style="background:rgba(239,68,68,0.06);"{% endif %}>
-                                        <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
-                                        <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
-                                        <td>
-                                            {{ reg.student_name }}
-                                            {% if reg.is_unresolved %}
-                                            <span style="color:#ef4444;font-size:11px;margin-left:6px;">⚠️ {{ reg.unresolved_reason }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            {% if reg.department %}
-                                            <span style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid var(--border);">{{ reg.department }}</span>
-                                            {% else %}
-                                            <span style="color:var(--text-muted);font-size:12px;">—</span>
-                                            {% endif %}
-                                        </td>
-                                        <td style="color: var(--text-secondary); font-size: 12.5px;">{{ reg.class_name|default:"—" }}</td>
-                                        <td style="color: var(--text-muted); font-size: 11.5px;">
-                                            {{ reg.source_file|default:"—" }}{% if reg.source_sheet_or_page %} <span style="opacity:0.7;">({{ reg.source_sheet_or_page }})</span>{% endif %}
-                                        </td>
-                                        <td style="text-align:right; white-space:nowrap;">
-                                            <button class="row-act-btn" onclick="openEditElectiveRegModal({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}', '{{ reg.student_name|escapejs }}', '{{ reg.department|default:''|escapejs }}', '{{ reg.class_name|default:''|escapejs }}')">✏️</button>
-                                            <button class="row-act-btn del" onclick="deleteElectiveReg({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}')">🗑️</button>
-                                        </td>
-                                    </tr>
+                <div class="stud-table-wrap">
+                    <table class="stud-table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px; padding-left: 20px;">Subject Code</th>
+                                <th>Subject Name</th>
+                                <th style="width: 140px;">Department</th>
+                                <th style="width: 130px;">Enrolled</th>
+                                <th style="width: 130px; text-align: right;">Actions</th>
+                                <th style="width: 40px; text-align: center; padding-right: 20px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in group_data.subjects %}
+                            <tr id="elective-sub-row-{{ item.subject.elective_subject_id }}" class="elective-sub-tr" onclick="toggleElectivePanel('sub-{{ item.subject.elective_subject_id }}', this)" style="cursor: pointer;">
+                                <td style="padding-left: 20px;">
+                                    <span id="sub-code-{{ item.subject.elective_subject_id }}" style="font-weight: 700; font-family: monospace; color: var(--text-primary); font-size: 13px;">{{ item.subject.subject_code }}</span>
+                                </td>
+                                <td>
+                                    <span id="sub-name-{{ item.subject.elective_subject_id }}" style="color: var(--text-primary); font-size: 13.5px; font-weight: 600;">{{ item.subject.subject_name }}</span>
+                                </td>
+                                <td>
+                                    {% for dept in item.departments %}
+                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
+                                        {{ dept }}
+                                    </span>
                                     {% empty %}
-                                    <tr>
-                                        <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
-                                    </tr>
+                                    <span style="color:var(--text-muted);font-size:12px;">—</span>
                                     {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div style="padding: 12px 16px; color: var(--text-muted); font-size: 13px;">No subjects in this elective group.</div>
-                    {% endfor %}
+                                </td>
+                                <td>
+                                    <span class="class-count" id="sub-count-{{ item.subject.elective_subject_id }}">{{ item.reg_count }} student{{ item.reg_count|pluralize }}</span>
+                                </td>
+                                <td style="text-align: right; white-space: nowrap;">
+                                    <button class="row-act-btn" onclick="event.stopPropagation(); openEditElectiveSubjectModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}', '{{ item.subject.subject_name|escapejs }}', '{{ group_data.elective_label|escapejs }}')">✏️ Edit</button>
+                                    <button class="row-act-btn del" onclick="event.stopPropagation(); deleteElectiveSubject({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">🗑️</button>
+                                </td>
+                                <td style="text-align: center; padding-right: 20px;">
+                                    <span class="class-arrow" style="font-size: 13px; color: var(--text-muted);">›</span>
+                                </td>
+                            </tr>
+                            <tr id="sp-sub-{{ item.subject.elective_subject_id }}" style="display: none;">
+                                <td colspan="6" style="padding: 16px 20px; background: var(--bg-sunken); border-bottom: 2px solid var(--border);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                        <div style="font-size:12.5px; font-weight:700; color:var(--text-secondary);">
+                                            👥 Enrolled Students in <span style="font-family:monospace; color:var(--accent-light);">{{ item.subject.subject_code }}</span> ({{ item.reg_count }})
+                                        </div>
+                                        <button class="btn-sm-primary" onclick="openAddElectiveStudentModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">+ Add Student</button>
+                                    </div>
+                                    <div class="stud-table-wrap">
+                                        <table class="stud-table" id="elective-table-{{ item.subject.elective_subject_id }}" style="background: var(--bg-card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 45px;">#</th>
+                                                    <th style="width: 140px;">Roll No</th>
+                                                    <th>Student Name</th>
+                                                    <th style="width: 110px;">Department</th>
+                                                    <th style="width: 130px;">Class</th>
+                                                    <th style="width: 180px;">Source File</th>
+                                                    <th style="width: 120px; text-align:right;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for reg in item.registrations %}
+                                                <tr id="reg-row-{{ reg.registration_id }}" {% if reg.is_unresolved %}style="background:rgba(239,68,68,0.06);"{% endif %}>
+                                                    <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
+                                                    <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
+                                                    <td>
+                                                        {{ reg.student_name }}
+                                                        {% if reg.is_unresolved %}
+                                                        <span style="color:#ef4444;font-size:11px;margin-left:6px;">⚠️ {{ reg.unresolved_reason }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if reg.department %}
+                                                        <span style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid var(--border);">{{ reg.department }}</span>
+                                                        {% else %}
+                                                        <span style="color:var(--text-muted);font-size:12px;">—</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td style="color: var(--text-secondary); font-size: 12.5px;">{{ reg.class_name|default:"—" }}</td>
+                                                    <td style="color: var(--text-muted); font-size: 11.5px;">
+                                                        {{ reg.source_file|default:"—" }}{% if reg.source_sheet_or_page %} <span style="opacity:0.7;">({{ reg.source_sheet_or_page }})</span>{% endif %}
+                                                    </td>
+                                                    <td style="text-align:right; white-space:nowrap;">
+                                                        <button class="row-act-btn" onclick="openEditElectiveRegModal({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}', '{{ reg.student_name|escapejs }}', '{{ reg.department|default:''|escapejs }}', '{{ reg.class_name|default:''|escapejs }}')">✏️ Edit</button>
+                                                        <button class="row-act-btn del" onclick="deleteElectiveReg({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}')">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" style="padding: 16px 20px; color: var(--text-muted); font-size: 13px; text-align: center;">No subjects in this elective group.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -1572,9 +1603,10 @@
         const p = document.getElementById('sp-' + id);
         if (!p) return;
         const isHidden = p.style.display === 'none';
-        p.style.display = isHidden ? 'block' : 'none';
+        p.style.display = isHidden ? 'table-row' : 'none';
         const arrow = rowEl.querySelector('.class-arrow');
         if (arrow) arrow.textContent = isHidden ? '▼' : '›';
+        rowEl.style.background = isHidden ? 'rgba(99, 102, 241, 0.05)' : '';
     }
 
     /* ── COLLAPSIBLE DEPT CARDS ─────────────── */
