@@ -674,8 +674,6 @@ def upload_file(request, session_id):
                         f"Elective Groups: {stats.get('groups_count', 0)}\n"
                         f"Subjects: {stats.get('subjects_count', 0)}\n"
                         f"Students: {stats.get('students_count', 0)}\n"
-                        f"Duplicates Skipped: {stats.get('duplicates_count', 0)}\n"
-                        f"Unresolved: {stats.get('unresolved_count', 0)}\n"
                         f"Warnings: {warning_count}\n"
                         f"Errors: 0"
                     )
@@ -819,7 +817,7 @@ def review_session(request, session_id):
     exam_days_count = len(timetable_days)
 
     # Elective Groups for session (prefetch subjects and student registrations)
-    elective_groups_qs = (
+    elective_groups = (
         ElectiveGroup.objects.filter(session=session)
         .prefetch_related(
             Prefetch(
@@ -827,48 +825,31 @@ def review_session(request, session_id):
                 queryset=ElectiveSubject.objects.prefetch_related("student_registrations").order_by("subject_code"),
             )
         )
-        .order_by("elective_label")
+        .order_by("department_code", "elective_label")
     )
 
+    elective_depts = defaultdict(list)
     total_elective_subjects = 0
-    total_elective_registrations = 0
-    unique_elective_students = set()
-    unresolved_registrations_count = 0
-    all_elective_departments = set()
-    elective_groups_list = []
+    total_elective_students = 0
 
-    for eg in elective_groups_qs:
-        group_students_count = 0
-        enriched_subjects = []
+    for eg in elective_groups:
+        elective_depts[eg.department_code].append(eg)
         for subj in eg.subjects.all():
-            regs = list(subj.student_registrations.all())
-            reg_count = len(regs)
-            group_students_count += reg_count
-            total_elective_registrations += reg_count
             total_elective_subjects += 1
+            total_elective_students += subj.student_registrations.count()
 
-            subj_depts = set()
-            for r in regs:
-                unique_elective_students.add(r.roll_number)
-                if r.is_unresolved:
-                    unresolved_registrations_count += 1
-                if r.department:
-                    subj_depts.add(r.department)
-                    all_elective_departments.add(r.department)
-
-            enriched_subjects.append({
-                "subject": subj,
-                "registrations": regs,
-                "reg_count": reg_count,
-                "departments": sorted(list(subj_depts)),
-            })
-
-        elective_groups_list.append({
-            "group": eg,
-            "elective_label": eg.elective_label,
-            "subjects": enriched_subjects,
-            "total_students": group_students_count,
-            "subjects_count": len(enriched_subjects),
+    elective_dept_list = []
+    for dept_code in sorted(elective_depts.keys()):
+        groups = elective_depts[dept_code]
+        dept_name = groups[0].department_name or dept_code
+        dept_students = sum(
+            s.student_registrations.count() for g in groups for s in g.subjects.all()
+        )
+        elective_dept_list.append({
+            "department_code": dept_code,
+            "department_name": dept_name,
+            "groups": groups,
+            "total_students": dept_students,
         })
 
     return render(
@@ -883,13 +864,10 @@ def review_session(request, session_id):
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,
             "exam_days_count": exam_days_count,
-            "elective_groups_list": elective_groups_list,
-            "elective_groups_count": len(elective_groups_list),
+            "elective_dept_list": elective_dept_list,
+            "elective_groups_count": elective_groups.count(),
             "elective_subjects_count": total_elective_subjects,
-            "elective_registrations_count": total_elective_registrations,
-            "elective_unique_students_count": len(unique_elective_students),
-            "elective_unresolved_count": unresolved_registrations_count,
-            "elective_departments_count": len(all_elective_departments),
+            "elective_students_count": total_elective_students,
         },
     )
 
