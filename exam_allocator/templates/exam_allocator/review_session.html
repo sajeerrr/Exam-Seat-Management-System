@@ -1107,74 +1107,121 @@
 
     <!-- ══ PANEL: ELECTIVES ════════════════════════════════════════════════ -->
     <div class="panel" id="panel-electives">
-        {% for dept in elective_dept_list %}
+        {% if elective_groups_list %}
+        <!-- Elective Statistics Summary -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_groups_count }}</div>
+                <div class="stat-lbl">Elective Types</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_subjects_count }}</div>
+                <div class="stat-lbl">Elective Subjects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_unique_students_count }}</div>
+                <div class="stat-lbl">Registered Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_registrations_count }}</div>
+                <div class="stat-lbl">Total Enrollments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_departments_count }}</div>
+                <div class="stat-lbl">Departments</div>
+            </div>
+            {% if elective_unresolved_count > 0 %}
+            <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);">
+                <div class="stat-num" style="color: #ef4444;">{{ elective_unresolved_count }}</div>
+                <div class="stat-lbl" style="color: #ef4444;">Unresolved Students</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Elective Types List -->
+        {% for group_data in elective_groups_list %}
         <div class="sec-card">
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
-                    <span>🏛️</span>
-                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{ dept.department_code }})</span>
+                    <span>📚</span>
+                    {{ group_data.elective_label }}
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="sec-card-meta">{{ dept.groups|length }} elective group{{ dept.groups|length|pluralize }} · {{ dept.total_students }} student{{ dept.total_students|pluralize }}</span>
+                    <span class="sec-card-meta">{{ group_data.subjects_count }} subject{{ group_data.subjects_count|pluralize }} · {{ group_data.total_students }} enrollment{{ group_data.total_students|pluralize }}</span>
                     <span class="chevron">▼</span>
                 </div>
             </div>
             <div class="sec-card-body collapsed">
-                {% for group in dept.groups %}
-                <div style="margin-bottom: 22px;">
-                    <div style="font-size: 13.5px; font-weight: 700; color: var(--accent-light); padding: 10px 16px; background: rgba(99, 102, 241, 0.08); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>📂 {{ group.elective_label }}</span>
-                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">{{ group.subjects.all|length }} subject{{ group.subjects.all|length|pluralize }}</span>
-                    </div>
-                    <div class="class-list">
-                        {% for subj in group.subjects.all %}
-                        <div class="class-row" onclick="toggleElectivePanel('sub-{{ subj.elective_subject_id }}', this)">
-                            <div>
-                                <span class="class-name" style="font-weight: 700; color: var(--text-primary);">{{ subj.subject_code }}</span>
-                                <span style="color: var(--text-secondary); margin-left: 8px; font-size: 13px;">{{ subj.subject_name }}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="class-count">{{ subj.student_registrations.count }} student{{ subj.student_registrations.count|pluralize }}</span>
-                                <span class="class-arrow">›</span>
-                            </div>
+                <div class="class-list">
+                    {% for item in group_data.subjects %}
+                    <div class="class-row" onclick="toggleElectivePanel('sub-{{ item.subject.elective_subject_id }}', this)">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                            <span class="class-name" style="font-weight: 700; font-family: monospace; color: var(--text-primary);">{{ item.subject.subject_code }}</span>
+                            <span style="color: var(--text-secondary); font-size: 13.5px; font-weight: 500;">{{ item.subject.subject_name }}</span>
+                            {% for dept in item.departments %}
+                            <span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:6px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);">
+                                {{ dept }}
+                            </span>
+                            {% endfor %}
                         </div>
-                        <div id="sp-sub-{{ subj.elective_subject_id }}" class="student-panel" style="display: none;">
-                            <div class="stud-table-wrap">
-                                <table class="stud-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">#</th>
-                                            <th style="width: 180px;">Roll No</th>
-                                            <th>Student Name</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for reg in subj.student_registrations.all %}
-                                        <tr>
-                                            <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
-                                            <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
-                                            <td>{{ reg.student_name }}</td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="class-count">{{ item.reg_count }} student{{ item.reg_count|pluralize }}</span>
+                            <span class="class-arrow">›</span>
                         </div>
-                        {% empty %}
-                        <div style="padding: 12px 16px; color: var(--text-muted); font-size: 13px;">No subjects in this elective group.</div>
-                        {% endfor %}
                     </div>
+                    <div id="sp-sub-{{ item.subject.elective_subject_id }}" class="student-panel" style="display: none;">
+                        <div class="stud-table-wrap">
+                            <table class="stud-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th style="width: 140px;">Roll No</th>
+                                        <th>Student Name</th>
+                                        <th style="width: 110px;">Department</th>
+                                        <th style="width: 140px;">Class</th>
+                                        <th style="width: 170px;">Source File</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for reg in item.registrations %}
+                                    <tr {% if reg.is_unresolved %}style="background:rgba(239,68,68,0.06);"{% endif %}>
+                                        <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
+                                        <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
+                                        <td>
+                                            {{ reg.student_name }}
+                                            {% if reg.is_unresolved %}
+                                            <span style="color:#ef4444;font-size:11px;margin-left:6px;">⚠️ {{ reg.unresolved_reason }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if reg.department %}
+                                            <span style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid var(--border);">{{ reg.department }}</span>
+                                            {% else %}
+                                            <span style="color:var(--text-muted);font-size:12px;">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td style="color: var(--text-secondary); font-size: 12.5px;">{{ reg.class_name|default:"—" }}</td>
+                                        <td style="color: var(--text-muted); font-size: 11.5px;">
+                                            {{ reg.source_file|default:"—" }}{% if reg.source_sheet_or_page %} <span style="opacity:0.7;">({{ reg.source_sheet_or_page }})</span>{% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="padding: 12px 16px; color: var(--text-muted); font-size: 13px;">No subjects in this elective group.</div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <div style="padding: 16px 20px; color: var(--text-muted); font-size: 13px;">No elective groups for this department.</div>
-                {% endfor %}
             </div>
         </div>
-        {% empty %}
+        {% endfor %}
+        {% else %}
         <div class="no-rooms"
             style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:16px;">
             <div>No elective data imported yet for this session.</div>
@@ -1183,7 +1230,7 @@
                 📥 Import Elective Files
             </a>
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- BOTTOM BAR -->

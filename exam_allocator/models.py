@@ -298,20 +298,20 @@ class ElectiveGroup(models.Model):
         on_delete=models.CASCADE,
         related_name="elective_groups",
     )
-    department_code = models.CharField(max_length=20)
-    department_name = models.CharField(max_length=100, blank=True)
-    elective_label = models.CharField(max_length=100)
+    department_code = models.CharField(max_length=50, blank=True, default="")
+    department_name = models.CharField(max_length=100, blank=True, default="")
+    elective_label = models.CharField(max_length=100)  # e.g. "Programme Elective III", "Programme Elective IV"
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["session", "department_code", "elective_label"],
+                fields=["session", "elective_label"],
                 name="unique_elective_group_per_session",
             )
         ]
 
     def __str__(self):
-        return f"{self.department_code} - {self.elective_label}"
+        return self.elective_label
 
 
 class ElectiveSubject(models.Model):
@@ -321,8 +321,10 @@ class ElectiveSubject(models.Model):
         on_delete=models.CASCADE,
         related_name="subjects",
     )
-    subject_code = models.CharField(max_length=30)
-    subject_name = models.CharField(max_length=150)
+    subject_code = models.CharField(max_length=50)  # Normalized subject code
+    original_subject_code = models.CharField(max_length=100, blank=True, default="")
+    subject_name = models.CharField(max_length=200)
+    elective_type = models.CharField(max_length=100, blank=True, default="")
 
     class Meta:
         constraints = [
@@ -352,7 +354,13 @@ class ElectiveStudentRegistration(models.Model):
     )
     roll_number = models.CharField(max_length=50)
     student_name = models.CharField(max_length=150)
-    source_file = models.CharField(max_length=255, blank=True)
+    department = models.CharField(max_length=50, blank=True, default="")
+    class_name = models.CharField(max_length=100, blank=True, default="")
+    source_file = models.CharField(max_length=255, blank=True, default="")
+    source_sheet_or_page = models.CharField(max_length=100, blank=True, default="")
+    source_row = models.IntegerField(null=True, blank=True)
+    is_unresolved = models.BooleanField(default=False)
+    unresolved_reason = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
         constraints = [
