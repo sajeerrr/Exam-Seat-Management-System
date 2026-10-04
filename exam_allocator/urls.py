@@ -47,6 +47,7 @@ urlpatterns = [
     path("api/session/<int:session_id>/clear-rooms/", views.api_clear_rooms, name="api_clear_rooms"),
     path("api/uploaded-file/<int:file_id>/delete/", views.api_delete_uploaded_file, name="api_delete_uploaded_file"),
 
+    path("api/elective-group/<int:group_id>/delete/", views.api_delete_elective_group, name="api_delete_elective_group"),
     path("api/elective-subject/<int:subject_id>/edit/", views.api_edit_elective_subject, name="api_edit_elective_subject"),
     path("api/elective-subject/<int:subject_id>/delete/", views.api_delete_elective_subject, name="api_delete_elective_subject"),
     path("api/elective-subject/<int:subject_id>/add-student/", views.api_add_elective_student, name="api_add_elective_student"),

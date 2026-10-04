@@ -279,6 +279,15 @@ class EditAndDeleteApiTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(ElectiveSubject.objects.filter(pk=subj.pk).exists())
 
+        # 6. Delete elective group
+        grp2 = ElectiveGroup.objects.create(session=self.session, elective_label="Programme Elective IV")
+        resp = self.client.post(
+            reverse("exam_allocator:api_delete_elective_group", args=[grp2.group_id]),
+            HTTP_HOST="localhost",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(ElectiveGroup.objects.filter(pk=grp2.pk).exists())
+
     def test_clear_all_electives(self):
         grp = ElectiveGroup.objects.create(session=self.session, elective_label="Group A")
         subj = ElectiveSubject.objects.create(group=grp, subject_code="22CS801", subject_name="Sub CS", elective_type="Group A")

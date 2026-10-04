@@ -1270,12 +1270,13 @@
                     <span>📚</span>
                     {{ group_data.elective_label }}
                 </div>
-                <div style="display:flex;align-items:center;gap:12px;">
+                <div style="display:flex;align-items:center;gap:10px;">
                     <span class="sec-card-meta">{{ group_data.subjects_count }} subject{{ group_data.subjects_count|pluralize }} · {{ group_data.total_students }} enrollment{{ group_data.total_students|pluralize }}</span>
-                    <span class="chevron">▼</span>
+                    <button class="row-act-btn del" style="font-size:12px; padding:5px 11px;" onclick="event.stopPropagation(); deleteElectiveGroup({{ group_data.group.group_id }}, '{{ group_data.elective_label|escapejs }}')">🗑️ Delete Group</button>
+                    <span class="chevron">▲</span>
                 </div>
             </div>
-            <div class="sec-card-body collapsed">
+            <div class="sec-card-body">
                 <div class="class-list">
                     {% for item in group_data.subjects %}
                     <div class="class-row" id="elective-sub-row-{{ item.subject.elective_subject_id }}" onclick="toggleElectivePanel('sub-{{ item.subject.elective_subject_id }}', this)">
@@ -1850,6 +1851,17 @@
     }
 
     /* ── ELECTIVES ACTIONS & MODALS ─────────── */
+    function deleteElectiveGroup(groupId, label) {
+        if (!confirm(`Delete elective group "${label}" and all its subjects and enrolled students?\nThis cannot be undone.`)) return;
+        fetch(`/api/elective-group/${groupId}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else { alert(data.error || 'Failed to delete elective group.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
     let editingSubjectId = null;
     function openEditElectiveSubjectModal(id, code, name, type) {
         editingSubjectId = id;

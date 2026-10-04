@@ -1200,6 +1200,17 @@ def api_delete_elective_subject(request, subject_id):
 
 
 @require_POST
+def api_delete_elective_group(request, group_id):
+    group = get_object_or_404(ElectiveGroup, group_id=group_id)
+    with transaction.atomic():
+        for subj in group.subjects.all():
+            subj.student_registrations.all().delete()
+            subj.delete()
+        group.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
 def api_edit_elective_registration(request, registration_id):
     reg = get_object_or_404(ElectiveStudentRegistration, registration_id=registration_id)
     body = json.loads(request.body)
