@@ -17,6 +17,7 @@ from exam_allocator.models import (
 # for the same department.
 DEPARTMENT_ALIASES = {
     "EE": "EEE",
+    "EC": "ECE",
 }
 
 

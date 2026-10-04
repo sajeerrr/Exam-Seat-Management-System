@@ -338,6 +338,11 @@ class ElectiveSubject(models.Model):
     def __str__(self):
         return f"{self.subject_code} - {self.subject_name}"
 
+    @property
+    def offering_department(self) -> str:
+        from exam_allocator.parsers.elective_parser import derive_dept_from_subject_code
+        return derive_dept_from_subject_code(self.subject_code)
+
 
 class ElectiveStudentRegistration(models.Model):
     registration_id = models.AutoField(primary_key=True)
