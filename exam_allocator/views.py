@@ -853,14 +853,8 @@ def review_session(request, session_id):
                 if r.is_unresolved:
                     unresolved_registrations_count += 1
                 if r.department:
-                    dept = "ECE" if r.department == "EC" else r.department
-                    subj_depts.add(dept)
-                    all_elective_departments.add(dept)
-
-            offering_dept = subj.offering_department
-            if offering_dept:
-                subj_depts.add(offering_dept)
-                all_elective_departments.add(offering_dept)
+                    subj_depts.add(r.department)
+                    all_elective_departments.add(r.department)
 
             enriched_subjects.append({
                 "subject": subj,
@@ -942,12 +936,11 @@ def api_edit_student(request, student_id):
         reg = body.get("uni_reg_no", "").strip()
         gender = body.get("gender", "").strip()
         
-        if not name:
-            return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
+        if not roll or not name:
+            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
 
-        # Check uniqueness within class (excluding self) if roll is non-empty
+        # Check uniqueness within class (excluding self)
         if (
-            roll and
             Student.objects.filter(student_class=student.student_class, roll_number=roll)
             .exclude(pk=student_id)
             .exists()
@@ -1228,12 +1221,6 @@ def api_edit_elective_registration(request, registration_id):
     if not roll or not name:
         return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
 
-    from exam_allocator.parsers.elective_parser import derive_dept_from_roll
-    if dept == "EC":
-        dept = "ECE"
-    elif not dept and roll:
-        dept = derive_dept_from_roll(roll)
-
     if (
         ElectiveStudentRegistration.objects.filter(elective_subject=reg.elective_subject, roll_number__iexact=roll)
         .exclude(pk=registration_id)
@@ -1272,12 +1259,6 @@ def api_add_elective_student(request, subject_id):
     cname = body.get("class_name", "").strip()
     if not roll or not name:
         return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
-
-    from exam_allocator.parsers.elective_parser import derive_dept_from_roll
-    if dept == "EC":
-        dept = "ECE"
-    elif not dept and roll:
-        dept = derive_dept_from_roll(roll)
 
     if ElectiveStudentRegistration.objects.filter(elective_subject=subject, roll_number__iexact=roll).exists():
         return JsonResponse({"success": False, "error": f"Student with roll '{roll}' is already in this subject."}, status=400)
@@ -1401,10 +1382,10 @@ def api_add_class_student(request, class_id):
     adm = body.get("admission_no", "").strip()
     reg = body.get("uni_reg_no", "").strip()
     gender = body.get("gender", "").strip()
-    if not name:
-        return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
 
-    if roll and Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
         return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
 
     student = Student.objects.create(

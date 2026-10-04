@@ -84,7 +84,7 @@ class Student(models.Model):
     student_class = models.ForeignKey(
         Class, on_delete=models.PROTECT, related_name="students"
     )
-    roll_number = models.CharField(max_length=50, blank=True)
+    roll_number = models.CharField(max_length=50)
     student_name = models.CharField(max_length=150)
     
     admission_no = models.CharField(max_length=50, blank=True)
@@ -95,7 +95,6 @@ class Student(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["student_class", "roll_number"],
-                condition=~models.Q(roll_number=""),
                 name="unique_roll_number_per_class",
             )
         ]
@@ -337,11 +336,6 @@ class ElectiveSubject(models.Model):
 
     def __str__(self):
         return f"{self.subject_code} - {self.subject_name}"
-
-    @property
-    def offering_department(self) -> str:
-        from exam_allocator.parsers.elective_parser import derive_dept_from_subject_code
-        return derive_dept_from_subject_code(self.subject_code)
 
 
 class ElectiveStudentRegistration(models.Model):

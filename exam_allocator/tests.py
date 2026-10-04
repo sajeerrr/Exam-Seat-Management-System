@@ -416,14 +416,3 @@ class StudentPDFParserTests(TestCase):
         self.assertEqual(aiswariya.roll_number, "")  # Blank in database as well
         self.assertEqual(aiswariya.uni_reg_no, "KTE21AR004")
 
-    def test_derive_dept_from_subject_code(self):
-        from exam_allocator.parsers.elective_parser import derive_dept_from_subject_code
-        self.assertEqual(derive_dept_from_subject_code("22CEE803.3"), "CE")
-        self.assertEqual(derive_dept_from_subject_code("22CHE803.1"), "CHE")
-        self.assertEqual(derive_dept_from_subject_code("22CSE803.4"), "CSE")
-        self.assertEqual(derive_dept_from_subject_code("22ECE803.1"), "ECE")
-        self.assertEqual(derive_dept_from_subject_code("22EEE803.2"), "EEE")
-        self.assertEqual(derive_dept_from_subject_code("22MEE803.1"), "ME")
-        self.assertEqual(derive_dept_from_subject_code("22ARE801.1"), "B.ARCH")
-        self.assertEqual(derive_dept_from_subject_code("ECT-4023"), "ECE")
-

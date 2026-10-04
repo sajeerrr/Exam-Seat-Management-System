@@ -205,41 +205,6 @@ def derive_elective_type(sub_code: str, context: str = "") -> str:
     return "Programme Elective"
 
 
-def derive_dept_from_subject_code(code: str) -> str:
-    """Derive offering department code from course/subject code."""
-    if not code:
-        return ""
-    c = code.upper().strip()
-
-    if c.startswith("ECT-") or c.startswith("ECP-"):
-        return "ECE"
-
-    m = re.search(r"^(?:\d{2})?([A-Z]+)", c)
-    if m:
-        prefix = m.group(1)
-        if prefix in ("CEE", "CET", "CEJ", "CE"):
-            return "CE"
-        elif prefix in ("CHE", "CHT", "CHP", "CH"):
-            return "CHE"
-        elif prefix in ("CSE", "CST", "CSP", "CS"):
-            return "CSE"
-        elif prefix in ("ECE", "ECT", "ECP", "EC"):
-            return "ECE"
-        elif prefix in ("EEE", "EET", "EEP", "EE"):
-            return "EEE"
-        elif prefix in ("MEE", "MET", "MEP", "ME"):
-            return "ME"
-        elif prefix in ("ARE", "ART", "AR", "BARCH", "B.ARCH"):
-            return "B.ARCH"
-        elif prefix in ("ELE", "ERE", "ERT", "ERP", "EL"):
-            return "EL"
-        elif prefix in ("AIE", "AIT", "AIP", "AI"):
-            return "AI"
-        elif prefix in ("MCA",):
-            return "MCA"
-    return ""
-
-
 def derive_dept_from_roll(roll: str) -> str:
     """Derive department code from student roll number prefix."""
     r = roll.upper().replace(" ", "")
@@ -248,7 +213,7 @@ def derive_dept_from_roll(roll: str) -> str:
     if m:
         code = m.group(1)
         mapping = {
-            "EC": "ECE",
+            "EC": "EC",
             "CS": "CSE",
             "ME": "ME",
             "EE": "EEE",
@@ -266,7 +231,7 @@ def derive_dept_from_roll(roll: str) -> str:
         code = m_tkm.group(1)
         mapping_tkm = {
             "CS": "CSE",
-            "EC": "ECE",
+            "EC": "EC",
             "ME": "ME",
             "EE": "EEE",
             "EL": "EL",
