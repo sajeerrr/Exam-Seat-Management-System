@@ -343,8 +343,49 @@ def session_allocation_result(request, session_id):
         )
         total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
         if total_regs == 0:
+            from exam_allocator.services.registration_service import create_exam_registrations
+            for ex in exams_in_slot:
+                create_exam_registrations(ex)
+            total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
+
+        if total_regs == 0:
             missing_data_reason = "No students are currently registered for the exams during this specific slot. This typically happens because the student list Excel files for the matching classes (like Semester 8) were not uploaded in the Import Data step!"
-        
+        else:
+            # If registrations exist but allocations do not yet exist for this slot, run allocation on the fly
+            existing_allocs = Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=selected_slot['date'],
+                exam__session=selected_slot['shift']
+            ).count()
+            if existing_allocs == 0:
+                try:
+                    from exam_allocator.services.session_allocation_service import (
+                        _get_session_rooms, _allocate_slot, save_session_seat_plan
+                    )
+                    from exam_allocator.services.engine_adapter import get_engine_students
+                    slot_students = []
+                    for ex in exams_in_slot:
+                        slot_students.extend(get_engine_students(ex))
+                    rooms = _get_session_rooms(session)
+                    slot_tuple = (selected_slot['date'], selected_slot['shift'])
+                    seat_plan = _allocate_slot(session, slot_tuple, slot_students, rooms)
+                    if seat_plan:
+                        save_session_seat_plan(session, seat_plan, list(exams_in_slot))
+                except Exception as exc:
+                    pass
+
+        # Pre-cache elective registrations for fast in-memory resolution
+        from exam_allocator.models import ElectiveStudentRegistration
+        from exam_allocator.services.engine_adapter import _is_matching_elective_exam
+        from collections import defaultdict
+
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related('elective_subject', 'elective_subject__group')
+        elec_map = defaultdict(list)
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
+
         # Fetch ALL allocations in this slot
         allocations = (
             Allocation.objects.filter(
@@ -356,59 +397,150 @@ def session_allocation_result(request, session_id):
                 "registration__student",
                 "registration__student__student_class",
                 "registration__student__student_class__department",
+                "exam",
+                "exam__subject",
                 "room",
             )
             .order_by("room__room_number", "bench_number", "seat_number")
         )
-        
-        # Group by room
-        from collections import defaultdict
+
+        all_slot_students = []
         room_allocs = defaultdict(list)
+
         for a in allocations:
-            room_allocs[a.room].append(a)
-            
-        def get_stream_summary(allocs, seat_num):
-            seat_allocs = [a for a in allocs if a.seat_number == seat_num]
-            if not seat_allocs:
-                return "None"
-            
-            seat_allocs.sort(key=lambda x: x.bench_number)
-            summary = []
-            
-            # The excel has abbreviations like ME, CS. Usually it's department_code
-            current_dept = seat_allocs[0].registration.student.student_class.department.department_code
-            start_bench = seat_allocs[0].bench_number
-            prev_bench = start_bench
-            
-            for a in seat_allocs[1:]:
-                dept = a.registration.student.student_class.department.department_code
-                current_num = a.bench_number
-                
-                if dept != current_dept or current_num != prev_bench + 1:
-                    if start_bench == prev_bench:
-                        summary.append(f"{start_bench} {current_dept}")
-                    else:
-                        summary.append(f"{start_bench}-{prev_bench} {current_dept}")
-                    current_dept = dept
-                    start_bench = current_num
-                prev_bench = current_num
-                
-            if start_bench == prev_bench:
-                summary.append(f"{start_bench} {current_dept}")
-            else:
-                summary.append(f"{start_bench}-{prev_bench} {current_dept}")
-                
-            return ", ".join(summary)
-            
-        for room, allocs in room_allocs.items():
-            rooms_data[room.room_number] = {
-                'room_number': room.room_number,
-                'total_students': len(allocs),
-                'stream_a': get_stream_summary(allocs, 1),
-                'stream_b': get_stream_summary(allocs, 2),
-                'stream_c': get_stream_summary(allocs, 3),
+            st = a.registration.student
+            ex = a.exam
+            dept_code = st.student_class.department.department_code if (st.student_class and st.student_class.department) else "GEN"
+            class_name = st.student_class.class_name if st.student_class else ""
+            subj_code = ex.subject.subject_code
+            subj_name = ex.subject.subject_name
+            cat = "NORMAL"
+
+            st_elecs = elec_map.get(st.student_id, [])
+            for r in st_elecs:
+                if _is_matching_elective_exam(ex, r.elective_subject):
+                    subj_code = r.elective_subject.subject_code
+                    subj_name = r.elective_subject.subject_name
+                    cat = r.elective_subject.elective_type or "ELECTIVE"
+                    break
+
+            is_special = cat in ("ELECTIVE", "MINOR", "HONOURS") or any(
+                kw in ex.subject.subject_name.upper()
+                for kw in ("ELECTIVE", "MINOR", "HONOURS", "HONS")
+            )
+            # Label for stream summary:
+            # For Elective / Minor / Honours: ALWAYS display the actual subject code
+            # For normal exams: display department code
+            summary_label = subj_code if is_special else dept_code
+
+            stream_letter = chr(64 + a.seat_number) if 1 <= a.seat_number <= 3 else str(a.seat_number)
+            record = {
+                'allocation_id': a.allocation_id,
+                'room_number': a.room.room_number,
+                'bench_number': a.bench_number,
+                'seat_number': a.seat_number,
+                'stream_letter': stream_letter,
+                'stream_name': f"Stream {stream_letter} (Seat {a.seat_number})",
+                'roll_number': st.roll_number,
+                'student_name': st.student_name,
+                'department': dept_code,
+                'class_name': class_name,
+                'subject_code': subj_code,
+                'subject_name': subj_name,
+                'category': cat,
+                'is_special': is_special,
+                'summary_label': summary_label,
                 'exam_date': selected_slot['date'],
                 'session': selected_slot['shift'],
+            }
+            room_allocs[a.room].append(record)
+            all_slot_students.append(record)
+
+        def get_stream_summary(records, seat_num):
+            seat_records = [r for r in records if r['seat_number'] == seat_num]
+            if not seat_records:
+                return "None"
+
+            seat_records.sort(key=lambda x: x['bench_number'])
+            summary = []
+
+            current_label = seat_records[0]['summary_label']
+            start_bench = seat_records[0]['bench_number']
+            prev_bench = start_bench
+
+            for r in seat_records[1:]:
+                lbl = r['summary_label']
+                current_num = r['bench_number']
+
+                if lbl != current_label or current_num != prev_bench + 1:
+                    if start_bench == prev_bench:
+                        summary.append(f"{start_bench} {current_label}")
+                    else:
+                        summary.append(f"{start_bench}-{prev_bench} {current_label}")
+                    current_label = lbl
+                    start_bench = current_num
+                prev_bench = current_num
+
+            if start_bench == prev_bench:
+                summary.append(f"{start_bench} {current_label}")
+            else:
+                summary.append(f"{start_bench}-{prev_bench} {current_label}")
+
+            return ", ".join(summary)
+
+        for room, records in room_allocs.items():
+            records.sort(key=lambda x: (x['bench_number'], x['seat_number']))
+
+            # Group into 3-seat benches for realistic classroom seating layout
+            bench_map = defaultdict(dict)
+            for r in records:
+                bench_map[r['bench_number']][r['seat_number']] = r
+
+            max_bench = max((r['bench_number'] for r in records), default=0)
+            benches = []
+            for b_num in range(1, max_bench + 1):
+                benches.append({
+                    'bench_number': b_num,
+                    'seat_1': bench_map[b_num].get(1),
+                    'seat_2': bench_map[b_num].get(2),
+                    'seat_3': bench_map[b_num].get(3),
+                })
+
+            # Divide benches into exactly 3 columns (Col 1: B1-B5, Col 2: B6-B10, Col 3: B11-B15)
+            col1 = [b for b in benches if 1 <= b['bench_number'] <= 5]
+            col2 = [b for b in benches if 6 <= b['bench_number'] <= 10]
+            col3 = [b for b in benches if 11 <= b['bench_number'] <= 15]
+            extra = [b for b in benches if b['bench_number'] > 15]
+            if extra:
+                col3.extend(extra)
+
+            columns = []
+            if col1:
+                columns.append({'title': 'Column 1 (Benches 1–5)', 'benches': col1})
+            if col2:
+                columns.append({'title': 'Column 2 (Benches 6–10)', 'benches': col2})
+            if col3:
+                columns.append({'title': 'Column 3 (Benches 11–15)', 'benches': col3})
+
+            dept_codes = sorted(list(set(r['department'] for r in records if r['department'])))
+            class_names = sorted(list(set(r['class_name'] for r in records if r['class_name'])))
+
+            rooms_data[room.room_number] = {
+                'room_id': room.room_id,
+                'room_number': room.room_number,
+                'total_students': len(records),
+                'total_benches': max_bench,
+                'stream_a': get_stream_summary(records, 1),
+                'stream_b': get_stream_summary(records, 2),
+                'stream_c': get_stream_summary(records, 3),
+                'exam_date': selected_slot['date'],
+                'session': selected_slot['shift'],
+                'departments': ", ".join(dept_codes),
+                'classes': ", ".join(class_names),
+                'classes_list': class_names,
+                'benches': benches,
+                'columns': columns,
+                'students': records,
             }
 
     # sort rooms numerically
@@ -420,6 +552,8 @@ def session_allocation_result(request, session_id):
 
     sorted_rooms = [rooms_data[k] for k in sorted(rooms_data.keys(), key=try_int)]
 
+    all_slot_classes = sorted(list(set(r['class_name'] for r in all_slot_students if r['class_name'])))
+
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
@@ -428,6 +562,9 @@ def session_allocation_result(request, session_id):
             "slots": slots,
             "selected_slot": selected_slot,
             "rooms": sorted_rooms,
+            "all_classes": all_slot_classes if selected_slot else [],
+            "total_slot_students": len(all_slot_students) if selected_slot else 0,
+            "all_students": all_slot_students if selected_slot else [],
             "missing_data_reason": missing_data_reason,
         },
     )
@@ -555,7 +692,7 @@ def upload_file(request, session_id):
         for uploaded in uploaded_files:
             filename = uploaded.name.lower()
 
-            if filename.endswith(".xlsx"):
+            if filename.endswith((".xlsx", ".xlsm", ".xls")):
                 source_format = UploadedFile.SourceFormat.XLSX
 
             elif filename.endswith(".pdf"):
@@ -644,6 +781,44 @@ def upload_file(request, session_id):
                     total_stats["targets_created"] += stats.get("targets_created", 0)
 
                 # -----------------------------------------------------
+                # Elective List
+                # -----------------------------------------------------
+                elif file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+                    if source_format not in (UploadedFile.SourceFormat.XLSX, UploadedFile.SourceFormat.PDF):
+                        raise ValueError(
+                            "Elective Data supports Excel (.xlsx, .xls, .xlsm) and PDF files only."
+                        )
+
+                    result = parse_elective_file(record.file.path)
+                    result.source_file = record.original_filename
+
+                    total_extracted_students = sum(
+                        len(subj.students) for g in result.groups for subj in g.subjects
+                    )
+                    if total_extracted_students == 0:
+                        raise ValueError("No valid elective student records were extracted from the file.")
+
+                    stats = import_elective_data(session, result)
+
+                    if stats.get("students_count", 0) == 0:
+                        raise ValueError("No valid elective records were saved to the database.")
+
+                    warning_count = len(result.issues)
+                    msg = (
+                        f"File: {record.original_filename}\n"
+                        f"Status: Success\n"
+                        f"Departments: {stats.get('departments_count', 0)}\n"
+                        f"Elective Groups: {stats.get('groups_count', 0)}\n"
+                        f"Subjects: {stats.get('subjects_count', 0)}\n"
+                        f"Students: {stats.get('students_count', 0)}\n"
+                        f"Duplicates Skipped: {stats.get('duplicates_count', 0)}\n"
+                        f"Unresolved: {stats.get('unresolved_count', 0)}\n"
+                        f"Warnings: {warning_count}\n"
+                        f"Errors: 0"
+                    )
+                    messages.success(request, msg)
+
+                # -----------------------------------------------------
                 # Mark upload as successfully processed
                 # -----------------------------------------------------
                 record.status = UploadedFile.Status.VALIDATED
@@ -668,13 +843,19 @@ def upload_file(request, session_id):
                         "error_log",
                     ]
                 )
-                messages.error(
-                    request,
-                    f"Import failed for {uploaded.name}: {exc}",
-                )
+                if file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+                    messages.error(
+                        request,
+                        f"File: {record.original_filename}\nStatus: Failed\nErrors: 1\nDetails: {exc}",
+                    )
+                else:
+                    messages.error(
+                        request,
+                        f"Import failed for {uploaded.name}: {exc}",
+                    )
                 error_occurred = True
 
-        if not error_occurred or len(uploaded_files) > 1:
+        if file_kind != UploadedFile.FileKind.ELECTIVE_LIST and (not error_occurred or len(uploaded_files) > 1):
             if file_kind == UploadedFile.FileKind.STUDENT_LIST:
                 message = (
                     f"Student list imported: "
@@ -775,7 +956,7 @@ def review_session(request, session_id):
     exam_days_count = len(timetable_days)
 
     # Elective Groups for session (prefetch subjects and student registrations)
-    elective_groups = (
+    elective_groups_qs = (
         ElectiveGroup.objects.filter(session=session)
         .prefetch_related(
             Prefetch(
@@ -783,31 +964,48 @@ def review_session(request, session_id):
                 queryset=ElectiveSubject.objects.prefetch_related("student_registrations").order_by("subject_code"),
             )
         )
-        .order_by("department_code", "elective_label")
+        .order_by("elective_label")
     )
 
-    elective_depts = defaultdict(list)
     total_elective_subjects = 0
-    total_elective_students = 0
+    total_elective_registrations = 0
+    unique_elective_students = set()
+    unresolved_registrations_count = 0
+    all_elective_departments = set()
+    elective_groups_list = []
 
-    for eg in elective_groups:
-        elective_depts[eg.department_code].append(eg)
+    for eg in elective_groups_qs:
+        group_students_count = 0
+        enriched_subjects = []
         for subj in eg.subjects.all():
+            regs = list(subj.student_registrations.all())
+            reg_count = len(regs)
+            group_students_count += reg_count
+            total_elective_registrations += reg_count
             total_elective_subjects += 1
-            total_elective_students += subj.student_registrations.count()
 
-    elective_dept_list = []
-    for dept_code in sorted(elective_depts.keys()):
-        groups = elective_depts[dept_code]
-        dept_name = groups[0].department_name or dept_code
-        dept_students = sum(
-            s.student_registrations.count() for g in groups for s in g.subjects.all()
-        )
-        elective_dept_list.append({
-            "department_code": dept_code,
-            "department_name": dept_name,
-            "groups": groups,
-            "total_students": dept_students,
+            subj_depts = set()
+            for r in regs:
+                unique_elective_students.add(r.roll_number)
+                if r.is_unresolved:
+                    unresolved_registrations_count += 1
+                if r.department:
+                    subj_depts.add(r.department)
+                    all_elective_departments.add(r.department)
+
+            enriched_subjects.append({
+                "subject": subj,
+                "registrations": regs,
+                "reg_count": reg_count,
+                "departments": sorted(list(subj_depts)),
+            })
+
+        elective_groups_list.append({
+            "group": eg,
+            "elective_label": eg.elective_label,
+            "subjects": enriched_subjects,
+            "total_students": group_students_count,
+            "subjects_count": len(enriched_subjects),
         })
 
     return render(
@@ -822,10 +1020,13 @@ def review_session(request, session_id):
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,
             "exam_days_count": exam_days_count,
-            "elective_dept_list": elective_dept_list,
-            "elective_groups_count": elective_groups.count(),
+            "elective_groups_list": elective_groups_list,
+            "elective_groups_count": len(elective_groups_list),
             "elective_subjects_count": total_elective_subjects,
-            "elective_students_count": total_elective_students,
+            "elective_registrations_count": total_elective_registrations,
+            "elective_unique_students_count": len(unique_elective_students),
+            "elective_unresolved_count": unresolved_registrations_count,
+            "elective_departments_count": len(all_elective_departments),
         },
     )
 
@@ -1011,3 +1212,346 @@ def api_exam_target_students(request, exam_id):
         for s in students_qs
     ]
     return JsonResponse(data, safe=False)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: BULK CLEAR CATEGORIES (FULL ELECTIVES, TIMETABLE, STUDENTS, ROOMS)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_clear_electives(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        ElectiveStudentRegistration.objects.filter(elective_subject__group__session=session).delete()
+        ElectiveSubject.objects.filter(group__session=session).delete()
+        ElectiveGroup.objects.filter(session=session).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.ELECTIVE_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_timetable(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        exam_ids = list(Exam.objects.filter(subject__session=session).values_list("exam_id", flat=True))
+        Allocation.objects.filter(exam_id__in=exam_ids).delete()
+        ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
+        ExamTarget.objects.filter(exam_id__in=exam_ids).delete()
+        Exam.objects.filter(pk__in=exam_ids).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.TIMETABLE).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_students(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        class_ids = list(Class.objects.filter(department__session=session).values_list("class_id", flat=True))
+        student_ids = list(Student.objects.filter(student_class_id__in=class_ids).values_list("student_id", flat=True))
+        Allocation.objects.filter(registration__student_id__in=student_ids).delete()
+        ExamRegistration.objects.filter(student_id__in=student_ids).delete()
+        Student.objects.filter(pk__in=student_ids).delete()
+        Class.objects.filter(pk__in=class_ids).delete()
+        Department.objects.filter(session=session).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.STUDENT_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_clear_rooms(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    with transaction.atomic():
+        room_ids = list(Room.objects.filter(session=session).values_list("room_id", flat=True))
+        if Allocation.objects.filter(room_id__in=room_ids).exists():
+            return JsonResponse({"success": False, "error": "Cannot delete rooms because seat allocations exist."}, status=400)
+        Room.objects.filter(pk__in=room_ids).delete()
+        UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.CLASSROOM_LIST).delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_delete_uploaded_file(request, file_id):
+    record = get_object_or_404(UploadedFile, pk=file_id)
+    session = record.session
+    with transaction.atomic():
+        if record.file_kind == UploadedFile.FileKind.ELECTIVE_LIST:
+            ElectiveStudentRegistration.objects.filter(
+                elective_subject__group__session=session,
+                source_file=record.original_filename,
+            ).delete()
+            ElectiveSubject.objects.filter(
+                group__session=session,
+                student_registrations__isnull=True,
+            ).delete()
+            ElectiveGroup.objects.filter(
+                session=session,
+                subjects__isnull=True,
+            ).delete()
+        record.delete()
+    return JsonResponse({"success": True})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: ELECTIVE SUBJECT & REGISTRATION EDIT/DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_elective_subject(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    body = json.loads(request.body)
+    code = body.get("subject_code", "").strip()
+    name = body.get("subject_name", "").strip()
+    etype = body.get("elective_type", "").strip()
+    if not code or not name:
+        return JsonResponse({"success": False, "error": "Subject code and name are required."}, status=400)
+
+    subject.subject_code = code
+    subject.subject_name = name
+    if etype:
+        subject.elective_type = etype
+        group, _ = ElectiveGroup.objects.get_or_create(
+            session=subject.group.session,
+            elective_label=etype,
+            defaults={"department_code": "ELECTIVE", "department_name": "Electives"}
+        )
+        subject.group = group
+    subject.save()
+    return JsonResponse({
+        "success": True,
+        "subject_code": subject.subject_code,
+        "subject_name": subject.subject_name,
+        "elective_type": subject.elective_type,
+    })
+
+
+@require_POST
+def api_delete_elective_subject(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    group = subject.group
+    with transaction.atomic():
+        subject.student_registrations.all().delete()
+        subject.delete()
+        if not group.subjects.exists():
+            group.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_delete_elective_group(request, group_id):
+    group = get_object_or_404(ElectiveGroup, group_id=group_id)
+    with transaction.atomic():
+        for subj in group.subjects.all():
+            subj.student_registrations.all().delete()
+            subj.delete()
+        group.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_edit_elective_registration(request, registration_id):
+    reg = get_object_or_404(ElectiveStudentRegistration, registration_id=registration_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    dept = body.get("department", "").strip()
+    cname = body.get("class_name", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if (
+        ElectiveStudentRegistration.objects.filter(elective_subject=reg.elective_subject, roll_number__iexact=roll)
+        .exclude(pk=registration_id)
+        .exists()
+    ):
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' is already in this subject."}, status=400)
+
+    reg.roll_number = roll
+    reg.student_name = name
+    reg.department = dept
+    reg.class_name = cname
+    reg.save(update_fields=["roll_number", "student_name", "department", "class_name"])
+    return JsonResponse({
+        "success": True,
+        "roll_number": reg.roll_number,
+        "student_name": reg.student_name,
+        "department": reg.department,
+        "class_name": reg.class_name,
+    })
+
+
+@require_POST
+def api_delete_elective_registration(request, registration_id):
+    reg = get_object_or_404(ElectiveStudentRegistration, registration_id=registration_id)
+    reg.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_elective_student(request, subject_id):
+    subject = get_object_or_404(ElectiveSubject, elective_subject_id=subject_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    dept = body.get("department", "").strip()
+    cname = body.get("class_name", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if ElectiveStudentRegistration.objects.filter(elective_subject=subject, roll_number__iexact=roll).exists():
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' is already in this subject."}, status=400)
+
+    reg = ElectiveStudentRegistration.objects.create(
+        elective_subject=subject,
+        roll_number=roll,
+        student_name=name,
+        department=dept,
+        class_name=cname,
+        source_file="Manual Entry",
+    )
+    return JsonResponse({
+        "success": True,
+        "registration_id": reg.registration_id,
+        "roll_number": reg.roll_number,
+        "student_name": reg.student_name,
+        "department": reg.department,
+        "class_name": reg.class_name,
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: TIMETABLE EXAM EDIT, ADD & DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_edit_exam(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    body = json.loads(request.body)
+    exam_date = body.get("exam_date", "").strip()
+    sess = body.get("session", "").strip()
+    slot = body.get("slot", "").strip()
+    if not exam_date or not sess:
+        return JsonResponse({"success": False, "error": "Exam date and session (FN/AN) are required."}, status=400)
+
+    exam.exam_date = exam_date
+    exam.session = sess
+    exam.save(update_fields=["exam_date", "session"])
+    if slot:
+        target = exam.targets.first()
+        if target:
+            target.slot = slot
+            target.save(update_fields=["slot"])
+        else:
+            ExamTarget.objects.create(exam=exam, branch_code="ALL", slot=slot)
+    return JsonResponse({
+        "success": True,
+        "exam_date": str(exam.exam_date),
+        "session": exam.session,
+        "slot": slot,
+    })
+
+
+@require_POST
+def api_delete_exam(request, exam_id):
+    exam = get_object_or_404(Exam, exam_id=exam_id)
+    with transaction.atomic():
+        exam.allocations.all().delete()
+        exam.registrations.all().delete()
+        exam.targets.all().delete()
+        exam.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_exam(request, session_id):
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    body = json.loads(request.body)
+    sub_code = body.get("subject_code", "").strip()
+    sub_name = body.get("subject_name", "").strip()
+    exam_date = body.get("exam_date", "").strip()
+    sess = body.get("session", "").strip()
+    slot = body.get("slot", "").strip()
+    branch = body.get("branch", "").strip()
+    if not sub_code or not exam_date or not sess:
+        return JsonResponse({"success": False, "error": "Subject code, date, and session are required."}, status=400)
+
+    with transaction.atomic():
+        subject, _ = Subject.objects.get_or_create(
+            session=session,
+            subject_code=sub_code,
+            defaults={"subject_name": sub_name or sub_code, "semester": 8}
+        )
+        exam = Exam.objects.create(
+            subject=subject,
+            exam_date=exam_date,
+            session=sess,
+            duration=180,
+        )
+        if branch or slot:
+            ExamTarget.objects.create(
+                exam=exam,
+                branch_code=branch or "ALL",
+                slot=slot,
+            )
+    return JsonResponse({"success": True, "exam_id": exam.exam_id})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API: STUDENT DELETE & CLASS ADD-STUDENT / DELETE
+# ─────────────────────────────────────────────────────────────────────────────
+
+@require_POST
+def api_delete_student(request, student_id):
+    student = get_object_or_404(Student, student_id=student_id)
+    with transaction.atomic():
+        Allocation.objects.filter(registration__student=student).delete()
+        student.exam_registrations.all().delete()
+        student.elective_registrations.all().delete()
+        student.delete()
+    return JsonResponse({"success": True})
+
+
+@require_POST
+def api_add_class_student(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    body = json.loads(request.body)
+    roll = body.get("roll_number", "").strip()
+    name = body.get("student_name", "").strip()
+    adm = body.get("admission_no", "").strip()
+    reg = body.get("uni_reg_no", "").strip()
+    gender = body.get("gender", "").strip()
+    if not roll or not name:
+        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+
+    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+        return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
+
+    student = Student.objects.create(
+        student_class=cls,
+        roll_number=roll,
+        student_name=name,
+        admission_no=adm,
+        uni_reg_no=reg,
+        gender=gender,
+    )
+    return JsonResponse({
+        "success": True,
+        "student_id": student.student_id,
+        "roll_number": student.roll_number,
+        "student_name": student.student_name,
+        "admission_no": student.admission_no,
+        "uni_reg_no": student.uni_reg_no,
+        "gender": student.gender,
+    })
+
+
+@require_POST
+def api_delete_class(request, class_id):
+    cls = get_object_or_404(Class, class_id=class_id)
+    with transaction.atomic():
+        stud_ids = list(cls.students.values_list("student_id", flat=True))
+        Allocation.objects.filter(registration__student_id__in=stud_ids).delete()
+        ExamRegistration.objects.filter(student_id__in=stud_ids).delete()
+        cls.students.all().delete()
+        cls.delete()
+    return JsonResponse({"success": True})
+

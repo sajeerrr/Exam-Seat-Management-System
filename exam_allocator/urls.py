@@ -28,8 +28,29 @@ urlpatterns = [
     # ── Data API ──────────────────────────────────────────────────────────
     path("api/class/<int:class_id>/students/", views.api_class_students, name="api_class_students"),
     path("api/student/<int:student_id>/edit/", views.api_edit_student, name="api_edit_student"),
+    path("api/student/<int:student_id>/delete/", views.api_delete_student, name="api_delete_student"),
+    path("api/class/<int:class_id>/add-student/", views.api_add_class_student, name="api_add_class_student"),
+    path("api/class/<int:class_id>/delete/", views.api_delete_class, name="api_delete_class"),
+
     path("api/session/<int:session_id>/rooms/add/", views.api_add_room, name="api_add_room"),
     path("api/room/<int:room_id>/edit/", views.api_edit_room, name="api_edit_room"),
     path("api/room/<int:room_id>/delete/", views.api_delete_room, name="api_delete_room"),
+
     path("api/exam/<int:exam_id>/target-students/", views.api_exam_target_students, name="api_exam_target_students"),
+    path("api/exam/<int:exam_id>/edit/", views.api_edit_exam, name="api_edit_exam"),
+    path("api/exam/<int:exam_id>/delete/", views.api_delete_exam, name="api_delete_exam"),
+    path("api/session/<int:session_id>/exams/add/", views.api_add_exam, name="api_add_exam"),
+
+    path("api/session/<int:session_id>/clear-electives/", views.api_clear_electives, name="api_clear_electives"),
+    path("api/session/<int:session_id>/clear-timetable/", views.api_clear_timetable, name="api_clear_timetable"),
+    path("api/session/<int:session_id>/clear-students/", views.api_clear_students, name="api_clear_students"),
+    path("api/session/<int:session_id>/clear-rooms/", views.api_clear_rooms, name="api_clear_rooms"),
+    path("api/uploaded-file/<int:file_id>/delete/", views.api_delete_uploaded_file, name="api_delete_uploaded_file"),
+
+    path("api/elective-group/<int:group_id>/delete/", views.api_delete_elective_group, name="api_delete_elective_group"),
+    path("api/elective-subject/<int:subject_id>/edit/", views.api_edit_elective_subject, name="api_edit_elective_subject"),
+    path("api/elective-subject/<int:subject_id>/delete/", views.api_delete_elective_subject, name="api_delete_elective_subject"),
+    path("api/elective-subject/<int:subject_id>/add-student/", views.api_add_elective_student, name="api_add_elective_student"),
+    path("api/elective-registration/<int:registration_id>/edit/", views.api_edit_elective_registration, name="api_edit_elective_registration"),
+    path("api/elective-registration/<int:registration_id>/delete/", views.api_delete_elective_registration, name="api_delete_elective_registration"),
 ]

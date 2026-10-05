@@ -578,6 +578,8 @@ def _parse_pdf_file(path: Path) -> FileExtractionResult:
                     continue
 
                 col_contexts = {}
+                last_exam_by_col = {}
+
                 for row in grid:
                     row = [c.replace('\n', ' ') if c else '' for c in row]
                     for c, cell in enumerate(row):
@@ -590,6 +592,7 @@ def _parse_pdf_file(path: Path) -> FileExtractionResult:
                                 if c not in col_contexts:
                                     col_contexts[c] = {}
                                 col_contexts[c]["date"] = dt
+                                last_exam_by_col.pop(c, None)
                         if "Time" in cell_clean and ":" in cell_clean:
                             sess = "FN"
                             if "AN" in cell_clean.upper():
@@ -607,6 +610,7 @@ def _parse_pdf_file(path: Path) -> FileExtractionResult:
                             if c not in col_contexts:
                                 col_contexts[c] = {}
                             col_contexts[c]["type"] = "SUBJECT"
+                            last_exam_by_col.pop(c, None)
                         if cell_clean.upper() == "BRANCH":
                             if c not in col_contexts:
                                 col_contexts[c] = {}
@@ -633,74 +637,88 @@ def _parse_pdf_file(path: Path) -> FileExtractionResult:
                             if cell_clean and not any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
                                 is_data_row = True
                                 break
+                            elif not cell_clean and c in last_exam_by_col:
+                                b_cell = row[c + 1].strip() if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH" else ""
+                                if b_cell and not any(kw in b_cell for kw in ["Date", "Time", "Subject", "Branch"]):
+                                    is_data_row = True
+                                    break
 
                     if is_data_row:
                         for c, cell in enumerate(row):
                             if c in col_contexts and col_contexts[c].get("type") == "SUBJECT":
                                 cell_clean = cell.strip()
-                                if not cell_clean or any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
-                                    continue
+                                b_cell = row[c + 1].strip() if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH" else ""
 
-                                branch = "ALL BRANCHES"
-                                if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH":
-                                    b_cell = row[c + 1]
+                                if cell_clean and not any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
+                                    branch = "ALL BRANCHES"
                                     if b_cell:
-                                        branch = b_cell.strip()
-                                elif "Arch" in str(program):
-                                    branch = "B.ARCH"
+                                        branch = b_cell
+                                    elif "Arch" in str(program):
+                                        branch = "B.ARCH"
 
-                                date_val = col_contexts[c].get("date")
-                                time_val = col_contexts[c].get("time", "")
-                                sess_val = col_contexts[c].get("session", "FN")
+                                    date_val = col_contexts[c].get("date")
+                                    time_val = col_contexts[c].get("time", "")
+                                    sess_val = col_contexts[c].get("session", "FN")
 
-                                if not date_val:
-                                    continue
+                                    if not date_val:
+                                        continue
 
-                                slot = ""
-                                subj_name = cell_clean
-                                subj_code = ""
+                                    slot = ""
+                                    subj_name = cell_clean
+                                    subj_code = ""
 
-                                if "|" in subj_name:
-                                    parts = subj_name.split("|", 1)
-                                    slot = parts[0].strip()
-                                    subj_name = parts[1].strip()
-                                    if "Arch" in str(program) and slot:
-                                        branch = f"SLOT {slot}"
+                                    if "|" in subj_name:
+                                        parts = subj_name.split("|", 1)
+                                        slot = parts[0].strip()
+                                        subj_name = parts[1].strip()
+                                        if "Arch" in str(program) and slot:
+                                            branch = f"SLOT {slot}"
 
-                                match = re.search(r"\(([^)]+)\)$", subj_name)
-                                if match:
-                                    subj_code = match.group(1).strip()
-                                    subj_name = subj_name[:match.start()].strip()
+                                    match = re.search(r"\(([^)]+)\)$", subj_name)
+                                    if match:
+                                        subj_code = match.group(1).strip()
+                                        subj_name = subj_name[:match.start()].strip()
 
-                                if not subj_code:
-                                    subj_code = subj_name
+                                    if not subj_code:
+                                        subj_code = subj_name
 
-                                if path.name.startswith("CE_"):
-                                    branch = "CE"
-                                elif path.name.startswith("ME_"):
-                                    branch = "ME"
-                                elif path.name.startswith("EEE_"):
-                                    branch = "EEE"
-                                elif path.name.startswith("CHE_"):
-                                    branch = "CHE"
-                                elif path.name.startswith("EL_"):
-                                    branch = "EL"
-                                elif path.name.startswith("B.Arch_"):
-                                    branch = "B.Arch"
+                                    if path.name.startswith("CE_"):
+                                        branch = "CE"
+                                    elif path.name.startswith("ME_"):
+                                        branch = "ME"
+                                    elif path.name.startswith("EEE_"):
+                                        branch = "EEE"
+                                    elif path.name.startswith("CHE_"):
+                                        branch = "CHE"
+                                    elif path.name.startswith("EL_"):
+                                        branch = "EL"
+                                    elif path.name.startswith("B.Arch_"):
+                                        branch = "B.Arch"
 
-                                exams.append(ExamRecord(
-                                    programme=program if program != "Unknown" else "B.Tech",
-                                    semester=semester if semester != "Unknown" else 6,
-                                    exam_date=date_val,
-                                    session=sess_val,
-                                    time=time_val,
-                                    branch=branch,
-                                    branches=_parse_branches(branch),
-                                    subject_name=subj_name,
-                                    subject_code=subj_code,
-                                    duration_minutes=_calculate_duration_minutes(time_val),
-                                    source_file=path.name,
-                                ))
+                                    new_exam = ExamRecord(
+                                        programme=program if program != "Unknown" else "B.Tech",
+                                        semester=semester if semester != "Unknown" else 6,
+                                        exam_date=date_val,
+                                        session=sess_val,
+                                        time=time_val,
+                                        branch=branch,
+                                        branches=_parse_branches(branch),
+                                        subject_name=subj_name,
+                                        subject_code=subj_code,
+                                        duration_minutes=_calculate_duration_minutes(time_val),
+                                        source_file=path.name,
+                                    )
+                                    exams.append(new_exam)
+                                    last_exam_by_col[c] = new_exam
+
+                                elif not cell_clean and b_cell and c in last_exam_by_col:
+                                    if not any(kw in b_cell for kw in ["Date", "Time", "Subject", "Branch"]):
+                                        parsed_b = _parse_branches(b_cell)
+                                        target_exam = last_exam_by_col[c]
+                                        for pb in parsed_b:
+                                            if pb not in target_exam.branches:
+                                                target_exam.branches.append(pb)
+                                        target_exam.branch = ", ".join(target_exam.branches)
     except Exception as exc:
         return FileExtractionResult(
             source_file=path.name,

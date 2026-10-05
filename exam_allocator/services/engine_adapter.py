@@ -25,6 +25,34 @@ def get_section(class_name):
     return ""
 
 
+def _is_matching_elective_exam(exam, el_subj) -> bool:
+    if not el_subj:
+        return False
+    if el_subj.subject_code.strip().upper() == exam.subject.subject_code.strip().upper():
+        return True
+    exam_text = f"{exam.subject.subject_code} {exam.subject.subject_name}".upper().replace("PROGRAMME", "PROGRAM")
+    group_label = getattr(el_subj.group, "elective_label", "") if hasattr(el_subj, "group") and el_subj.group else ""
+    el_type = getattr(el_subj, "elective_type", "") or ""
+    group_text = f"{group_label} {el_type}".upper().replace("PROGRAMME", "PROGRAM")
+    
+    # Specific elective group matching
+    tokens_3 = ["ELECTIVE III", "ELECTIVE-III", "ELECTIVE 3", "ELECTIVE-3"]
+    tokens_4 = ["ELECTIVE IV", "ELECTIVE-IV", "ELECTIVE 4", "ELECTIVE-4"]
+    tokens_5 = ["ELECTIVE V", "ELECTIVE-V", "ELECTIVE 5", "ELECTIVE-5"]
+    
+    if any(t in exam_text for t in tokens_3) and any(t in group_text for t in tokens_3):
+        return True
+    if any(t in exam_text for t in tokens_4) and any(t in group_text for t in tokens_4):
+        return True
+    if any(t in exam_text for t in tokens_5) and any(t in group_text for t in tokens_5):
+        return True
+    if ("ARCHITECTURE" in exam_text or "B.ARCH" in exam_text) and ("ARCHITECTURE" in group_text or "B.ARCH" in group_text):
+        return True
+    if el_subj.subject_code.strip().upper() in exam_text:
+        return True
+    return False
+
+
 def django_registration_to_engine_student(registration):
     student = registration.student
     exam = registration.exam
@@ -32,17 +60,73 @@ def django_registration_to_engine_student(registration):
     student_class = student.student_class
     department = student_class.department
 
+    reg_no = student.roll_number or student.uni_reg_no or student.admission_no or str(student.student_id)
+
+    subj_code = exam.subject.subject_code
+    subj_name = exam.subject.subject_name
+    category = "NORMAL"
+
+    el_regs = list(
+        student.elective_registrations
+        .filter(elective_subject__group__session=exam.subject.session)
+        .select_related("elective_subject", "elective_subject__group")
+    )
+    matching_el = None
+    for r in el_regs:
+        if _is_matching_elective_exam(exam, r.elective_subject):
+            matching_el = r
+            break
+
+    if matching_el:
+        subj_code = matching_el.elective_subject.subject_code
+        subj_name = matching_el.elective_subject.subject_name
+        category = matching_el.elective_subject.elective_type or "ELECTIVE"
+    elif hasattr(registration, "category") and registration.category:
+        category = registration.category
+    elif hasattr(registration, "subject_category") and registration.subject_category:
+        category = registration.subject_category
+    elif hasattr(exam, "subject_category") and exam.subject_category:
+        category = exam.subject_category
+    elif hasattr(exam.subject, "elective_type") and exam.subject.elective_type:
+        category = exam.subject.elective_type
+    elif hasattr(exam.subject, "subject_category") and exam.subject.subject_category:
+        category = exam.subject.subject_category
+
     return EngineStudent(
-        register_no=student.roll_number,
+        register_no=reg_no,
         name=student.student_name,
         department=department.department_code,
         semester=student_class.semester,
         section=get_section(student_class.class_name),
-        subject_code=exam.subject.subject_code,
-        subject_name=exam.subject.subject_name,
+        subject_code=subj_code,
+        subject_name=subj_name,
         exam_date=exam.exam_date.strftime("%d-%m-%Y"),
         session=exam.session,
         roll_no=student.roll_number,
+        subject_category=category,
+    )
+
+
+def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session="FN"):
+    dept = reg.department
+    if not dept and reg.student and reg.student.student_class:
+        dept = reg.student.student_class.department.department_code
+    sem = 0
+    if reg.student and reg.student.student_class:
+        sem = reg.student.student_class.semester
+    sec = get_section(reg.class_name) if reg.class_name else ""
+    return EngineStudent(
+        register_no=reg.roll_number,
+        name=reg.student_name,
+        department=dept or "GEN",
+        semester=sem,
+        section=sec,
+        subject_code=reg.elective_subject.subject_code,
+        subject_name=reg.elective_subject.subject_name,
+        exam_date=exam_date,
+        session=session,
+        roll_no=reg.roll_number,
+        subject_category=reg.elective_subject.elective_type or "ELECTIVE",
     )
 
 

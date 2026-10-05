@@ -812,6 +812,96 @@
         box-shadow: 0 6px 22px rgba(239, 68, 68, .4);
     }
 
+    .panel-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .panel-toolbar-title {
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .panel-toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .btn-sm-danger {
+        padding: 7px 14px;
+        border-radius: 8px;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        color: #ef4444;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-sm-danger:hover {
+        background: #ef4444;
+        color: white;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-sm-primary {
+        padding: 7px 14px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        border: none;
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .2s;
+        box-shadow: 0 2px 8px var(--accent-glow);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-sm-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, .4);
+    }
+
+    .row-act-btn {
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+    }
+
+    .row-act-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent-light);
+        background: rgba(99, 102, 241, .08);
+    }
+
+    .row-act-btn.del:hover {
+        border-color: var(--error);
+        color: var(--error);
+        background: var(--error-bg);
+    }
+
     /* BOTTOM */
     .bottom-bar {
         display: flex;
@@ -982,6 +1072,13 @@
 
     <!-- ══ PANEL: DEPARTMENTS ══════════════════════════════════════════════ -->
     <div class="panel active" id="panel-dept">
+        {% if departments %}
+        <div class="panel-toolbar">
+            <div class="panel-toolbar-title">👥 Departments &amp; Classes ({{ departments.count }} depts)</div>
+            <div class="panel-toolbar-actions">
+                <button class="btn-sm-danger" onclick="clearAllStudents()">🗑️ Clear All Students</button>
+            </div>
+        </div>
         {% for dept in departments %}
         <div class="sec-card">
             <div class="sec-card-header" onclick="toggleCard(this)">
@@ -997,9 +1094,10 @@
             <div class="sec-card-body collapsed">
                 <div class="class-list">
                     {% for cls in dept.classes.all %}
-                    <div class="class-row" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
+                    <div class="class-row" id="class-row-{{ cls.class_id }}" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
                         <span class="class-name">{{ cls.class_name }}</span>
                         <span class="class-count">{{ cls.students.count }} students</span>
+                        <button class="row-act-btn del" onclick="event.stopPropagation(); deleteClass({{ cls.class_id }}, '{{ cls.class_name|escapejs }}')">🗑️ Delete</button>
                         <span class="class-arrow">›</span>
                     </div>
                     <div id="sp-{{ cls.class_id }}" class="student-panel" style="display:none;">
@@ -1012,7 +1110,8 @@
                 </div>
             </div>
         </div>
-        {% empty %}
+        {% endfor %}
+        {% else %}
         <div class="no-rooms"
             style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:16px;">
             <div>No data imported yet for this session.</div>
@@ -1021,11 +1120,20 @@
                 📥 Import Files
             </a>
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- ══ PANEL: TIMETABLE ════════════════════════════════════════════════ -->
     <div class="panel" id="panel-tt">
+        <div class="panel-toolbar">
+            <div class="panel-toolbar-title">🗓️ Exam Timetable</div>
+            <div class="panel-toolbar-actions">
+                <button class="btn-sm-primary" onclick="openAddExamModal()">+ Add Exam</button>
+                {% if timetable_days %}
+                <button class="btn-sm-danger" onclick="clearFullTimetable()">🗑️ Clear Full Timetable</button>
+                {% endif %}
+            </div>
+        </div>
         {% for day in timetable_days %}
         <div class="tt-date-block">
             <div class="tt-date-header">
@@ -1048,8 +1156,13 @@
                             exam{% if slot.exams|length != 1 %}s{% endif %}</span>
                     </div>
                     {% for exam in slot.exams %}
-                    <div class="tt-exam-row">
-                        <div class="tt-exam-subject">{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}
+                    <div class="tt-exam-row" id="exam-row-{{ exam.exam_id }}">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                            <div class="tt-exam-subject" id="exam-sub-{{ exam.exam_id }}">{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}</div>
+                            <div style="display:flex; gap:5px; flex-shrink:0;">
+                                <button class="row-act-btn" onclick="openEditExamModal({{ exam.exam_id }}, '{{ exam.exam_date|date:'Y-m-d' }}', '{{ exam.session }}', '{{ exam.slot|default:''|escapejs }}')">✏️ Edit</button>
+                                <button class="row-act-btn del" onclick="deleteExam({{ exam.exam_id }}, '{{ exam.subject.subject_code|escapejs }}')">🗑️</button>
+                            </div>
                         </div>
                         <div class="tt-exam-targets">
                             {% for target in exam.targets.all %}
@@ -1078,7 +1191,12 @@
     <div class="panel" id="panel-rooms">
         <div class="rooms-toolbar">
             <div class="rooms-toolbar-title">🏫 Exam Rooms ({{ rooms|length }} total)</div>
-            <button class="btn-add-room" onclick="openRoomModal(null)" id="add-room-btn">+ Add Room</button>
+            <div class="panel-toolbar-actions">
+                <button class="btn-add-room" onclick="openRoomModal(null)" id="add-room-btn">+ Add Room</button>
+                {% if rooms %}
+                <button class="btn-sm-danger" onclick="clearAllRooms()">🗑️ Clear All Rooms</button>
+                {% endif %}
+            </div>
         </div>
         {% if rooms %}
         <div class="rooms-grid" id="rooms-grid">
@@ -1107,74 +1225,169 @@
 
     <!-- ══ PANEL: ELECTIVES ════════════════════════════════════════════════ -->
     <div class="panel" id="panel-electives">
-        {% for dept in elective_dept_list %}
-        <div class="sec-card">
-            <div class="sec-card-header" onclick="toggleCard(this)">
-                <div class="sec-card-title">
-                    <span>🏛️</span>
-                    {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{ dept.department_code }})</span>
-                </div>
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <span class="sec-card-meta">{{ dept.groups|length }} elective group{{ dept.groups|length|pluralize }} · {{ dept.total_students }} student{{ dept.total_students|pluralize }}</span>
-                    <span class="chevron">▼</span>
-                </div>
-            </div>
-            <div class="sec-card-body collapsed">
-                {% for group in dept.groups %}
-                <div style="margin-bottom: 22px;">
-                    <div style="font-size: 13.5px; font-weight: 700; color: var(--accent-light); padding: 10px 16px; background: rgba(99, 102, 241, 0.08); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>📂 {{ group.elective_label }}</span>
-                        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">{{ group.subjects.all|length }} subject{{ group.subjects.all|length|pluralize }}</span>
-                    </div>
-                    <div class="class-list">
-                        {% for subj in group.subjects.all %}
-                        <div class="class-row" onclick="toggleElectivePanel('sub-{{ subj.elective_subject_id }}', this)">
-                            <div>
-                                <span class="class-name" style="font-weight: 700; color: var(--text-primary);">{{ subj.subject_code }}</span>
-                                <span style="color: var(--text-secondary); margin-left: 8px; font-size: 13px;">{{ subj.subject_name }}</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span class="class-count">{{ subj.student_registrations.count }} student{{ subj.student_registrations.count|pluralize }}</span>
-                                <span class="class-arrow">›</span>
-                            </div>
-                        </div>
-                        <div id="sp-sub-{{ subj.elective_subject_id }}" class="student-panel" style="display: none;">
-                            <div class="stud-table-wrap">
-                                <table class="stud-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">#</th>
-                                            <th style="width: 180px;">Roll No</th>
-                                            <th>Student Name</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for reg in subj.student_registrations.all %}
-                                        <tr>
-                                            <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
-                                            <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
-                                            <td>{{ reg.student_name }}</td>
-                                        </tr>
-                                        {% empty %}
-                                        <tr>
-                                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div style="padding: 12px 16px; color: var(--text-muted); font-size: 13px;">No subjects in this elective group.</div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% empty %}
-                <div style="padding: 16px 20px; color: var(--text-muted); font-size: 13px;">No elective groups for this department.</div>
-                {% endfor %}
+        {% if elective_groups_list %}
+        <div class="panel-toolbar">
+            <div class="panel-toolbar-title">📚 Elective Groups &amp; Subjects</div>
+            <div class="panel-toolbar-actions">
+                <button class="btn-sm-danger" onclick="clearAllElectives()">🗑️ Clear All Electives</button>
             </div>
         </div>
-        {% empty %}
+        <!-- Elective Statistics Summary -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom: 24px;">
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_groups_count }}</div>
+                <div class="stat-lbl">Elective Types</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_subjects_count }}</div>
+                <div class="stat-lbl">Elective Subjects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_unique_students_count }}</div>
+                <div class="stat-lbl">Registered Students</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_registrations_count }}</div>
+                <div class="stat-lbl">Total Enrollments</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-num">{{ elective_departments_count }}</div>
+                <div class="stat-lbl">Departments</div>
+            </div>
+            {% if elective_unresolved_count > 0 %}
+            <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05);">
+                <div class="stat-num" style="color: #ef4444;">{{ elective_unresolved_count }}</div>
+                <div class="stat-lbl" style="color: #ef4444;">Unresolved Students</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Elective Types List -->
+        {% for group_data in elective_groups_list %}
+        <div class="sec-card" id="elective-group-card-{{ forloop.counter }}">
+            <div class="sec-card-header" onclick="toggleCard(this)">
+                <div class="sec-card-title">
+                    <span>📚</span>
+                    {{ group_data.elective_label }}
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span class="sec-card-meta">{{ group_data.subjects_count }} subject{{ group_data.subjects_count|pluralize }} · {{ group_data.total_students }} enrollment{{ group_data.total_students|pluralize }}</span>
+                    <button class="row-act-btn del" style="font-size:12px; padding:5px 11px;" onclick="event.stopPropagation(); deleteElectiveGroup({{ group_data.group.group_id }}, '{{ group_data.elective_label|escapejs }}')">🗑️ Delete Group</button>
+                    <span class="chevron">▲</span>
+                </div>
+            </div>
+            <div class="sec-card-body">
+                <div class="stud-table-wrap">
+                    <table class="stud-table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th style="width: 150px; padding-left: 20px;">Subject Code</th>
+                                <th>Subject Name</th>
+                                <th style="width: 140px;">Department</th>
+                                <th style="width: 130px;">Enrolled</th>
+                                <th style="width: 130px; text-align: right;">Actions</th>
+                                <th style="width: 40px; text-align: center; padding-right: 20px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in group_data.subjects %}
+                            <tr id="elective-sub-row-{{ item.subject.elective_subject_id }}" class="elective-sub-tr" onclick="toggleElectivePanel('sub-{{ item.subject.elective_subject_id }}', this)" style="cursor: pointer;">
+                                <td style="padding-left: 20px;">
+                                    <span id="sub-code-{{ item.subject.elective_subject_id }}" style="font-weight: 700; font-family: monospace; color: var(--text-primary); font-size: 13px;">{{ item.subject.subject_code }}</span>
+                                </td>
+                                <td>
+                                    <span id="sub-name-{{ item.subject.elective_subject_id }}" style="color: var(--text-primary); font-size: 13.5px; font-weight: 600;">{{ item.subject.subject_name }}</span>
+                                </td>
+                                <td>
+                                    {% for dept in item.departments %}
+                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
+                                        {{ dept }}
+                                    </span>
+                                    {% empty %}
+                                    <span style="color:var(--text-muted);font-size:12px;">—</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <span class="class-count" id="sub-count-{{ item.subject.elective_subject_id }}">{{ item.reg_count }} student{{ item.reg_count|pluralize }}</span>
+                                </td>
+                                <td style="text-align: right; white-space: nowrap;">
+                                    <button class="row-act-btn" onclick="event.stopPropagation(); openEditElectiveSubjectModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}', '{{ item.subject.subject_name|escapejs }}', '{{ group_data.elective_label|escapejs }}')">✏️ Edit</button>
+                                    <button class="row-act-btn del" onclick="event.stopPropagation(); deleteElectiveSubject({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">🗑️</button>
+                                </td>
+                                <td style="text-align: center; padding-right: 20px;">
+                                    <span class="class-arrow" style="font-size: 13px; color: var(--text-muted);">›</span>
+                                </td>
+                            </tr>
+                            <tr id="sp-sub-{{ item.subject.elective_subject_id }}" style="display: none;">
+                                <td colspan="6" style="padding: 16px 20px; background: var(--bg-sunken); border-bottom: 2px solid var(--border);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                        <div style="font-size:12.5px; font-weight:700; color:var(--text-secondary);">
+                                            👥 Enrolled Students in <span style="font-family:monospace; color:var(--accent-light);">{{ item.subject.subject_code }}</span> ({{ item.reg_count }})
+                                        </div>
+                                        <button class="btn-sm-primary" onclick="openAddElectiveStudentModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">+ Add Student</button>
+                                    </div>
+                                    <div class="stud-table-wrap">
+                                        <table class="stud-table" id="elective-table-{{ item.subject.elective_subject_id }}" style="background: var(--bg-card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border);">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 45px;">#</th>
+                                                    <th style="width: 140px;">Roll No</th>
+                                                    <th>Student Name</th>
+                                                    <th style="width: 110px;">Department</th>
+                                                    <th style="width: 130px;">Class</th>
+                                                    <th style="width: 180px;">Source File</th>
+                                                    <th style="width: 120px; text-align:right;">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for reg in item.registrations %}
+                                                <tr id="reg-row-{{ reg.registration_id }}" {% if reg.is_unresolved %}style="background:rgba(239,68,68,0.06);"{% endif %}>
+                                                    <td style="color: var(--text-muted);">{{ forloop.counter }}</td>
+                                                    <td style="font-weight: 600; font-family: monospace;">{{ reg.roll_number }}</td>
+                                                    <td>
+                                                        {{ reg.student_name }}
+                                                        {% if reg.is_unresolved %}
+                                                        <span style="color:#ef4444;font-size:11px;margin-left:6px;">⚠️ {{ reg.unresolved_reason }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        {% if reg.department %}
+                                                        <span style="padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.06);border:1px solid var(--border);">{{ reg.department }}</span>
+                                                        {% else %}
+                                                        <span style="color:var(--text-muted);font-size:12px;">—</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td style="color: var(--text-secondary); font-size: 12.5px;">{{ reg.class_name|default:"—" }}</td>
+                                                    <td style="color: var(--text-muted); font-size: 11.5px;">
+                                                        {{ reg.source_file|default:"—" }}{% if reg.source_sheet_or_page %} <span style="opacity:0.7;">({{ reg.source_sheet_or_page }})</span>{% endif %}
+                                                    </td>
+                                                    <td style="text-align:right; white-space:nowrap;">
+                                                        <button class="row-act-btn" onclick="openEditElectiveRegModal({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}', '{{ reg.student_name|escapejs }}', '{{ reg.department|default:''|escapejs }}', '{{ reg.class_name|default:''|escapejs }}')">✏️ Edit</button>
+                                                        <button class="row-act-btn del" onclick="deleteElectiveReg({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}')">🗑️</button>
+                                                    </td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 14px;">No students enrolled in this subject.</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" style="padding: 16px 20px; color: var(--text-muted); font-size: 13px; text-align: center;">No subjects in this elective group.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
         <div class="no-rooms"
             style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:16px;">
             <div>No elective data imported yet for this session.</div>
@@ -1183,7 +1396,7 @@
                 📥 Import Elective Files
             </a>
         </div>
-        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- BOTTOM BAR -->
@@ -1227,10 +1440,10 @@
     </div>
 </div>
 
-<!-- ══ STUDENT EDIT MODAL ══════════════════════════════════════════════ -->
+<!-- ══ STUDENT EDIT / ADD MODAL ═════════════════════════════════════════ -->
 <div class="modal-backdrop" id="student-modal" hidden>
     <div class="modal-box">
-        <div class="modal-title">Edit Student</div>
+        <div class="modal-title" id="student-modal-title">Edit Student</div>
         <div class="form-group">
             <label class="form-label" for="inp-roll">Roll Number</label>
             <input class="form-input" type="text" id="inp-roll" placeholder="Roll number">
@@ -1275,6 +1488,97 @@
     </div>
 </div>
 
+<!-- ══ ELECTIVE SUBJECT MODAL ══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="elective-subject-modal" hidden>
+    <div class="modal-box">
+        <div class="modal-title" id="elective-subject-modal-title">Edit Elective Subject</div>
+        <div class="form-group">
+            <label class="form-label" for="inp-sub-code">Subject Code</label>
+            <input class="form-input" type="text" id="inp-sub-code" placeholder="e.g. 22ECE803.2">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-sub-name">Subject Name</label>
+            <input class="form-input" type="text" id="inp-sub-name" placeholder="Subject Name">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-sub-type">Elective Group / Type</label>
+            <input class="form-input" type="text" id="inp-sub-type" placeholder="e.g. Programme Elective III">
+        </div>
+        <div id="elective-subject-modal-error" style="font-size:13px;color:var(--error);margin-top:-8px;margin-bottom:8px;display:none;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeElectiveSubjectModal()">Cancel</button>
+            <button class="btn-save" onclick="saveElectiveSubject()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ ELECTIVE STUDENT MODAL ══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="elective-student-modal" hidden>
+    <div class="modal-box">
+        <div class="modal-title" id="elective-student-modal-title">Edit Elective Student</div>
+        <div class="form-group">
+            <label class="form-label" for="inp-el-roll">Roll Number</label>
+            <input class="form-input" type="text" id="inp-el-roll" placeholder="e.g. B22ECA01">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-el-name">Student Name</label>
+            <input class="form-input" type="text" id="inp-el-name" placeholder="Student Name">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-el-dept">Department</label>
+            <input class="form-input" type="text" id="inp-el-dept" placeholder="e.g. EC">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-el-class">Class / Division</label>
+            <input class="form-input" type="text" id="inp-el-class" placeholder="e.g. EC A">
+        </div>
+        <div id="elective-student-modal-error" style="font-size:13px;color:var(--error);margin-top:-8px;margin-bottom:8px;display:none;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeElectiveStudentModal()">Cancel</button>
+            <button class="btn-save" onclick="saveElectiveStudent()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ EXAM MODAL (ADD & EDIT) ══════════════════════════════════════════ -->
+<div class="modal-backdrop" id="exam-modal" hidden>
+    <div class="modal-box">
+        <div class="modal-title" id="exam-modal-title">Edit Exam</div>
+        <div class="form-group" id="grp-exam-code" style="display:none;">
+            <label class="form-label" for="inp-exam-code">Subject Code</label>
+            <input class="form-input" type="text" id="inp-exam-code" placeholder="e.g. 22CST801">
+        </div>
+        <div class="form-group" id="grp-exam-name" style="display:none;">
+            <label class="form-label" for="inp-exam-name">Subject Name</label>
+            <input class="form-input" type="text" id="inp-exam-name" placeholder="e.g. Distributed Computing">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-exam-date">Exam Date</label>
+            <input class="form-input" type="date" id="inp-exam-date">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-exam-session">Session</label>
+            <select class="form-input" id="inp-exam-session">
+                <option value="FN">FN (Forenoon)</option>
+                <option value="AN">AN (Afternoon)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="inp-exam-slot">Slot (Optional)</label>
+            <input class="form-input" type="text" id="inp-exam-slot" placeholder="e.g. A, B, C">
+        </div>
+        <div class="form-group" id="grp-exam-branch" style="display:none;">
+            <label class="form-label" for="inp-exam-branch">Target Branch / Class (Optional)</label>
+            <input class="form-input" type="text" id="inp-exam-branch" placeholder="e.g. CSE">
+        </div>
+        <div id="exam-modal-error" style="font-size:13px;color:var(--error);margin-top:-8px;margin-bottom:8px;display:none;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeExamModal()">Cancel</button>
+            <button class="btn-save" onclick="saveExam()">Save</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const SESSION_ID = {{ session.session_id }};
     const CSRF = '{{ csrf_token }}';
@@ -1299,11 +1603,11 @@
         const p = document.getElementById('sp-' + id);
         if (!p) return;
         const isHidden = p.style.display === 'none';
-        p.style.display = isHidden ? 'block' : 'none';
+        p.style.display = isHidden ? 'table-row' : 'none';
         const arrow = rowEl.querySelector('.class-arrow');
         if (arrow) arrow.textContent = isHidden ? '▼' : '›';
+        rowEl.style.background = isHidden ? 'rgba(99, 102, 241, 0.05)' : '';
     }
-
 
     /* ── COLLAPSIBLE DEPT CARDS ─────────────── */
     function toggleCard(header) {
@@ -1330,31 +1634,43 @@
 
     function renderStudentTable(classId, students) {
         const panel = document.getElementById('sp-' + classId);
+        let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px; color:var(--text-muted);">${students.length} student${students.length === 1 ? '' : 's'} enrolled</div>
+            <button class="btn-sm-primary" onclick="openAddClassStudentModal(${classId})">+ Add Student</button>
+        </div>`;
         if (!students.length) {
-            panel.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;">No students in this class.</div>';
+            html += '<div style="padding:12px;color:var(--text-muted);font-size:13px;">No students in this class.</div>';
+            panel.innerHTML = html;
             return;
         }
-        let html = `<div class="stud-table-wrap"><table class="stud-table">
-        <thead><tr><th>#</th><th>Admission No</th><th>Roll No</th><th>Uni Reg No</th><th>Name</th><th>Gender</th><th></th></tr></thead><tbody>`;
+        html += `<div class="stud-table-wrap"><table class="stud-table">
+        <thead><tr><th>#</th><th>Admission No</th><th>Roll No</th><th>Uni Reg No</th><th>Name</th><th>Gender</th><th style="text-align:right;">Actions</th></tr></thead><tbody>`;
         students.forEach((s, i) => {
             html += `<tr id="stud-row-${s.id}">
             <td style="color:var(--text-muted)">${i + 1}</td>
-            <td>${s.admission_no}</td>
+            <td>${s.admission_no || '—'}</td>
             <td style="font-weight:600">${s.roll_number}</td>
-            <td>${s.uni_reg_no}</td>
+            <td>${s.uni_reg_no || '—'}</td>
             <td>${s.student_name}</td>
-            <td>${s.gender}</td>
-            <td><button class="edit-btn" onclick="openStudentModal(${s.id},'${escJS(s.roll_number)}','${escJS(s.student_name)}','${escJS(s.admission_no)}','${escJS(s.uni_reg_no)}','${escJS(s.gender)}')">Edit</button></td>
+            <td>${s.gender || '—'}</td>
+            <td style="text-align:right; white-space:nowrap;">
+                <button class="row-act-btn" onclick="openStudentModal(${s.id},'${escJS(s.roll_number)}','${escJS(s.student_name)}','${escJS(s.admission_no)}','${escJS(s.uni_reg_no)}','${escJS(s.gender)}')">Edit</button>
+                <button class="row-act-btn del" onclick="deleteStudent(${s.id},'${escJS(s.roll_number)}')">Delete</button>
+            </td>
         </tr>`;
         });
         html += '</tbody></table></div>';
         panel.innerHTML = html;
     }
 
-    /* ── STUDENT MODAL ──────────────────────── */
+    /* ── STUDENT ADD / EDIT MODAL ───────────── */
     let editingStudentId = null;
+    let addingClassId = null;
     function openStudentModal(id, roll, name, adm, reg, gender) {
         editingStudentId = id;
+        addingClassId = null;
+        document.getElementById('student-modal-title').textContent = 'Edit Student';
         document.getElementById('inp-roll').value = roll;
         document.getElementById('inp-name').value = name;
         document.getElementById('inp-adm').value = adm || '';
@@ -1363,7 +1679,23 @@
         document.getElementById('student-modal-error').style.display = 'none';
         document.getElementById('student-modal').hidden = false;
     }
-    function closeStudentModal() { document.getElementById('student-modal').hidden = true; editingStudentId = null; }
+    function openAddClassStudentModal(classId) {
+        addingClassId = classId;
+        editingStudentId = null;
+        document.getElementById('student-modal-title').textContent = 'Add Student to Class';
+        document.getElementById('inp-roll').value = '';
+        document.getElementById('inp-name').value = '';
+        document.getElementById('inp-adm').value = '';
+        document.getElementById('inp-reg').value = '';
+        document.getElementById('inp-gender').value = '';
+        document.getElementById('student-modal-error').style.display = 'none';
+        document.getElementById('student-modal').hidden = false;
+    }
+    function closeStudentModal() {
+        document.getElementById('student-modal').hidden = true;
+        editingStudentId = null;
+        addingClassId = null;
+    }
     function saveStudent() {
         const roll = document.getElementById('inp-roll').value.trim();
         const name = document.getElementById('inp-name').value.trim();
@@ -1374,23 +1706,334 @@
         const errEl = document.getElementById('student-modal-error');
         if (!roll || !name) { errEl.textContent = 'Roll number and name are required.'; errEl.style.display = 'block'; return; }
         errEl.style.display = 'none';
-        fetch(`/api/student/${editingStudentId}/edit/`, {
-            method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ roll_number: roll, student_name: name, admission_no: adm, uni_reg_no: reg, gender: gender })
+
+        if (addingClassId) {
+            fetch(`/api/class/${addingClassId}/add-student/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roll_number: roll, student_name: name, admission_no: adm, uni_reg_no: reg, gender: gender })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    closeStudentModal();
+                    loadedPanels.delete(addingClassId);
+                    fetch(`/api/class/${addingClassId}/students/`)
+                        .then(r => r.json())
+                        .then(studs => renderStudentTable(addingClassId, studs));
+                } else {
+                    errEl.textContent = data.error || 'Save failed.';
+                    errEl.style.display = 'block';
+                }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        } else if (editingStudentId) {
+            fetch(`/api/student/${editingStudentId}/edit/`, {
+                method: 'POST', headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roll_number: roll, student_name: name, admission_no: adm, uni_reg_no: reg, gender: gender })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const row = document.getElementById('stud-row-' + editingStudentId);
+                    if (row) {
+                        row.cells[1].textContent = data.admission_no || '—';
+                        row.cells[2].textContent = data.roll_number;
+                        row.cells[3].textContent = data.uni_reg_no || '—';
+                        row.cells[4].textContent = data.student_name;
+                        row.cells[5].textContent = data.gender || '—';
+                    }
+                    closeStudentModal();
+                } else { errEl.textContent = data.error || 'Save failed.'; errEl.style.display = 'block'; }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        }
+    }
+
+    function deleteStudent(id, roll) {
+        if (!confirm(`Delete student "${roll}"? This cannot be undone.`)) return;
+        fetch(`/api/student/${id}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
         }).then(r => r.json()).then(data => {
             if (data.success) {
-                const row = document.getElementById('stud-row-' + editingStudentId);
-                if (row) {
-                    row.cells[1].textContent = data.admission_no;
-                    row.cells[2].textContent = data.roll_number;
-                    row.cells[3].textContent = data.uni_reg_no;
-                    row.cells[4].textContent = data.student_name;
-                    row.cells[5].textContent = data.gender;
-                    row.cells[6].innerHTML = `<button class="edit-btn" onclick="openStudentModal(${editingStudentId},'${escJS(data.roll_number)}','${escJS(data.student_name)}','${escJS(data.admission_no)}','${escJS(data.uni_reg_no)}','${escJS(data.gender)}')">Edit</button>`;
+                const row = document.getElementById('stud-row-' + id);
+                if (row) row.remove();
+            } else { alert(data.error || 'Delete failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    function deleteClass(id, name) {
+        if (!confirm(`Delete class "${name}" and all enrolled students? This cannot be undone.`)) return;
+        fetch(`/api/class/${id}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else { alert(data.error || 'Delete failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    function clearAllStudents() {
+        if (!confirm("Are you sure you want to delete ALL departments, classes, and students for this session?\nThis action cannot be undone.")) return;
+        fetch(`/api/session/${SESSION_ID}/clear-students/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                alert("All students and classes cleared.");
+                location.reload();
+            } else { alert(data.error || 'Clear failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    /* ── TIMETABLE ACTIONS & MODAL ───────────── */
+    let editingExamId = null;
+    function openEditExamModal(id, date, sess, slot) {
+        editingExamId = id;
+        document.getElementById('exam-modal-title').textContent = 'Edit Exam';
+        document.getElementById('grp-exam-code').style.display = 'none';
+        document.getElementById('grp-exam-name').style.display = 'none';
+        document.getElementById('grp-exam-branch').style.display = 'none';
+        document.getElementById('inp-exam-date').value = date || '';
+        document.getElementById('inp-exam-session').value = sess || 'FN';
+        document.getElementById('inp-exam-slot').value = slot || '';
+        document.getElementById('exam-modal-error').style.display = 'none';
+        document.getElementById('exam-modal').hidden = false;
+    }
+    function openAddExamModal() {
+        editingExamId = null;
+        document.getElementById('exam-modal-title').textContent = 'Add Exam';
+        document.getElementById('grp-exam-code').style.display = 'block';
+        document.getElementById('grp-exam-name').style.display = 'block';
+        document.getElementById('grp-exam-branch').style.display = 'block';
+        document.getElementById('inp-exam-code').value = '';
+        document.getElementById('inp-exam-name').value = '';
+        document.getElementById('inp-exam-date').value = '';
+        document.getElementById('inp-exam-session').value = 'FN';
+        document.getElementById('inp-exam-slot').value = '';
+        document.getElementById('inp-exam-branch').value = '';
+        document.getElementById('exam-modal-error').style.display = 'none';
+        document.getElementById('exam-modal').hidden = false;
+    }
+    function closeExamModal() {
+        document.getElementById('exam-modal').hidden = true;
+        editingExamId = null;
+    }
+    function saveExam() {
+        const errEl = document.getElementById('exam-modal-error');
+        const date = document.getElementById('inp-exam-date').value.trim();
+        const sess = document.getElementById('inp-exam-session').value.trim();
+        const slot = document.getElementById('inp-exam-slot').value.trim();
+        if (!date || !sess) {
+            errEl.textContent = 'Date and session are required.';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (editingExamId) {
+            fetch(`/api/exam/${editingExamId}/edit/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ exam_date: date, session: sess, slot: slot })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    closeExamModal();
+                    location.reload();
+                } else {
+                    errEl.textContent = data.error || 'Failed to update exam.';
+                    errEl.style.display = 'block';
                 }
-                closeStudentModal();
-            } else { errEl.textContent = data.error || 'Save failed.'; errEl.style.display = 'block'; }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        } else {
+            const code = document.getElementById('inp-exam-code').value.trim();
+            const name = document.getElementById('inp-exam-name').value.trim();
+            const branch = document.getElementById('inp-exam-branch').value.trim();
+            if (!code) {
+                errEl.textContent = 'Subject code is required.';
+                errEl.style.display = 'block';
+                return;
+            }
+            fetch(`/api/session/${SESSION_ID}/exams/add/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ subject_code: code, subject_name: name, exam_date: date, session: sess, slot: slot, branch: branch })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    closeExamModal();
+                    location.reload();
+                } else {
+                    errEl.textContent = data.error || 'Failed to create exam.';
+                    errEl.style.display = 'block';
+                }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        }
+    }
+    function deleteExam(id, subCode) {
+        if (!confirm(`Delete exam for "${subCode}"? This will remove related allocations.`)) return;
+        fetch(`/api/exam/${id}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else { alert(data.error || 'Delete failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+    function clearFullTimetable() {
+        if (!confirm("Are you sure you want to delete the FULL timetable and all its exams for this session?\nThis will also remove any allocations created for these exams.")) return;
+        fetch(`/api/session/${SESSION_ID}/clear-timetable/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                alert("Full timetable cleared successfully.");
+                location.reload();
+            } else { alert(data.error || 'Clear failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    /* ── ELECTIVES ACTIONS & MODALS ─────────── */
+    function deleteElectiveGroup(groupId, label) {
+        if (!confirm(`Delete elective group "${label}" and all its subjects and enrolled students?\nThis cannot be undone.`)) return;
+        fetch(`/api/elective-group/${groupId}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else { alert(data.error || 'Failed to delete elective group.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    let editingSubjectId = null;
+    function openEditElectiveSubjectModal(id, code, name, type) {
+        editingSubjectId = id;
+        document.getElementById('elective-subject-modal-title').textContent = 'Edit Elective Subject';
+        document.getElementById('inp-sub-code').value = code || '';
+        document.getElementById('inp-sub-name').value = name || '';
+        document.getElementById('inp-sub-type').value = type || '';
+        document.getElementById('elective-subject-modal-error').style.display = 'none';
+        document.getElementById('elective-subject-modal').hidden = false;
+    }
+    function closeElectiveSubjectModal() {
+        document.getElementById('elective-subject-modal').hidden = true;
+        editingSubjectId = null;
+    }
+    function saveElectiveSubject() {
+        const errEl = document.getElementById('elective-subject-modal-error');
+        const code = document.getElementById('inp-sub-code').value.trim();
+        const name = document.getElementById('inp-sub-name').value.trim();
+        const type = document.getElementById('inp-sub-type').value.trim();
+        if (!code || !name) {
+            errEl.textContent = 'Subject code and name are required.';
+            errEl.style.display = 'block';
+            return;
+        }
+        fetch(`/api/elective-subject/${editingSubjectId}/edit/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subject_code: code, subject_name: name, elective_type: type })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                closeElectiveSubjectModal();
+                location.reload();
+            } else {
+                errEl.textContent = data.error || 'Save failed.';
+                errEl.style.display = 'block';
+            }
         }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+    }
+    function deleteElectiveSubject(id, code) {
+        if (!confirm(`Delete elective subject "${code}" and all its student registrations? This cannot be undone.`)) return;
+        fetch(`/api/elective-subject/${id}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                location.reload();
+            } else { alert(data.error || 'Delete failed.'); }
+        }).catch(() => alert('Network error.'));
+    }
+
+    let editingRegId = null;
+    let addingElectiveSubjectId = null;
+    function openEditElectiveRegModal(regId, roll, name, dept, cls) {
+        editingRegId = regId;
+        addingElectiveSubjectId = null;
+        document.getElementById('elective-student-modal-title').textContent = 'Edit Elective Student';
+        document.getElementById('inp-el-roll').value = roll || '';
+        document.getElementById('inp-el-name').value = name || '';
+        document.getElementById('inp-el-dept').value = dept || '';
+        document.getElementById('inp-el-class').value = cls || '';
+        document.getElementById('elective-student-modal-error').style.display = 'none';
+        document.getElementById('elective-student-modal').hidden = false;
+    }
+    function openAddElectiveStudentModal(subjectId, subCode) {
+        editingRegId = null;
+        addingElectiveSubjectId = subjectId;
+        document.getElementById('elective-student-modal-title').textContent = `Add Student to ${subCode}`;
+        document.getElementById('inp-el-roll').value = '';
+        document.getElementById('inp-el-name').value = '';
+        document.getElementById('inp-el-dept').value = '';
+        document.getElementById('inp-el-class').value = '';
+        document.getElementById('elective-student-modal-error').style.display = 'none';
+        document.getElementById('elective-student-modal').hidden = false;
+    }
+    function closeElectiveStudentModal() {
+        document.getElementById('elective-student-modal').hidden = true;
+        editingRegId = null;
+        addingElectiveSubjectId = null;
+    }
+    function saveElectiveStudent() {
+        const errEl = document.getElementById('elective-student-modal-error');
+        const roll = document.getElementById('inp-el-roll').value.trim();
+        const name = document.getElementById('inp-el-name').value.trim();
+        const dept = document.getElementById('inp-el-dept').value.trim();
+        const cls = document.getElementById('inp-el-class').value.trim();
+        if (!roll || !name) {
+            errEl.textContent = 'Roll number and student name are required.';
+            errEl.style.display = 'block';
+            return;
+        }
+        if (editingRegId) {
+            fetch(`/api/elective-registration/${editingRegId}/edit/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roll_number: roll, student_name: name, department: dept, class_name: cls })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    closeElectiveStudentModal();
+                    location.reload();
+                } else {
+                    errEl.textContent = data.error || 'Failed to update student.';
+                    errEl.style.display = 'block';
+                }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        } else if (addingElectiveSubjectId) {
+            fetch(`/api/elective-subject/${addingElectiveSubjectId}/add-student/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roll_number: roll, student_name: name, department: dept, class_name: cls })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    closeElectiveStudentModal();
+                    location.reload();
+                } else {
+                    errEl.textContent = data.error || 'Failed to add student.';
+                    errEl.style.display = 'block';
+                }
+            }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+        }
+    }
+    function deleteElectiveReg(regId, roll) {
+        if (!confirm(`Remove student "${roll}" from this elective subject?`)) return;
+        fetch(`/api/elective-registration/${regId}/delete/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                const row = document.getElementById('reg-row-' + regId);
+                if (row) row.remove();
+            } else { alert(data.error || 'Failed to remove student.'); }
+        }).catch(() => alert('Network error.'));
+    }
+    function clearAllElectives() {
+        if (!confirm("Are you sure you want to delete ALL elective subjects and student registrations for this session?\nThis action cannot be undone.")) return;
+        fetch(`/api/session/${SESSION_ID}/clear-electives/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                alert("All electives cleared successfully.");
+                location.reload();
+            } else { alert(data.error || 'Failed to clear electives.'); }
+        }).catch(() => alert('Network error.'));
     }
 
     /* ── TIMETABLE TARGET DRILL ─────────────── */
@@ -1417,7 +2060,7 @@
     }
     function closeTargetModal() { document.getElementById('target-modal').hidden = true; }
 
-    /* ── ROOM MODAL ─────────────────────────── */
+    /* ── ROOM MODAL & ACTIONS ───────────────── */
     let editingRoomId = null;
     function openRoomModal(id, number, building, capacity, benches) {
         editingRoomId = id;
@@ -1460,12 +2103,35 @@
         }).catch(() => alert('Network error.'));
     }
 
-    /* ── MODAL CLOSE ON BACKDROP ─────────────── */
-    ['room-modal', 'student-modal', 'target-modal'].forEach(id => {
-        document.getElementById(id).addEventListener('click', function (e) { if (e.target === this) this.hidden = true; });
-    });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') { ['room-modal', 'student-modal', 'target-modal'].forEach(id => { document.getElementById(id).hidden = true; }); } });
+    function clearAllRooms() {
+        if (!confirm("Are you sure you want to delete ALL classrooms for this session?\nThis action cannot be undone.")) return;
+        fetch(`/api/session/${SESSION_ID}/clear-rooms/`, {
+            method: 'POST', headers: { 'X-CSRFToken': CSRF }
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                alert("All classrooms cleared.");
+                location.reload();
+            } else { alert(data.error || 'Failed to clear rooms.'); }
+        }).catch(() => alert('Network error.'));
+    }
 
-    function escJS(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
+    /* ── MODAL CLOSE ON BACKDROP & ESCAPE ───── */
+    const modalIds = ['room-modal', 'student-modal', 'target-modal', 'elective-subject-modal', 'elective-student-modal', 'exam-modal'];
+    modalIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', function (e) { if (e.target === this) this.hidden = true; });
+        }
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            modalIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.hidden = true;
+            });
+        }
+    });
+
+    function escJS(s) { return String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"'); }
 </script>
 {% endblock %}

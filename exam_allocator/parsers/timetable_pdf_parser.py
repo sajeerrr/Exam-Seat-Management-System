@@ -73,6 +73,7 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                     continue
 
                 col_contexts = {}  # c -> {"date": date, "time": str, "session": str, "type": "SUBJECT" or "BRANCH"}
+                last_exam_by_col = {}  # c -> ExamRecord for branch continuation
 
                 for row in grid:
                     # Clean up row cells
@@ -90,6 +91,7 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                                 if c not in col_contexts:
                                     col_contexts[c] = {}
                                 col_contexts[c]["date"] = dt
+                                last_exam_by_col.pop(c, None)
 
                         if "Time" in cell_clean and ":" in cell_clean:
                             sess = "FN"
@@ -113,6 +115,7 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                             if c not in col_contexts:
                                 col_contexts[c] = {}
                             col_contexts[c]["type"] = "SUBJECT"
+                            last_exam_by_col.pop(c, None)
 
                         if cell_clean.upper() == "BRANCH":
                             if c not in col_contexts:
@@ -135,7 +138,7 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                                 col_contexts[c]["time"] = col_contexts[c - 1].get("time")
                                 col_contexts[c]["session"] = col_contexts[c - 1].get("session")
 
-                    # 3. Check if this is a data row
+                    # 3. Check if this is a data row or branch continuation row
                     is_data_row = False
                     for c, cell in enumerate(row):
                         if c in col_contexts and col_contexts[c].get("type") == "SUBJECT":
@@ -143,63 +146,74 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                             if cell_clean and not any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
                                 is_data_row = True
                                 break
+                            elif not cell_clean and c in last_exam_by_col:
+                                b_cell = row[c + 1].strip() if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH" else ""
+                                if b_cell and not any(kw in b_cell for kw in ["Date", "Time", "Subject", "Branch"]):
+                                    is_data_row = True
+                                    break
 
                     if is_data_row:
                         for c, cell in enumerate(row):
                             if c in col_contexts and col_contexts[c].get("type") == "SUBJECT":
                                 cell_clean = cell.strip()
-                                if not cell_clean:
-                                    continue
-                                if any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
-                                    continue
+                                branch_cell = row[c + 1].strip() if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH" else ""
 
-                                branch = "ALL BRANCHES"
-                                if c + 1 < len(row) and c + 1 in col_contexts and col_contexts[c + 1].get("type") == "BRANCH":
-                                    branch_cell = row[c + 1]
+                                if cell_clean and not any(kw in cell_clean for kw in ["Date", "Time", "Subject", "Branch"]):
+                                    branch = "ALL BRANCHES"
                                     if branch_cell:
-                                        branch = branch_cell.strip()
-                                elif "Arch" in program:
-                                    branch = "B.ARCH"
+                                        branch = branch_cell
+                                    elif "Arch" in program:
+                                        branch = "B.ARCH"
 
-                                date_val = col_contexts[c].get("date")
-                                time_val = col_contexts[c].get("time", "")
-                                sess_val = col_contexts[c].get("session", "")
+                                    date_val = col_contexts[c].get("date")
+                                    time_val = col_contexts[c].get("time", "")
+                                    sess_val = col_contexts[c].get("session", "")
 
-                                if not date_val:
-                                    # Try to inherit from previous row if something is weird, but skip if no date
-                                    continue
-                                    
-                                slot = ""
-                                subj_name = cell_clean
-                                subj_code = ""
+                                    if not date_val:
+                                        continue
+                                        
+                                    slot = ""
+                                    subj_name = cell_clean
+                                    subj_code = ""
 
-                                if "|" in subj_name:
-                                    parts = subj_name.split("|", 1)
-                                    slot = parts[0].strip()
-                                    subj_name = parts[1].strip()
-                                    if "Arch" in program and slot:
-                                        branch = f"SLOT {slot}"
+                                    if "|" in subj_name:
+                                        parts = subj_name.split("|", 1)
+                                        slot = parts[0].strip()
+                                        subj_name = parts[1].strip()
+                                        if "Arch" in program and slot:
+                                            branch = f"SLOT {slot}"
 
-                                match = re.search(r"\(([^)]+)\)$", subj_name)
-                                if match:
-                                    subj_code = match.group(1).strip()
-                                    subj_name = subj_name[:match.start()].strip()
+                                    match = re.search(r"\(([^)]+)\)$", subj_name)
+                                    if match:
+                                        subj_code = match.group(1).strip()
+                                        subj_name = subj_name[:match.start()].strip()
 
-                                if not subj_code:
-                                    subj_code = subj_name
+                                    if not subj_code:
+                                        subj_code = subj_name
 
-                                exams.append(ExamRecord(
-                                    program=program or "UNKNOWN",
-                                    semester=semester or 0,
-                                    exam_date=date_val,
-                                    session=sess_val,
-                                    time=time_val,
-                                    branch=branch,
-                                    branches=_parse_branches(branch),
-                                    subject_name=subj_name,
-                                    subject_code=subj_code,
-                                    duration_minutes=_calculate_duration_minutes(time_val)
-                                ))
+                                    new_exam = ExamRecord(
+                                        program=program or "UNKNOWN",
+                                        semester=semester or 0,
+                                        exam_date=date_val,
+                                        session=sess_val,
+                                        time=time_val,
+                                        branch=branch,
+                                        branches=_parse_branches(branch),
+                                        subject_name=subj_name,
+                                        subject_code=subj_code,
+                                        duration_minutes=_calculate_duration_minutes(time_val)
+                                    )
+                                    exams.append(new_exam)
+                                    last_exam_by_col[c] = new_exam
+
+                                elif not cell_clean and branch_cell and c in last_exam_by_col:
+                                    if not any(kw in branch_cell for kw in ["Date", "Time", "Subject", "Branch"]):
+                                        parsed_b = _parse_branches(branch_cell)
+                                        target_exam = last_exam_by_col[c]
+                                        for pb in parsed_b:
+                                            if pb not in target_exam.branches:
+                                                target_exam.branches.append(pb)
+                                        target_exam.branch = ", ".join(target_exam.branches)
     finally:
         doc.close()
 

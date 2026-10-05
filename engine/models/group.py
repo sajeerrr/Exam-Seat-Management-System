@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from .student import Student
+from .student import Student, normalize_subject_category
 
 
 @dataclass
@@ -17,6 +17,20 @@ class Group:
     students: list[Student] = field(default_factory=list)
 
     allocated_count: int = 0
+    subject_category: str = field(default="NORMAL")
+
+    def __post_init__(self):
+        self.subject_category = normalize_subject_category(self.subject_category)
+
+    @property
+    def is_special_subject(self) -> bool:
+        """Returns True if this group represents an Elective, Minor, or Honours subject."""
+        return self.subject_category in {"ELECTIVE", "MINOR", "HONOURS"}
+
+    @property
+    def normalized_subject_code(self) -> str:
+        """Normalized subject code for exact group/conflict matching."""
+        return str(self.subject_code).strip().upper() if self.subject_code else ""
 
     @property
     def strength(self):
@@ -46,24 +60,15 @@ class Group:
         return self.remaining_count
 
     def snapshot(self) -> int:
-        """Return current allocated_count for later restore."""
         return self.allocated_count
 
     def restore(self, allocated_count: int):
-        """Restore allocated_count to a previous snapshot value."""
         self.allocated_count = allocated_count
 
     def deallocate(self, count: int):
-        """Reverse allocation of `count` students (for LNS destroy).
-
-        This method both reduces the allocated_count and removes the students
-        from the group's students list to prevent duplicate allocations.
-        """
-        # Remove students from the end of the list to maintain consistency
         start_index = self.allocated_count - count
         if start_index < 0:
             start_index = 0
 
-        # Remove the last 'count' students (since we allocated from the beginning)
         self.students = self.students[:start_index]
         self.allocated_count = start_index

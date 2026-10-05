@@ -59,8 +59,8 @@ media/
 staticfiles/
 
 # Test files
-test_*.py
-*_test.py
+# test_*.py
+# *_test.py
 
 # Editor/IDE
 .vscode/
@@ -78,3 +78,4 @@ dev_tools/
 resources/
 *.xlsx
 docs/
+elective_data/

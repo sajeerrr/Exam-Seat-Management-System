@@ -1,5 +1,3 @@
-# engine/models/room_allocation.py
-
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from engine.config import AllocationLimits
@@ -49,7 +47,6 @@ class RoomAllocation:
     def __init__(self, classroom):
         self.classroom = classroom
 
-        # FIX: Stream capacity is column_capacity (15) or capacity // 3 (15)
         if hasattr(classroom, "column_capacity") and classroom.column_capacity:
             benches = classroom.column_capacity
         elif hasattr(classroom, "capacity") and classroom.capacity:
@@ -58,56 +55,90 @@ class RoomAllocation:
             benches = 15
 
         self.streams: Dict[str, StreamSlot] = {
-            "A": StreamSlot("A", capacity=benches),
-            "B": StreamSlot("B", capacity=benches),
-            "C": StreamSlot("C", capacity=benches),
+            "A": StreamSlot("A", benches),
+            "B": StreamSlot("B", benches),
+            "C": StreamSlot("C", benches),
         }
-        self.allocated_seats = []
 
-    def get_stream(self, stream_name: str) -> Optional[StreamSlot]:
-        return self.streams.get(str(stream_name).upper().strip())
-
-    @property
-    def stream_a(self) -> StreamSlot:
-        return self.streams["A"]
-
-    @property
-    def stream_b(self) -> StreamSlot:
-        return self.streams["B"]
-
-    @property
-    def stream_c(self) -> StreamSlot:
-        return self.streams["C"]
+    def get_stream(self, name: str) -> Optional[StreamSlot]:
+        return self.streams.get(name)
 
     @property
     def used_capacity(self) -> int:
         return sum(len(s.students) for s in self.streams.values())
 
     @property
+    def is_full(self) -> bool:
+        return self.used_capacity >= self.classroom.capacity
+
+    @property
+    def remaining_capacity(self) -> int:
+        return self.classroom.capacity - self.used_capacity
+
+    @property
     def departments(self) -> set:
         depts = set()
-        for s in self.streams.values():
-            depts.update(s.departments)
+        for stream in self.streams.values():
+            depts.update(stream.departments)
         return depts
 
     def can_add_department(
-        self, dept: str, is_fallback_pass: bool = False
+        self, department: str, is_fallback_pass: bool = False
     ) -> bool:
-        """Check if a department can be added to this room.
+        limit = (
+            getattr(AllocationLimits, "MAX_DEPARTMENTS_FALLBACK", 4)
+            if is_fallback_pass
+            else getattr(AllocationLimits, "MAX_DEPARTMENTS_NORMAL", 3)
+        )
 
-        Args:
-            dept: Department to check
-            is_fallback_pass: If True, allows up to MAX_DEPARTMENTS_FALLBACK (4),
-                            otherwise uses MAX_DEPARTMENTS_NORMAL (3)
-
-        Returns:
-            True if department can be added without exceeding limit
-        """
-        current = self.departments
-        if dept in current:
+        current_depts = self.departments
+        if department in current_depts:
             return True
-        limit = AllocationLimits.MAX_DEPARTMENTS_FALLBACK if is_fallback_pass else AllocationLimits.MAX_DEPARTMENTS_NORMAL
-        return len(current) < limit
+
+        return len(current_depts) < limit
+
+    def get_adjacent_seats(self, stream_name: str, bench_no: int) -> List[tuple[str, int]]:
+        col_map = {"A": 0, "B": 1, "C": 2}
+        inv_map = {0: "A", 1: "B", 2: "C"}
+        if stream_name not in col_map:
+            return []
+
+        c0 = col_map[stream_name]
+        adjacent = []
+        for dc in (-1, 0, 1):
+            c = c0 + dc
+            if c not in inv_map:
+                continue
+            s_name = inv_map[c]
+            for db in (-1, 0, 1):
+                if dc == 0 and db == 0:
+                    continue
+                b = bench_no + db
+                if b >= 1:
+                    adjacent.append((s_name, b))
+        return adjacent
+
+    def get_adjacent_students(self, stream_name: str, bench_no: int) -> List[Any]:
+        adj_seats = self.get_adjacent_seats(stream_name, bench_no)
+        students = []
+        for s_name, b_no in adj_seats:
+            stream = self.get_stream(s_name)
+            if stream and 1 <= b_no <= len(stream.students):
+                students.append(stream.students[b_no - 1])
+        return students
+
+    def can_seat_special_subject(self, stream_name: str, bench_no: int, subject_code: str) -> bool:
+        norm_code = str(subject_code or "").strip().upper()
+        adj_students = self.get_adjacent_students(stream_name, bench_no)
+        for student in adj_students:
+            if getattr(student, "is_special_subject", False):
+                other_code = getattr(
+                    student, "normalized_subject_code",
+                    str(student.subject_code).strip().upper()
+                )
+                if other_code == norm_code:
+                    return False
+        return True
 
     def can_seat_subject(
         self,
@@ -115,8 +146,13 @@ class RoomAllocation:
         subject_code: str,
         department: str = "",
         subject_name: str = "",
+        is_special_subject: bool = False,
     ) -> bool:
-        name = str(stream_name).upper().strip()
+        if is_special_subject:
+            bench_no = len(self.streams[stream_name].students) + 1
+            return self.can_seat_special_subject(stream_name, bench_no, subject_code)
+
+        name = stream_name
         subject_code = subject_conflict_key(
             subject_code,
             department,
@@ -147,19 +183,16 @@ class RoomAllocation:
         stream.students.extend(allocated_students)
 
     def snapshot(self) -> dict:
-        """Return a snapshot of all stream student lists."""
         return {
             name: list(stream.students)
             for name, stream in self.streams.items()
         }
 
     def restore(self, snapshot: dict):
-        """Restore streams from a snapshot."""
         for name, students in snapshot.items():
             self.streams[name].students = list(students)
 
     def clear_all_streams(self):
-        """Remove all students from all streams (for LNS destroy)."""
         for stream in self.streams.values():
             stream.students.clear()
 
