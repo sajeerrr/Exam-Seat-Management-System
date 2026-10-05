@@ -13,7 +13,7 @@
         min-height: 100vh;
     }
     .page-wrapper {
-        max-width: 1520px;
+        max-width: 1560px;
         margin: 0 auto;
         padding: 24px 20px 80px;
     }
@@ -139,34 +139,162 @@
         color: white;
     }
 
-    /* ════════════════ COMPACT 3-COLUMN CLASSROOM LAYOUT ════════════════ */
-    .room-jumper-bar {
+    /* ════════════════ SIDE-BY-SIDE CLASSROOM SEATING LAYOUT ════════════════ */
+    .classroom-view-layout {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    /* SIDEBAR */
+    .classroom-sidebar {
+        width: 300px;
+        flex-shrink: 0;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+    }
+    .sidebar-header {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-bottom: 16px;
+        justify-content: space-between;
     }
-    .room-select-input {
-        padding: 5px 10px;
+    .sidebar-title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .sidebar-count {
+        font-size: 11.5px;
+        color: var(--text-muted);
+    }
+
+    .sidebar-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .sidebar-select {
+        width: 100%;
+        padding: 7px 10px;
         border-radius: 6px;
-        background: var(--bg-card);
+        background: var(--bg-primary);
         border: 1px solid var(--border);
         color: var(--text-primary);
         font-size: 12.5px;
         outline: none;
+        font-weight: 500;
+    }
+    .sidebar-search {
+        width: 100%;
+        padding: 7px 10px;
+        border-radius: 6px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        font-size: 12px;
+        outline: none;
+    }
+    .sidebar-search:focus, .sidebar-select:focus {
+        border-color: var(--accent);
+    }
+
+    .sidebar-room-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow-y: auto;
+        padding-right: 4px;
+        max-height: calc(100vh - 220px);
+    }
+    .sidebar-room-list::-webkit-scrollbar {
+        width: 5px;
+    }
+    .sidebar-room-list::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+
+    .sidebar-room-item {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 9px 12px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: left;
+    }
+    .sidebar-room-item:hover {
+        background: var(--bg-card-hover);
+        border-color: rgba(99,102,241,0.4);
+    }
+    .sidebar-room-item.active {
+        background: rgba(99,102,241,0.12);
+        border-color: var(--accent);
+        box-shadow: 0 2px 8px rgba(99,102,241,0.2);
+    }
+    .sidebar-room-item-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .sidebar-room-num {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .sidebar-room-item.active .sidebar-room-num {
+        color: var(--accent-light);
+    }
+    .sidebar-room-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.06);
+        color: var(--text-secondary);
+    }
+    .sidebar-room-item.active .sidebar-room-badge {
+        background: var(--accent);
+        color: white;
+    }
+    .sidebar-room-meta {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* MAIN ROOM CONTAINER (ONE ROOM AT A TIME) */
+    .classroom-main {
+        flex: 1;
+        min-width: 0;
     }
 
     .room-block {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 10px;
-        margin-bottom: 30px;
-        padding: 18px 20px 24px;
+        padding: 20px 22px 26px;
         box-shadow: 0 4px 16px rgba(0,0,0,0.03);
     }
 
-    /* Minimal Room Header */
+    /* Room Header */
     .room-header-simple {
         display: flex;
         align-items: center;
@@ -175,10 +303,10 @@
         padding-bottom: 12px;
         border-bottom: 1px solid var(--border);
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
     }
     .room-title-text {
-        font-size: 17px;
+        font-size: 18px;
         font-weight: 800;
         color: var(--text-primary);
         display: flex;
@@ -186,7 +314,7 @@
         gap: 10px;
     }
     .room-badge-tag {
-        font-size: 11px;
+        font-size: 11.5px;
         font-weight: 700;
         padding: 2px 8px;
         border-radius: 4px;
@@ -198,9 +326,31 @@
         color: var(--text-muted);
     }
 
+    .room-nav-btns {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .room-nav-btn {
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.04);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .room-nav-btn:hover {
+        background: rgba(99,102,241,0.15);
+        color: var(--accent-light);
+        border-color: var(--accent);
+    }
+
     /* Minimal Front Board */
     .classroom-board-simple {
-        max-width: 500px;
+        max-width: 520px;
         margin: 0 auto 18px;
         background: rgba(255,255,255,0.02);
         border: 1px solid var(--border);
@@ -218,10 +368,10 @@
     .classroom-3col-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
+        gap: 18px;
         align-items: start;
     }
-    @media (max-width: 1150px) {
+    @media (max-width: 1200px) {
         .classroom-3col-grid {
             grid-template-columns: 1fr;
         }
@@ -283,6 +433,10 @@
     .seat-cell:hover {
         border-color: var(--accent);
     }
+    .seat-cell.highlight-class {
+        border-color: var(--accent);
+        background: rgba(99,102,241,0.08);
+    }
     .seat-cell-header {
         display: flex;
         align-items: center;
@@ -342,6 +496,21 @@
         min-height: 70px;
         text-align: center;
         padding: 4px;
+    }
+
+    /* Responsive Sidebar */
+    @media (max-width: 1024px) {
+        .classroom-view-layout {
+            flex-direction: column;
+        }
+        .classroom-sidebar {
+            width: 100%;
+            position: static;
+            max-height: none;
+        }
+        .sidebar-room-list {
+            max-height: 200px;
+        }
     }
 
     /* ════════════════ EXISTING VIEW STYLES ════════════════ */
@@ -499,11 +668,13 @@
 
     @media print {
         body { background: #fff; color: #000; }
-        .slot-bar, .top-nav, .view-switcher, .room-jumper-bar { display: none !important; }
-        .room-block { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+        .slot-bar, .top-nav, .view-switcher, .classroom-sidebar { display: none !important; }
+        .classroom-view-layout { display: block !important; }
+        .room-block { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; display: block !important; margin-bottom: 40px !important; }
         .bench-box { border-color: #ddd !important; background: #fff !important; }
         .seat-cell { border-color: #ccc !important; background: #fff !important; color: #000 !important; }
         .seat-roll { color: #000 !important; }
+        .room-nav-btns { display: none !important; }
     }
 </style>
 {% endblock %}
@@ -676,118 +847,165 @@
         </div>
     </div>
 
-    <!-- ════════════════ VIEW 2: MINIMAL 3-COLUMN CLASSROOM LAYOUT ════════════════ -->
+    <!-- ════════════════ VIEW 2: ONE-ROOM-AT-A-TIME WITH SIDE CLASS SELECTOR ════════════════ -->
     <div id="view-room-cards" class="view-panel">
         
-        <!-- QUICK ROOM JUMPER -->
-        <div class="room-jumper-bar">
-            <label for="room-jumper-sel" style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Jump to Room:</label>
-            <select id="room-jumper-sel" class="room-select-input" onchange="jumpToRoom(this.value)">
-                <option value="">-- All Rooms ({{ rooms|length }}) --</option>
-                {% for r in rooms %}
-                <option value="room-block-{{ r.room_number }}">Room {{ r.room_number }} ({{ r.total_students }} students)</option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- EACH ROOM AS A 3-COLUMN CLASSROOM -->
-        {% for r in rooms %}
-        <div class="room-block" id="room-block-{{ r.room_number }}">
+        <div class="classroom-view-layout">
             
-            <!-- Minimal Room Header -->
-            <div class="room-header-simple">
-                <div class="room-title-text">
-                    <span>Room {{ r.room_number }}</span>
-                    <span class="room-badge-tag">{{ r.total_students }} Students</span>
+            <!-- LEFT SIDEBAR: SELECT ROOM / CLASS -->
+            <div class="classroom-sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">
+                        <span>🏫 Classrooms</span>
+                    </div>
+                    <span class="sidebar-count" id="sidebar-count-text">{{ rooms|length }} rooms</span>
                 </div>
-                <div class="room-meta-simple">
-                    <span>{{ r.total_benches }} Benches · {{ r.exam_date|date:"d-m-Y" }} ({{ r.session }})</span>
+
+                <div class="sidebar-filter-group">
+                    <!-- Option to select the class -->
+                    <div>
+                        <label for="sidebar-class-filter" style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">
+                            Select Class:
+                        </label>
+                        <select id="sidebar-class-filter" class="sidebar-select" onchange="filterRoomsByClass(this.value)">
+                            <option value="">-- All Classes ({{ all_classes|length }}) --</option>
+                            {% for c in all_classes %}
+                            <option value="{{ c }}">{{ c }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Room Search input -->
+                    <input type="text" id="sidebar-room-search" class="sidebar-search" placeholder="🔍 Search room or department..." onkeyup="filterSidebarRooms(this.value)">
                 </div>
-            </div>
 
-            <!-- Front / Blackboard Bar -->
-            <div class="classroom-board-simple">
-                ▲ FRONT / BOARD ▲
-            </div>
-
-            <!-- Exactly 3 Bench Columns -->
-            <div class="classroom-3col-grid">
-                {% for col in r.columns %}
-                <div class="column-wrap">
-                    <div class="column-header">{{ col.title }}</div>
-                    
-                    {% for bench in col.benches %}
-                    <div class="bench-box">
-                        <div class="bench-box-title">
-                            <span>Bench {{ bench.bench_number }}</span>
-                            <span style="font-size:9.5px; opacity:0.6;">Seat 1 · Seat 2 · Seat 3</span>
+                <!-- Scrollable Room Items -->
+                <div class="sidebar-room-list" id="sidebar-room-list">
+                    {% for r in rooms %}
+                    <div class="sidebar-room-item {% if forloop.first %}active{% endif %}"
+                         id="sidebar-item-{{ r.room_number }}"
+                         data-room="{{ r.room_number }}"
+                         data-classes="{{ r.classes }}"
+                         data-depts="{{ r.departments }}"
+                         onclick="selectRoom('{{ r.room_number }}')">
+                        <div class="sidebar-room-item-top">
+                            <span class="sidebar-room-num">Room {{ r.room_number }}</span>
+                            <span class="sidebar-room-badge">{{ r.total_students }}</span>
                         </div>
-                        <div class="bench-seats-grid">
-                            
-                            <!-- SEAT 1 -->
-                            {% if bench.seat_1 %}
-                            <div class="seat-cell">
-                                <div class="seat-cell-header">
-                                    <span>S1</span>
-                                    <span>{{ bench.seat_1.department }}</span>
-                                </div>
-                                <div class="seat-roll" title="{{ bench.seat_1.roll_number }}">{{ bench.seat_1.roll_number }}</div>
-                                <div class="seat-name" title="{{ bench.seat_1.student_name }}">{{ bench.seat_1.student_name }}</div>
-                                <div class="seat-dept">{% if bench.seat_1.class_name %}{{ bench.seat_1.class_name }}{% else %}{{ bench.seat_1.department }}{% endif %}</div>
-                                <div class="seat-subject" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">
-                                    {{ bench.seat_1.subject_code }}
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="seat-empty">Empty</div>
-                            {% endif %}
-
-                            <!-- SEAT 2 -->
-                            {% if bench.seat_2 %}
-                            <div class="seat-cell">
-                                <div class="seat-cell-header">
-                                    <span>S2</span>
-                                    <span>{{ bench.seat_2.department }}</span>
-                                </div>
-                                <div class="seat-roll" title="{{ bench.seat_2.roll_number }}">{{ bench.seat_2.roll_number }}</div>
-                                <div class="seat-name" title="{{ bench.seat_2.student_name }}">{{ bench.seat_2.student_name }}</div>
-                                <div class="seat-dept">{% if bench.seat_2.class_name %}{{ bench.seat_2.class_name }}{% else %}{{ bench.seat_2.department }}{% endif %}</div>
-                                <div class="seat-subject" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">
-                                    {{ bench.seat_2.subject_code }}
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="seat-empty">Empty</div>
-                            {% endif %}
-
-                            <!-- SEAT 3 -->
-                            {% if bench.seat_3 %}
-                            <div class="seat-cell">
-                                <div class="seat-cell-header">
-                                    <span>S3</span>
-                                    <span>{{ bench.seat_3.department }}</span>
-                                </div>
-                                <div class="seat-roll" title="{{ bench.seat_3.roll_number }}">{{ bench.seat_3.roll_number }}</div>
-                                <div class="seat-name" title="{{ bench.seat_3.student_name }}">{{ bench.seat_3.student_name }}</div>
-                                <div class="seat-dept">{% if bench.seat_3.class_name %}{{ bench.seat_3.class_name }}{% else %}{{ bench.seat_3.department }}{% endif %}</div>
-                                <div class="seat-subject" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">
-                                    {{ bench.seat_3.subject_code }}
-                                </div>
-                            </div>
-                            {% else %}
-                            <div class="seat-empty">Empty</div>
-                            {% endif %}
-
+                        <div class="sidebar-room-meta" title="{{ r.departments }}{% if r.classes %} · {{ r.classes }}{% endif %}">
+                            {{ r.departments }}{% if r.classes %} · {{ r.classes }}{% endif %}
                         </div>
                     </div>
                     {% endfor %}
+                </div>
+            </div>
+
+            <!-- RIGHT / MAIN: EXACTLY ONE ROOM AT A TIME -->
+            <div class="classroom-main">
+                {% for r in rooms %}
+                <div class="room-block" id="room-block-{{ r.room_number }}" {% if not forloop.first %}style="display: none;"{% endif %}>
+                    
+                    <!-- Minimal Room Header with Prev / Next Buttons -->
+                    <div class="room-header-simple">
+                        <div class="room-title-text">
+                            <span>Room {{ r.room_number }}</span>
+                            <span class="room-badge-tag">{{ r.total_students }} Students</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <span class="room-meta-simple">{{ r.total_benches }} Benches · {{ r.exam_date|date:"d-m-Y" }} ({{ r.session }})</span>
+                            <div class="room-nav-btns">
+                                <button class="room-nav-btn" onclick="navRoom(-1)" title="Previous Room">← Prev Room</button>
+                                <button class="room-nav-btn" onclick="navRoom(1)" title="Next Room">Next Room →</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Front / Blackboard Bar -->
+                    <div class="classroom-board-simple">
+                        ▲ FRONT / BOARD ▲
+                    </div>
+
+                    <!-- Exactly 3 Bench Columns -->
+                    <div class="classroom-3col-grid">
+                        {% for col in r.columns %}
+                        <div class="column-wrap">
+                            <div class="column-header">{{ col.title }}</div>
+                            
+                            {% for bench in col.benches %}
+                            <div class="bench-box">
+                                <div class="bench-box-title">
+                                    <span>Bench {{ bench.bench_number }}</span>
+                                    <span style="font-size:9.5px; opacity:0.6;">Seat 1 · Seat 2 · Seat 3</span>
+                                </div>
+                                <div class="bench-seats-grid">
+                                    
+                                    <!-- SEAT 1 -->
+                                    {% if bench.seat_1 %}
+                                    <div class="seat-cell" data-class="{{ bench.seat_1.class_name }}">
+                                        <div class="seat-cell-header">
+                                            <span>S1</span>
+                                            <span>{{ bench.seat_1.department }}</span>
+                                        </div>
+                                        <div class="seat-roll" title="{{ bench.seat_1.roll_number }}">{{ bench.seat_1.roll_number }}</div>
+                                        <div class="seat-name" title="{{ bench.seat_1.student_name }}">{{ bench.seat_1.student_name }}</div>
+                                        <div class="seat-dept">{% if bench.seat_1.class_name %}{{ bench.seat_1.class_name }}{% else %}{{ bench.seat_1.department }}{% endif %}</div>
+                                        <div class="seat-subject" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">
+                                            {{ bench.seat_1.subject_code }}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="seat-empty">Empty</div>
+                                    {% endif %}
+
+                                    <!-- SEAT 2 -->
+                                    {% if bench.seat_2 %}
+                                    <div class="seat-cell" data-class="{{ bench.seat_2.class_name }}">
+                                        <div class="seat-cell-header">
+                                            <span>S2</span>
+                                            <span>{{ bench.seat_2.department }}</span>
+                                        </div>
+                                        <div class="seat-roll" title="{{ bench.seat_2.roll_number }}">{{ bench.seat_2.roll_number }}</div>
+                                        <div class="seat-name" title="{{ bench.seat_2.student_name }}">{{ bench.seat_2.student_name }}</div>
+                                        <div class="seat-dept">{% if bench.seat_2.class_name %}{{ bench.seat_2.class_name }}{% else %}{{ bench.seat_2.department }}{% endif %}</div>
+                                        <div class="seat-subject" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">
+                                            {{ bench.seat_2.subject_code }}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="seat-empty">Empty</div>
+                                    {% endif %}
+
+                                    <!-- SEAT 3 -->
+                                    {% if bench.seat_3 %}
+                                    <div class="seat-cell" data-class="{{ bench.seat_3.class_name }}">
+                                        <div class="seat-cell-header">
+                                            <span>S3</span>
+                                            <span>{{ bench.seat_3.department }}</span>
+                                        </div>
+                                        <div class="seat-roll" title="{{ bench.seat_3.roll_number }}">{{ bench.seat_3.roll_number }}</div>
+                                        <div class="seat-name" title="{{ bench.seat_3.student_name }}">{{ bench.seat_3.student_name }}</div>
+                                        <div class="seat-dept">{% if bench.seat_3.class_name %}{{ bench.seat_3.class_name }}{% else %}{{ bench.seat_3.department }}{% endif %}</div>
+                                        <div class="seat-subject" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">
+                                            {{ bench.seat_3.subject_code }}
+                                        </div>
+                                    </div>
+                                    {% else %}
+                                    <div class="seat-empty">Empty</div>
+                                    {% endif %}
+
+                                </div>
+                            </div>
+                            {% endfor %}
+
+                        </div>
+                        {% endfor %}
+                    </div>
 
                 </div>
                 {% endfor %}
             </div>
 
         </div>
-        {% endfor %}
 
     </div>
 
@@ -857,6 +1075,15 @@
 </div>
 
 <script>
+// Array of room numbers in order
+const roomList = [
+    {% for r in rooms %}
+    "{{ r.room_number }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+let currentRoomIndex = 0;
+let selectedClassFilter = "";
+
 function switchView(mode) {
     document.querySelectorAll('.view-panel').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
@@ -873,12 +1100,129 @@ function switchView(mode) {
     }
 }
 
-function jumpToRoom(elementId) {
-    if (!elementId) return;
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Select a single room to view
+function selectRoom(roomNum) {
+    const idx = roomList.indexOf(roomNum);
+    if (idx !== -1) {
+        currentRoomIndex = idx;
     }
+
+    // Hide all rooms, show only selected
+    roomList.forEach(r => {
+        const block = document.getElementById('room-block-' + r);
+        if (block) block.style.display = 'none';
+
+        const item = document.getElementById('sidebar-item-' + r);
+        if (item) item.classList.remove('active');
+    });
+
+    const activeBlock = document.getElementById('room-block-' + roomNum);
+    if (activeBlock) {
+        activeBlock.style.display = 'block';
+    }
+
+    const activeItem = document.getElementById('sidebar-item-' + roomNum);
+    if (activeItem) {
+        activeItem.classList.add('active');
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    highlightClassInCurrentRoom();
+}
+
+// Navigate previous / next room
+function navRoom(direction) {
+    const visibleRooms = [];
+    roomList.forEach(r => {
+        const item = document.getElementById('sidebar-item-' + r);
+        if (item && item.style.display !== 'none') {
+            visibleRooms.push(r);
+        }
+    });
+
+    if (visibleRooms.length === 0) return;
+
+    const currentRoom = roomList[currentRoomIndex];
+    let vIdx = visibleRooms.indexOf(currentRoom);
+    if (vIdx === -1) vIdx = 0;
+
+    let nextIdx = vIdx + direction;
+    if (nextIdx < 0) nextIdx = visibleRooms.length - 1;
+    if (nextIdx >= visibleRooms.length) nextIdx = 0;
+
+    selectRoom(visibleRooms[nextIdx]);
+}
+
+// Filter rooms by class from the sidebar dropdown
+function filterRoomsByClass(className) {
+    selectedClassFilter = className.toLowerCase().trim();
+    applySidebarFilters();
+
+    // Auto-select the first visible room for this class
+    const firstVisible = document.querySelector('.sidebar-room-item:not([style*="display: none"])');
+    if (firstVisible) {
+        selectRoom(firstVisible.dataset.room);
+    }
+}
+
+// Filter rooms by text search (room number or department)
+function filterSidebarRooms(text) {
+    applySidebarFilters();
+}
+
+function applySidebarFilters() {
+    const classFilter = (document.getElementById('sidebar-class-filter').value || '').toLowerCase().trim();
+    const searchFilter = (document.getElementById('sidebar-room-search').value || '').toLowerCase().trim();
+
+    let visibleCount = 0;
+    const items = document.querySelectorAll('.sidebar-room-item');
+
+    items.forEach(item => {
+        const roomNum = (item.dataset.room || '').toLowerCase();
+        const classes = (item.dataset.classes || '').toLowerCase();
+        const depts = (item.dataset.depts || '').toLowerCase();
+
+        let matchesClass = true;
+        if (classFilter) {
+            matchesClass = classes.includes(classFilter);
+        }
+
+        let matchesSearch = true;
+        if (searchFilter) {
+            matchesSearch = roomNum.includes(searchFilter) || depts.includes(searchFilter) || classes.includes(searchFilter);
+        }
+
+        if (matchesClass && matchesSearch) {
+            item.style.display = 'flex';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+
+    const countText = document.getElementById('sidebar-count-text');
+    if (countText) {
+        countText.innerText = visibleCount + ' rooms';
+    }
+
+    highlightClassInCurrentRoom();
+}
+
+function highlightClassInCurrentRoom() {
+    const currentClass = (document.getElementById('sidebar-class-filter').value || '').trim();
+    const currentRoom = roomList[currentRoomIndex];
+    const block = document.getElementById('room-block-' + currentRoom);
+    if (!block) return;
+
+    const cells = block.querySelectorAll('.seat-cell');
+    cells.forEach(cell => {
+        const c = (cell.dataset.class || '').trim();
+        if (currentClass && c === currentClass) {
+            cell.classList.add('highlight-class');
+        } else {
+            cell.classList.remove('highlight-class');
+        }
+    });
 }
 
 function toggleRoomDrawer(drawerId, btn) {

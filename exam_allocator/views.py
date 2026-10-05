@@ -522,6 +522,9 @@ def session_allocation_result(request, session_id):
             if col3:
                 columns.append({'title': 'Column 3 (Benches 11–15)', 'benches': col3})
 
+            dept_codes = sorted(list(set(r['department'] for r in records if r['department'])))
+            class_names = sorted(list(set(r['class_name'] for r in records if r['class_name'])))
+
             rooms_data[room.room_number] = {
                 'room_id': room.room_id,
                 'room_number': room.room_number,
@@ -532,6 +535,9 @@ def session_allocation_result(request, session_id):
                 'stream_c': get_stream_summary(records, 3),
                 'exam_date': selected_slot['date'],
                 'session': selected_slot['shift'],
+                'departments': ", ".join(dept_codes),
+                'classes': ", ".join(class_names),
+                'classes_list': class_names,
                 'benches': benches,
                 'columns': columns,
                 'students': records,
@@ -546,6 +552,8 @@ def session_allocation_result(request, session_id):
 
     sorted_rooms = [rooms_data[k] for k in sorted(rooms_data.keys(), key=try_int)]
 
+    all_slot_classes = sorted(list(set(r['class_name'] for r in all_slot_students if r['class_name'])))
+
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
@@ -554,6 +562,7 @@ def session_allocation_result(request, session_id):
             "slots": slots,
             "selected_slot": selected_slot,
             "rooms": sorted_rooms,
+            "all_classes": all_slot_classes if selected_slot else [],
             "total_slot_students": len(all_slot_students) if selected_slot else 0,
             "all_students": all_slot_students if selected_slot else [],
             "missing_data_reason": missing_data_reason,
