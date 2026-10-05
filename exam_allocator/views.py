@@ -374,6 +374,18 @@ def session_allocation_result(request, session_id):
                 except Exception as exc:
                     pass
 
+        # Pre-cache elective registrations for fast in-memory resolution
+        from exam_allocator.models import ElectiveStudentRegistration
+        from exam_allocator.services.engine_adapter import _is_matching_elective_exam
+        from collections import defaultdict
+
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related('elective_subject', 'elective_subject__group')
+        elec_map = defaultdict(list)
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
+
         # Fetch ALL allocations in this slot
         allocations = (
             Allocation.objects.filter(
@@ -385,59 +397,109 @@ def session_allocation_result(request, session_id):
                 "registration__student",
                 "registration__student__student_class",
                 "registration__student__student_class__department",
+                "exam",
+                "exam__subject",
                 "room",
             )
             .order_by("room__room_number", "bench_number", "seat_number")
         )
-        
-        # Group by room
-        from collections import defaultdict
+
+        all_slot_students = []
         room_allocs = defaultdict(list)
+
         for a in allocations:
-            room_allocs[a.room].append(a)
-            
-        def get_stream_summary(allocs, seat_num):
-            seat_allocs = [a for a in allocs if a.seat_number == seat_num]
-            if not seat_allocs:
-                return "None"
-            
-            seat_allocs.sort(key=lambda x: x.bench_number)
-            summary = []
-            
-            # The excel has abbreviations like ME, CS. Usually it's department_code
-            current_dept = seat_allocs[0].registration.student.student_class.department.department_code
-            start_bench = seat_allocs[0].bench_number
-            prev_bench = start_bench
-            
-            for a in seat_allocs[1:]:
-                dept = a.registration.student.student_class.department.department_code
-                current_num = a.bench_number
-                
-                if dept != current_dept or current_num != prev_bench + 1:
-                    if start_bench == prev_bench:
-                        summary.append(f"{start_bench} {current_dept}")
-                    else:
-                        summary.append(f"{start_bench}-{prev_bench} {current_dept}")
-                    current_dept = dept
-                    start_bench = current_num
-                prev_bench = current_num
-                
-            if start_bench == prev_bench:
-                summary.append(f"{start_bench} {current_dept}")
-            else:
-                summary.append(f"{start_bench}-{prev_bench} {current_dept}")
-                
-            return ", ".join(summary)
-            
-        for room, allocs in room_allocs.items():
-            rooms_data[room.room_number] = {
-                'room_number': room.room_number,
-                'total_students': len(allocs),
-                'stream_a': get_stream_summary(allocs, 1),
-                'stream_b': get_stream_summary(allocs, 2),
-                'stream_c': get_stream_summary(allocs, 3),
+            st = a.registration.student
+            ex = a.exam
+            dept_code = st.student_class.department.department_code if (st.student_class and st.student_class.department) else "GEN"
+            class_name = st.student_class.class_name if st.student_class else ""
+            subj_code = ex.subject.subject_code
+            subj_name = ex.subject.subject_name
+            cat = "NORMAL"
+
+            st_elecs = elec_map.get(st.student_id, [])
+            for r in st_elecs:
+                if _is_matching_elective_exam(ex, r.elective_subject):
+                    subj_code = r.elective_subject.subject_code
+                    subj_name = r.elective_subject.subject_name
+                    cat = r.elective_subject.elective_type or "ELECTIVE"
+                    break
+
+            is_special = cat in ("ELECTIVE", "MINOR", "HONOURS") or any(
+                kw in ex.subject.subject_name.upper()
+                for kw in ("ELECTIVE", "MINOR", "HONOURS", "HONS")
+            )
+            # Label for stream summary:
+            # For Elective / Minor / Honours: ALWAYS display the actual subject code
+            # For normal exams: display department code
+            summary_label = subj_code if is_special else dept_code
+
+            stream_letter = chr(64 + a.seat_number) if 1 <= a.seat_number <= 3 else str(a.seat_number)
+            record = {
+                'allocation_id': a.allocation_id,
+                'room_number': a.room.room_number,
+                'bench_number': a.bench_number,
+                'seat_number': a.seat_number,
+                'stream_letter': stream_letter,
+                'stream_name': f"Stream {stream_letter} (Seat {a.seat_number})",
+                'roll_number': st.roll_number,
+                'student_name': st.student_name,
+                'department': dept_code,
+                'class_name': class_name,
+                'subject_code': subj_code,
+                'subject_name': subj_name,
+                'category': cat,
+                'is_special': is_special,
+                'summary_label': summary_label,
                 'exam_date': selected_slot['date'],
                 'session': selected_slot['shift'],
+            }
+            room_allocs[a.room].append(record)
+            all_slot_students.append(record)
+
+        def get_stream_summary(records, seat_num):
+            seat_records = [r for r in records if r['seat_number'] == seat_num]
+            if not seat_records:
+                return "None"
+
+            seat_records.sort(key=lambda x: x['bench_number'])
+            summary = []
+
+            current_label = seat_records[0]['summary_label']
+            start_bench = seat_records[0]['bench_number']
+            prev_bench = start_bench
+
+            for r in seat_records[1:]:
+                lbl = r['summary_label']
+                current_num = r['bench_number']
+
+                if lbl != current_label or current_num != prev_bench + 1:
+                    if start_bench == prev_bench:
+                        summary.append(f"{start_bench} {current_label}")
+                    else:
+                        summary.append(f"{start_bench}-{prev_bench} {current_label}")
+                    current_label = lbl
+                    start_bench = current_num
+                prev_bench = current_num
+
+            if start_bench == prev_bench:
+                summary.append(f"{start_bench} {current_label}")
+            else:
+                summary.append(f"{start_bench}-{prev_bench} {current_label}")
+
+            return ", ".join(summary)
+
+        for room, records in room_allocs.items():
+            records.sort(key=lambda x: (x['bench_number'], x['seat_number']))
+            rooms_data[room.room_number] = {
+                'room_id': room.room_id,
+                'room_number': room.room_number,
+                'total_students': len(records),
+                'stream_a': get_stream_summary(records, 1),
+                'stream_b': get_stream_summary(records, 2),
+                'stream_c': get_stream_summary(records, 3),
+                'exam_date': selected_slot['date'],
+                'session': selected_slot['shift'],
+                'students': records,
             }
 
     # sort rooms numerically
@@ -457,6 +519,8 @@ def session_allocation_result(request, session_id):
             "slots": slots,
             "selected_slot": selected_slot,
             "rooms": sorted_rooms,
+            "total_slot_students": len(all_slot_students) if selected_slot else 0,
+            "all_students": all_slot_students if selected_slot else [],
             "missing_data_reason": missing_data_reason,
         },
     )

@@ -166,6 +166,7 @@ def save_session_seat_plan(
     session,
     seat_plan,
     exams,
+    expected_students=None,
 ):
     """
     Save allocations for one examination time slot.
@@ -263,6 +264,63 @@ def save_session_seat_plan(
             )
         )
 
+    # ── VALIDATION BEFORE SAVING ─────────────────────────────────
+    from collections import defaultdict
+
+    # 1. Check expected student count
+    if expected_students is not None and len(allocations) < expected_students:
+        raise SessionAllocationError(
+            f"Under-allocation: only {len(allocations)} of {expected_students} expected students allocated."
+        )
+
+    # 2. No student allocated twice
+    seen_regs = set()
+    for a in allocations:
+        if a.registration_id in seen_regs:
+            raise SessionAllocationError(
+                f"Duplicate student allocation: Registration ID {a.registration_id} ({a.registration.student.roll_number}) allocated more than once."
+            )
+        seen_regs.add(a.registration_id)
+
+    # 3. Seat conflicts must be zero
+    seen_positions = set()
+    for a in allocations:
+        pos = (a.room_id, a.bench_number, a.seat_number)
+        if pos in seen_positions:
+            raise SessionAllocationError(
+                f"Seat conflict: Room {a.room.room_number}, Bench {a.bench_number}, Seat {a.seat_number} allocated multiple times."
+            )
+        seen_positions.add(pos)
+
+    # 4. Room capacities must not be exceeded
+    room_counts = defaultdict(int)
+    for a in allocations:
+        room_counts[a.room] += 1
+    for r_obj, cnt in room_counts.items():
+        if cnt > r_obj.capacity:
+            raise SessionAllocationError(
+                f"Room capacity exceeded in Room {r_obj.room_number}: {cnt} allocated > capacity {r_obj.capacity}."
+            )
+
+    # 5. Special subject rules: No same-subject students adjacent horizontally
+    bench_grid = defaultdict(dict)
+    for seat in seat_plan.seats:
+        s_num = stream_to_seat_number.get(seat.stream, 0)
+        bench_grid[(seat.classroom.room_no, seat.bench_no)][s_num] = seat.student
+
+    for (r_no, b_no), seats_map in bench_grid.items():
+        for s_idx in (1, 2):
+            if s_idx in seats_map and (s_idx + 1) in seats_map:
+                st1 = seats_map[s_idx]
+                st2 = seats_map[s_idx + 1]
+                if (st1.subject_category in ("ELECTIVE", "MINOR", "HONOURS") or
+                    st2.subject_category in ("ELECTIVE", "MINOR", "HONOURS")):
+                    if st1.subject_code.strip().upper() == st2.subject_code.strip().upper():
+                        raise SessionAllocationError(
+                            f"Special subject adjacency conflict in Room {r_no}, Bench {b_no}: "
+                            f"Seat {s_idx} and Seat {s_idx + 1} both have same subject {st1.subject_code}."
+                        )
+
     # Replace allocations ONLY for exams in this time slot.
     if exams_in_this_slot:
         Allocation.objects.filter(exam_id__in=exams_in_this_slot).delete()
@@ -336,6 +394,7 @@ def run_session_allocation(session):
                     session=session,
                     seat_plan=seat_plan,
                     exams=slot_exams,
+                    expected_students=len(students),
                 )
 
             all_allocations.extend(allocations)
