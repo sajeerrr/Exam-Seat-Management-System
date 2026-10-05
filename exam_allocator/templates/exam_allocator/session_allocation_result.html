@@ -7,22 +7,22 @@
 {% block extra_css %}
 <style>
     body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         background: var(--bg-primary);
         color: var(--text-primary);
         min-height: 100vh;
     }
     .page-wrapper {
-        max-width: 1440px;
+        max-width: 1520px;
         margin: 0 auto;
-        padding: 32px 24px 80px;
+        padding: 24px 20px 80px;
     }
     
     .top-nav {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
         gap: 12px;
     }
@@ -44,11 +44,11 @@
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 16px 20px;
-        margin-bottom: 24px;
+        padding: 12px 18px;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
     }
     .slot-lbl {
@@ -60,12 +60,12 @@
         gap: 6px;
     }
     .slot-pill {
-        padding: 7px 14px;
+        padding: 6px 14px;
         border-radius: 20px;
         background: rgba(99,102,241,0.05);
         border: 1px solid rgba(99,102,241,0.15);
         color: var(--text-secondary);
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 600;
         text-decoration: none;
         transition: all 0.2s;
@@ -89,23 +89,23 @@
         justify-content: space-between;
         margin-bottom: 20px;
         flex-wrap: wrap;
-        gap: 14px;
+        gap: 12px;
     }
     .stats-chips {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         flex-wrap: wrap;
     }
     .stat-chip {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 14px;
+        padding: 5px 12px;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        font-size: 13px;
+        border-radius: 6px;
+        font-size: 12.5px;
         color: var(--text-secondary);
     }
     .stat-chip strong {
@@ -126,7 +126,7 @@
         border: none;
         background: transparent;
         color: var(--text-secondary);
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
@@ -139,31 +139,212 @@
         color: white;
     }
 
-    /* SEARCH BAR */
-    .search-bar-wrap {
-        margin-bottom: 16px;
+    /* ════════════════ COMPACT 3-COLUMN CLASSROOM LAYOUT ════════════════ */
+    .room-jumper-bar {
         display: flex;
         align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 16px;
     }
-    .search-input {
-        flex: 1;
-        min-width: 260px;
-        padding: 9px 14px;
-        border-radius: 8px;
-        border: 1px solid var(--border);
+    .room-select-input {
+        padding: 5px 10px;
+        border-radius: 6px;
         background: var(--bg-card);
+        border: 1px solid var(--border);
         color: var(--text-primary);
-        font-size: 13.5px;
+        font-size: 12.5px;
         outline: none;
-        transition: border-color 0.2s;
     }
-    .search-input:focus {
+
+    .room-block {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 30px;
+        padding: 18px 20px 24px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    }
+
+    /* Minimal Room Header */
+    .room-header-simple {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .room-title-text {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .room-badge-tag {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: var(--accent);
+        color: white;
+    }
+    .room-meta-simple {
+        font-size: 12.5px;
+        color: var(--text-muted);
+    }
+
+    /* Minimal Front Board */
+    .classroom-board-simple {
+        max-width: 500px;
+        margin: 0 auto 18px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 12px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+    }
+
+    /* 3-Column Layout */
+    .classroom-3col-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        align-items: start;
+    }
+    @media (max-width: 1150px) {
+        .classroom-3col-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .column-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .column-header {
+        font-size: 11.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        padding: 4px 6px;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 2px;
+    }
+
+    /* Bench Box */
+    .bench-box {
+        background: rgba(255,255,255,0.015);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 7px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .bench-box-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        padding: 0 2px;
+    }
+    .bench-seats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 5px;
+    }
+
+    /* Compact Seat Cell */
+    .seat-cell {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 6px 7px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        transition: border-color 0.15s;
+    }
+    .seat-cell:hover {
         border-color: var(--accent);
     }
-    
-    /* TABLES */
+    .seat-cell-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 9.5px;
+        color: var(--text-muted);
+        font-weight: 600;
+        margin-bottom: 1px;
+    }
+    .seat-roll {
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        font-size: 11.5px;
+        font-weight: 800;
+        color: var(--accent-light);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .seat-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.25;
+    }
+    .seat-dept {
+        font-size: 10px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .seat-subject {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding-top: 2px;
+        margin-top: 2px;
+    }
+
+    /* Empty Seat */
+    .seat-empty {
+        background: transparent;
+        border: 1px dashed rgba(255,255,255,0.12);
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10.5px;
+        color: var(--text-muted);
+        min-height: 70px;
+        text-align: center;
+        padding: 4px;
+    }
+
+    /* ════════════════ EXISTING VIEW STYLES ════════════════ */
     .alloc-table-wrapper {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -199,13 +380,11 @@
     .alloc-table tr:hover td {
         background: var(--bg-card-hover);
     }
-    
     .room-badge {
         font-weight: 700;
         font-size: 14px;
         color: var(--accent-light);
     }
-    
     .code-badge {
         display: inline-block;
         padding: 2px 7px;
@@ -227,7 +406,6 @@
         color: #94a3b8;
         border-color: rgba(100,116,139,0.25);
     }
-    
     .stream-text {
         font-family: system-ui, -apple-system, sans-serif;
         font-size: 12.5px;
@@ -236,7 +414,6 @@
         max-width: 320px;
         word-break: break-word;
     }
-
     .btn-toggle-room {
         padding: 4px 10px;
         border-radius: 6px;
@@ -256,7 +433,6 @@
         color: var(--accent-light);
         border-color: var(--accent);
     }
-
     .room-detail-drawer {
         display: none;
         background: rgba(15,23,42,0.4);
@@ -288,35 +464,29 @@
         border-bottom: 1px solid var(--border);
         color: var(--text-primary);
     }
-    .room-detail-table tr:last-child td {
-        border-bottom: none;
+
+    .search-bar-wrap {
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .search-input {
+        flex: 1;
+        min-width: 260px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 13px;
+        outline: none;
+    }
+    .search-input:focus {
+        border-color: var(--accent);
     }
 
-    /* ROOM CARD SECTION */
-    .room-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        margin-bottom: 24px;
-        overflow: hidden;
-    }
-    .room-card-header {
-        padding: 14px 20px;
-        background: rgba(99,102,241,0.06);
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .room-card-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
     .empty-state {
         text-align: center;
         padding: 60px;
@@ -329,11 +499,11 @@
 
     @media print {
         body { background: #fff; color: #000; }
-        .slot-bar, .top-nav, .view-switcher, .btn-toggle-room, .search-bar-wrap { display: none !important; }
-        .room-detail-drawer { display: table-row !important; }
-        .alloc-table-wrapper { border: none; box-shadow: none; }
-        .alloc-table th, .alloc-table td, .room-detail-table th, .room-detail-table td { color: #000 !important; border-color: #ccc !important; }
-        .code-badge { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; }
+        .slot-bar, .top-nav, .view-switcher, .room-jumper-bar { display: none !important; }
+        .room-block { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+        .bench-box { border-color: #ddd !important; background: #fff !important; }
+        .seat-cell { border-color: #ccc !important; background: #fff !important; color: #000 !important; }
+        .seat-roll { color: #000 !important; }
     }
 </style>
 {% endblock %}
@@ -351,10 +521,10 @@
             <span class="current">Timetable-wise Allocation List</span>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
-            <button onclick="window.print()" class="btn-secondary" style="padding: 8px 14px; font-size:13px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
-                🖨️ Print / Export PDF
+            <button onclick="window.print()" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
+                🖨️ Print Seating Plan
             </button>
-            <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary" style="padding: 8px 16px; font-size:13px; text-decoration:none; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
+            <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; text-decoration:none; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
                 ← Session Overview
             </a>
         </div>
@@ -362,9 +532,9 @@
     
     <!-- FLASH MESSAGES -->
     {% if messages %}
-    <div style="margin-bottom: 24px;">
+    <div style="margin-bottom: 20px;">
         {% for m in messages %}
-        <div style="padding:14px; border-radius:8px; font-size:14px; border:1px solid var(--accent); background:rgba(99,102,241,0.1); color:var(--accent-light); margin-bottom:10px;">
+        <div style="padding:12px; border-radius:8px; font-size:13.5px; border:1px solid var(--accent); background:rgba(99,102,241,0.1); color:var(--accent-light); margin-bottom:10px;">
             {{ m }}
         </div>
         {% endfor %}
@@ -392,7 +562,7 @@
     <div class="control-toolbar">
         <div class="stats-chips">
             <div class="stat-chip">
-                <span>Exam Slot:</span>
+                <span>Slot:</span>
                 <strong>{{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</strong>
             </div>
             <div class="stat-chip">
@@ -400,16 +570,16 @@
                 <strong style="color:var(--accent-light);">{{ total_slot_students }}</strong>
             </div>
             <div class="stat-chip">
-                <span>Total Rooms:</span>
+                <span>Rooms:</span>
                 <strong>{{ rooms|length }}</strong>
             </div>
         </div>
 
         <div class="view-switcher">
-            <button class="view-btn active" id="btn-view-summary" onclick="switchView('summary')">
+            <button class="view-btn" id="btn-view-summary" onclick="switchView('summary')">
                 📊 Stream Overview
             </button>
-            <button class="view-btn" id="btn-view-room-cards" onclick="switchView('room-cards')">
+            <button class="view-btn active" id="btn-view-room-cards" onclick="switchView('room-cards')">
                 🪑 Room-by-Room Plan
             </button>
             <button class="view-btn" id="btn-view-all-students" onclick="switchView('all-students')">
@@ -419,7 +589,7 @@
     </div>
 
     <!-- ════════════════ VIEW 1: STREAM OVERVIEW TABLE ════════════════ -->
-    <div id="view-summary" class="view-panel">
+    <div id="view-summary" class="view-panel" style="display: none;">
         <div class="alloc-table-wrapper">
             <table class="alloc-table">
                 <thead>
@@ -450,7 +620,6 @@
                             </button>
                         </td>
                     </tr>
-                    <!-- INLINE ACCORDION DRAWER -->
                     <tr id="drawer-{{ row.room_number }}" class="room-detail-drawer">
                         <td colspan="8" style="padding: 14px 20px;">
                             <div style="font-weight: 700; margin-bottom: 8px; font-size: 13px; color:var(--accent-light);">
@@ -507,71 +676,119 @@
         </div>
     </div>
 
-    <!-- ════════════════ VIEW 2: ROOM-BY-ROOM PLAN CARDS ════════════════ -->
-    <div id="view-room-cards" class="view-panel" style="display: none;">
-        {% for row in rooms %}
-        <div class="room-card">
-            <div class="room-card-header">
-                <div class="room-card-title">
-                    <span class="room-badge">Room {{ row.room_number }}</span>
-                    <span style="color:var(--text-secondary); font-size:13px; font-weight:500;">— {{ row.total_students }} Students Allocated</span>
+    <!-- ════════════════ VIEW 2: MINIMAL 3-COLUMN CLASSROOM LAYOUT ════════════════ -->
+    <div id="view-room-cards" class="view-panel">
+        
+        <!-- QUICK ROOM JUMPER -->
+        <div class="room-jumper-bar">
+            <label for="room-jumper-sel" style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Jump to Room:</label>
+            <select id="room-jumper-sel" class="room-select-input" onchange="jumpToRoom(this.value)">
+                <option value="">-- All Rooms ({{ rooms|length }}) --</option>
+                {% for r in rooms %}
+                <option value="room-block-{{ r.room_number }}">Room {{ r.room_number }} ({{ r.total_students }} students)</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- EACH ROOM AS A 3-COLUMN CLASSROOM -->
+        {% for r in rooms %}
+        <div class="room-block" id="room-block-{{ r.room_number }}">
+            
+            <!-- Minimal Room Header -->
+            <div class="room-header-simple">
+                <div class="room-title-text">
+                    <span>Room {{ r.room_number }}</span>
+                    <span class="room-badge-tag">{{ r.total_students }} Students</span>
                 </div>
-                <div style="font-size: 12.5px; color: var(--text-muted);">
-                    {{ row.exam_date|date:"d-m-Y" }} ({{ row.session }})
+                <div class="room-meta-simple">
+                    <span>{{ r.total_benches }} Benches · {{ r.exam_date|date:"d-m-Y" }} ({{ r.session }})</span>
                 </div>
             </div>
-            <div style="padding: 12px 16px; background: rgba(0,0,0,0.1); border-bottom: 1px solid var(--border); font-size: 12.5px; display: flex; gap: 24px; flex-wrap: wrap;">
-                <div><strong style="color:var(--text-secondary);">Stream A:</strong> {{ row.stream_a }}</div>
-                <div><strong style="color:var(--text-secondary);">Stream B:</strong> {{ row.stream_b }}</div>
-                <div><strong style="color:var(--text-secondary);">Stream C:</strong> {{ row.stream_c }}</div>
+
+            <!-- Front / Blackboard Bar -->
+            <div class="classroom-board-simple">
+                ▲ FRONT / BOARD ▲
             </div>
-            <div style="overflow-x: auto;">
-                <table class="alloc-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 70px;">Bench</th>
-                            <th style="width: 140px;">Seat / Stream</th>
-                            <th style="width: 140px;">Roll Number</th>
-                            <th>Student Name</th>
-                            <th style="width: 110px;">Dept / Class</th>
-                            <th style="width: 150px;">Subject Code</th>
-                            <th>Subject Name</th>
-                            <th style="width: 100px;">Category</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for st in row.students %}
-                        <tr>
-                            <td style="font-weight: 600;">Bench {{ st.bench_number }}</td>
-                            <td>
-                                <span style="font-weight: 600; color:var(--accent-light);">Seat {{ st.seat_number }}</span>
-                                <span style="color:var(--text-muted); font-size: 11.5px;">({{ st.stream_name }})</span>
-                            </td>
-                            <td style="font-family: monospace; font-weight: 700;">{{ st.roll_number }}</td>
-                            <td style="font-weight: 500;">{{ st.student_name }}</td>
-                            <td>{{ st.department }}{% if st.class_name %} <span style="color:var(--text-muted); font-size:11.5px;">({{ st.class_name }})</span>{% endif %}</td>
-                            <td>
-                                <span class="code-badge {% if st.is_special %}special-badge{% else %}normal-badge{% endif %}">
-                                                {{ st.subject_code }}
-                                </span>
-                            </td>
-                            <td>{{ st.subject_name }}</td>
-                            <td>
-                                {% if st.is_special %}
-                                <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: #10b981; font-weight: 600;">
-                                    {{ st.category }}
-                                </span>
-                                {% else %}
-                                <span style="font-size: 11px; color: var(--text-muted);">Normal</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+            <!-- Exactly 3 Bench Columns -->
+            <div class="classroom-3col-grid">
+                {% for col in r.columns %}
+                <div class="column-wrap">
+                    <div class="column-header">{{ col.title }}</div>
+                    
+                    {% for bench in col.benches %}
+                    <div class="bench-box">
+                        <div class="bench-box-title">
+                            <span>Bench {{ bench.bench_number }}</span>
+                            <span style="font-size:9.5px; opacity:0.6;">Seat 1 · Seat 2 · Seat 3</span>
+                        </div>
+                        <div class="bench-seats-grid">
+                            
+                            <!-- SEAT 1 -->
+                            {% if bench.seat_1 %}
+                            <div class="seat-cell">
+                                <div class="seat-cell-header">
+                                    <span>S1</span>
+                                    <span>{{ bench.seat_1.department }}</span>
+                                </div>
+                                <div class="seat-roll" title="{{ bench.seat_1.roll_number }}">{{ bench.seat_1.roll_number }}</div>
+                                <div class="seat-name" title="{{ bench.seat_1.student_name }}">{{ bench.seat_1.student_name }}</div>
+                                <div class="seat-dept">{% if bench.seat_1.class_name %}{{ bench.seat_1.class_name }}{% else %}{{ bench.seat_1.department }}{% endif %}</div>
+                                <div class="seat-subject" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">
+                                    {{ bench.seat_1.subject_code }}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="seat-empty">Empty</div>
+                            {% endif %}
+
+                            <!-- SEAT 2 -->
+                            {% if bench.seat_2 %}
+                            <div class="seat-cell">
+                                <div class="seat-cell-header">
+                                    <span>S2</span>
+                                    <span>{{ bench.seat_2.department }}</span>
+                                </div>
+                                <div class="seat-roll" title="{{ bench.seat_2.roll_number }}">{{ bench.seat_2.roll_number }}</div>
+                                <div class="seat-name" title="{{ bench.seat_2.student_name }}">{{ bench.seat_2.student_name }}</div>
+                                <div class="seat-dept">{% if bench.seat_2.class_name %}{{ bench.seat_2.class_name }}{% else %}{{ bench.seat_2.department }}{% endif %}</div>
+                                <div class="seat-subject" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">
+                                    {{ bench.seat_2.subject_code }}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="seat-empty">Empty</div>
+                            {% endif %}
+
+                            <!-- SEAT 3 -->
+                            {% if bench.seat_3 %}
+                            <div class="seat-cell">
+                                <div class="seat-cell-header">
+                                    <span>S3</span>
+                                    <span>{{ bench.seat_3.department }}</span>
+                                </div>
+                                <div class="seat-roll" title="{{ bench.seat_3.roll_number }}">{{ bench.seat_3.roll_number }}</div>
+                                <div class="seat-name" title="{{ bench.seat_3.student_name }}">{{ bench.seat_3.student_name }}</div>
+                                <div class="seat-dept">{% if bench.seat_3.class_name %}{{ bench.seat_3.class_name }}{% else %}{{ bench.seat_3.department }}{% endif %}</div>
+                                <div class="seat-subject" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">
+                                    {{ bench.seat_3.subject_code }}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="seat-empty">Empty</div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                </div>
+                {% endfor %}
             </div>
+
         </div>
         {% endfor %}
+
     </div>
 
     <!-- ════════════════ VIEW 3: ALL STUDENTS FLAT TABLE ════════════════ -->
@@ -653,6 +870,14 @@ function switchView(mode) {
     } else if (mode === 'all-students') {
         document.getElementById('view-all-students').style.display = 'block';
         document.getElementById('btn-view-all-students').classList.add('active');
+    }
+}
+
+function jumpToRoom(elementId) {
+    if (!elementId) return;
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 

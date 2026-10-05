@@ -490,15 +490,50 @@ def session_allocation_result(request, session_id):
 
         for room, records in room_allocs.items():
             records.sort(key=lambda x: (x['bench_number'], x['seat_number']))
+
+            # Group into 3-seat benches for realistic classroom seating layout
+            bench_map = defaultdict(dict)
+            for r in records:
+                bench_map[r['bench_number']][r['seat_number']] = r
+
+            max_bench = max((r['bench_number'] for r in records), default=0)
+            benches = []
+            for b_num in range(1, max_bench + 1):
+                benches.append({
+                    'bench_number': b_num,
+                    'seat_1': bench_map[b_num].get(1),
+                    'seat_2': bench_map[b_num].get(2),
+                    'seat_3': bench_map[b_num].get(3),
+                })
+
+            # Divide benches into exactly 3 columns (Col 1: B1-B5, Col 2: B6-B10, Col 3: B11-B15)
+            col1 = [b for b in benches if 1 <= b['bench_number'] <= 5]
+            col2 = [b for b in benches if 6 <= b['bench_number'] <= 10]
+            col3 = [b for b in benches if 11 <= b['bench_number'] <= 15]
+            extra = [b for b in benches if b['bench_number'] > 15]
+            if extra:
+                col3.extend(extra)
+
+            columns = []
+            if col1:
+                columns.append({'title': 'Column 1 (Benches 1–5)', 'benches': col1})
+            if col2:
+                columns.append({'title': 'Column 2 (Benches 6–10)', 'benches': col2})
+            if col3:
+                columns.append({'title': 'Column 3 (Benches 11–15)', 'benches': col3})
+
             rooms_data[room.room_number] = {
                 'room_id': room.room_id,
                 'room_number': room.room_number,
                 'total_students': len(records),
+                'total_benches': max_bench,
                 'stream_a': get_stream_summary(records, 1),
                 'stream_b': get_stream_summary(records, 2),
                 'stream_c': get_stream_summary(records, 3),
                 'exam_date': selected_slot['date'],
                 'session': selected_slot['shift'],
+                'benches': benches,
+                'columns': columns,
                 'students': records,
             }
 
