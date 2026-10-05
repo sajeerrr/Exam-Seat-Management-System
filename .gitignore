@@ -59,8 +59,8 @@ media/
 staticfiles/
 
 # Test files
-test_*.py
-*_test.py
+# test_*.py
+# *_test.py
 
 # Editor/IDE
 .vscode/

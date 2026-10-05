@@ -385,7 +385,7 @@ class StudentPDFParserTests(TestCase):
         result = import_students(res, session)
         self.assertEqual(result["students_created"], 36)
         lakshmi = Student.objects.get(student_name="LAKSHMI RAJESHKUMAR")
-        self.assertEqual(lakshmi.roll_number, "")  # Blank in database as well
+        self.assertEqual(lakshmi.roll_number, "TKM20AR032")  # Fallback to uni_reg_no
         self.assertEqual(lakshmi.uni_reg_no, "TKM20AR032")
 
     def test_parse_student_pdf_barch_2k22_a(self):
@@ -413,6 +413,9 @@ class StudentPDFParserTests(TestCase):
         result = import_students(res, session)
         self.assertEqual(result["students_created"], 40)
         aiswariya = Student.objects.get(student_name="AISWARIYA S S")
-        self.assertEqual(aiswariya.roll_number, "")  # Blank in database as well
+        self.assertEqual(aiswariya.roll_number, "KTE21AR004")  # Fallback to uni_reg_no
         self.assertEqual(aiswariya.uni_reg_no, "KTE21AR004")
 
+
+
+from tests.test_special_subject_allocation import SpecialSubjectAllocationEngineTests

@@ -33,6 +33,19 @@ def django_registration_to_engine_student(registration):
     department = student_class.department
 
     reg_no = student.roll_number or student.uni_reg_no or student.admission_no or str(student.student_id)
+
+    category = "NORMAL"
+    if hasattr(registration, "category") and registration.category:
+        category = registration.category
+    elif hasattr(registration, "subject_category") and registration.subject_category:
+        category = registration.subject_category
+    elif hasattr(exam, "subject_category") and exam.subject_category:
+        category = exam.subject_category
+    elif hasattr(exam.subject, "elective_type") and exam.subject.elective_type:
+        category = exam.subject.elective_type
+    elif hasattr(exam.subject, "subject_category") and exam.subject.subject_category:
+        category = exam.subject.subject_category
+
     return EngineStudent(
         register_no=reg_no,
         name=student.student_name,
@@ -44,6 +57,30 @@ def django_registration_to_engine_student(registration):
         exam_date=exam.exam_date.strftime("%d-%m-%Y"),
         session=exam.session,
         roll_no=student.roll_number,
+        subject_category=category,
+    )
+
+
+def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session="FN"):
+    dept = reg.department
+    if not dept and reg.student and reg.student.student_class:
+        dept = reg.student.student_class.department.department_code
+    sem = 0
+    if reg.student and reg.student.student_class:
+        sem = reg.student.student_class.semester
+    sec = get_section(reg.class_name) if reg.class_name else ""
+    return EngineStudent(
+        register_no=reg.roll_number,
+        name=reg.student_name,
+        department=dept or "GEN",
+        semester=sem,
+        section=sec,
+        subject_code=reg.elective_subject.subject_code,
+        subject_name=reg.elective_subject.subject_name,
+        exam_date=exam_date,
+        session=session,
+        roll_no=reg.roll_number,
+        subject_category=reg.elective_subject.elective_type or "ELECTIVE",
     )
 
 
