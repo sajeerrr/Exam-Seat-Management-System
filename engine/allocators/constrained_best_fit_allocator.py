@@ -144,7 +144,9 @@ class ConstrainedBestFitAllocator:
 
                 valid_candidates = []
                 for g in special_groups:
-                    if not room.can_add_department(g.department, is_fallback_pass=True):
+                    nxt = g.allocated_count
+                    cand_dept = g.students[nxt].department if nxt < len(g.students) else g.department
+                    if not room.can_add_department(cand_dept, is_fallback_pass=True):
                         continue
 
                     if not room.can_seat_special_subject(s_name, b_no, g.subject_code):
@@ -187,7 +189,9 @@ class ConstrainedBestFitAllocator:
                                 if d < min_d:
                                     min_d = d
 
-                    dept_bonus = 1 if g.department in room.departments else 0
+                    nxt = g.allocated_count
+                    cand_d = g.students[nxt].department if nxt < len(g.students) else g.department
+                    dept_bonus = 1 if cand_d in room.departments else 0
                     return (-c_pair_bonus, -g.remaining_count, -dept_bonus, -min_d, g.subject_code)
 
                 valid_candidates.sort(key=candidate_score)

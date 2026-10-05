@@ -267,29 +267,8 @@ def _parse_exam_row(row, headers, default_program, default_semester) -> ExamReco
 
 
 def _parse_semester(value) -> int | None:
-
-    if value is None:
-        return None
-
-    if isinstance(value, int):
-        return value
-
-    if isinstance(value, float):
-        if value.is_integer():
-            return int(value)
-
-    text = str(value).strip()
-
-    match = re.search(
-        r"S?\s*(\d+)",
-        text,
-        re.IGNORECASE,
-    )
-
-    if not match:
-        return None
-
-    return int(match.group(1))
+    from exam_allocator.services.registration_service import parse_semester_flexible
+    return parse_semester_flexible(value)
 
 
 def _parse_date(value) -> date | None:

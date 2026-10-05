@@ -179,9 +179,10 @@ def save_session_seat_plan(
     rooms = {room.room_number: room for room in Room.objects.filter(session=session)}
 
     registrations = {}
+    reg_by_roll = {}
 
     for registration in ExamRegistration.objects.filter(
-        exam__subject__session=session
+        exam__in=exams
     ).select_related(
         "student",
         "exam",
@@ -193,8 +194,12 @@ def save_session_seat_plan(
             registration.exam.session,
             registration.student.roll_number,
         )
-
         registrations[key] = registration
+        reg_by_roll[(
+            registration.exam.exam_date.strftime("%d-%m-%Y"),
+            registration.exam.session,
+            registration.student.roll_number,
+        )] = registration
 
     allocations = []
     exams_in_this_slot = set()
@@ -222,15 +227,6 @@ def save_session_seat_plan(
 
         exam = exam_lookup.get(exam_key)
 
-        if exam is None:
-            raise SessionAllocationError(
-                "Could not match engine student to Django exam: "
-                f"{student.register_no} / "
-                f"{student.subject_code} / "
-                f"{student.exam_date} / "
-                f"{student.session}"
-            )
-
         registration_key = (
             student.subject_code,
             student.exam_date,
@@ -239,6 +235,8 @@ def save_session_seat_plan(
         )
 
         registration = registrations.get(registration_key)
+        if registration is None:
+            registration = reg_by_roll.get((student.exam_date, student.session, student.register_no))
 
         if registration is None:
             raise SessionAllocationError(
@@ -246,6 +244,9 @@ def save_session_seat_plan(
                 f"{student.register_no} / "
                 f"{student.subject_code}"
             )
+
+        if exam is None:
+            exam = registration.exam
 
         if seat.stream not in stream_to_seat_number:
             raise SessionAllocationError(f"Unknown engine stream: {seat.stream}")

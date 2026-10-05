@@ -343,8 +343,37 @@ def session_allocation_result(request, session_id):
         )
         total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
         if total_regs == 0:
+            from exam_allocator.services.registration_service import create_exam_registrations
+            for ex in exams_in_slot:
+                create_exam_registrations(ex)
+            total_regs = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
+
+        if total_regs == 0:
             missing_data_reason = "No students are currently registered for the exams during this specific slot. This typically happens because the student list Excel files for the matching classes (like Semester 8) were not uploaded in the Import Data step!"
-        
+        else:
+            # If registrations exist but allocations do not yet exist for this slot, run allocation on the fly
+            existing_allocs = Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=selected_slot['date'],
+                exam__session=selected_slot['shift']
+            ).count()
+            if existing_allocs == 0:
+                try:
+                    from exam_allocator.services.session_allocation_service import (
+                        _get_session_rooms, _allocate_slot, save_session_seat_plan
+                    )
+                    from exam_allocator.services.engine_adapter import get_engine_students
+                    slot_students = []
+                    for ex in exams_in_slot:
+                        slot_students.extend(get_engine_students(ex))
+                    rooms = _get_session_rooms(session)
+                    slot_tuple = (selected_slot['date'], selected_slot['shift'])
+                    seat_plan = _allocate_slot(session, slot_tuple, slot_students, rooms)
+                    if seat_plan:
+                        save_session_seat_plan(session, seat_plan, list(exams_in_slot))
+                except Exception as exc:
+                    pass
+
         # Fetch ALL allocations in this slot
         allocations = (
             Allocation.objects.filter(

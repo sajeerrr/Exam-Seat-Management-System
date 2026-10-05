@@ -198,10 +198,8 @@ def _parse_class_sheet(worksheet):
         cls_val = safe_get(idx_cls)
         dept_val = safe_get(idx_dept)
         sem_val_str = safe_get(idx_sem)
-        try:
-            sem_val = int(sem_val_str) if sem_val_str.isdigit() else (int(sem_val_str.replace("S", "")) if sem_val_str.startswith("S") and sem_val_str[1:].isdigit() else 0)
-        except:
-            sem_val = 0
+        from exam_allocator.services.registration_service import parse_semester_flexible
+        sem_val = parse_semester_flexible(sem_val_str) or parse_semester_flexible(cls_val) or 0
             
         sl_no = safe_get(idx_slno)
         adm_no = safe_get(idx_adm)
