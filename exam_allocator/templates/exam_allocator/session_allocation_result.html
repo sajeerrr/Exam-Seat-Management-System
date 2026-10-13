@@ -692,6 +692,11 @@
             <span class="current">Timetable-wise Allocation List</span>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
+            {% if selected_slot %}
+            <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; text-decoration:none; border-radius:6px; border:1px solid var(--accent); background:rgba(99,102,241,0.1); color:var(--accent-light); font-weight:600;">
+                📐 Department Blueprint
+            </a>
+            {% endif %}
             <button onclick="window.print()" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
                 🖨️ Print Seating Plan
             </button>
@@ -699,6 +704,7 @@
                 ← Session Overview
             </a>
         </div>
+
     </nav>
     
     <!-- FLASH MESSAGES -->

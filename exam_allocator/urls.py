@@ -20,10 +20,19 @@ urlpatterns = [
     # ── Exams / Allocation ────────────────────────────────────────────────
     path("session/<int:session_id>/exams/", views.exam_list, name="session_exam_list"),
     path("session/<int:session_id>/registrations/generate/", views.generate_registrations, name="generate_registrations"),
+    path("session/<int:session_id>/blueprint/", views.blueprint_review, name="blueprint_review"),
     path("session/<int:session_id>/allocations/", views.session_allocation_result, name="session_allocation_result"),
     path("session/<int:session_id>/allocate/", views.generate_session_allocation, name="generate_session_allocation"),
     path("exam/<int:exam_id>/generate/", views.generate_allocation, name="generate_allocation"),
     path("exam/<int:exam_id>/allocations/", views.allocation_list, name="allocation_list"),
+
+    # ── Blueprint API ─────────────────────────────────────────────────────
+    path("api/session/<int:session_id>/blueprint/allocate/", views.api_blueprint_allocate, name="api_blueprint_allocate"),
+    path("api/session/<int:session_id>/blueprint/validate/", views.api_blueprint_validate, name="api_blueprint_validate"),
+    path("api/session/<int:session_id>/blueprint/move/", views.api_blueprint_move, name="api_blueprint_move"),
+    path("api/session/<int:session_id>/blueprint/finalize/", views.api_blueprint_finalize, name="api_blueprint_finalize"),
+    path("api/session/<int:session_id>/blueprint/unfinalize/", views.api_blueprint_unfinalize, name="api_blueprint_unfinalize"),
+    path("api/session/<int:session_id>/blueprint/generate-seats/", views.api_blueprint_generate_seats, name="api_blueprint_generate_seats"),
 
     # ── Data API ──────────────────────────────────────────────────────────
     path("api/class/<int:class_id>/students/", views.api_class_students, name="api_class_students"),

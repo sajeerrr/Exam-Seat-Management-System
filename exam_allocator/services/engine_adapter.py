@@ -60,7 +60,7 @@ def django_registration_to_engine_student(registration):
     student_class = student.student_class
     department = student_class.department
 
-    reg_no = student.roll_number or student.uni_reg_no or student.admission_no or str(student.student_id)
+    roll = (student.roll_number or str(student.student_id)).strip()
 
     subj_code = exam.subject.subject_code
     subj_name = exam.subject.subject_name
@@ -93,7 +93,7 @@ def django_registration_to_engine_student(registration):
         category = exam.subject.subject_category
 
     return EngineStudent(
-        register_no=reg_no,
+        register_no=roll,
         name=student.student_name,
         department=department.department_code,
         semester=student_class.semester,
@@ -102,7 +102,7 @@ def django_registration_to_engine_student(registration):
         subject_name=subj_name,
         exam_date=exam.exam_date.strftime("%d-%m-%Y"),
         session=exam.session,
-        roll_no=student.roll_number,
+        roll_no=roll,
         subject_category=category,
     )
 
@@ -140,10 +140,7 @@ def get_engine_students(exam):
             "exam",
             "exam__subject",
         )
-        .order_by(
-            "student__student_class__class_name",
-            "student__roll_number",
-        )
+        .order_by("student__roll_number")
     )
 
     return [

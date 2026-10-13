@@ -53,6 +53,8 @@ class AllocationLimits:
     # Maximum departments per room
     MAX_DEPARTMENTS_NORMAL: int = 3
     MAX_DEPARTMENTS_FALLBACK: int = 4
+    MAX_DEPARTMENTS_PER_ROOM: int = 4
+
 
     # Stream capacity (students per stream/column)
     DEFAULT_STREAM_CAPACITY: int = 15

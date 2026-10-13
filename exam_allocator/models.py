@@ -372,3 +372,109 @@ class ElectiveStudentRegistration(models.Model):
 
     def __str__(self):
         return f"{self.roll_number} -> {self.elective_subject.subject_code}"
+
+
+class SlotBlueprint(models.Model):
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        NEEDS_REVIEW = "NEEDS_REVIEW", "Needs Review"
+        VALIDATED = "VALIDATED", "Validated"
+        FINALIZED = "FINALIZED", "Finalized"
+        SEATS_GENERATED = "SEATS_GENERATED", "Seats Generated"
+
+    blueprint_id = models.AutoField(primary_key=True)
+    session = models.ForeignKey(
+        AllocationSession,
+        on_delete=models.CASCADE,
+        related_name="slot_blueprints",
+    )
+    exam_date = models.DateField()
+    shift = models.CharField(max_length=10)  # "FN" or "AN"
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    version = models.PositiveIntegerField(default=1)
+    total_eligible_students = models.PositiveIntegerField(default=0)
+    total_allocated_students = models.PositiveIntegerField(default=0)
+    unallocated_count = models.PositiveIntegerField(default=0)
+    duplicate_count = models.PositiveIntegerField(default=0)
+    rooms_used = models.PositiveIntegerField(default=0)
+    total_room_capacity = models.PositiveIntegerField(default=0)
+    remaining_capacity = models.PositiveIntegerField(default=0)
+    pattern_distribution = models.CharField(max_length=100, blank=True, default="")
+    department_scattering = models.PositiveIntegerField(default=0)
+    room_utilization = models.FloatField(default=0.0)
+    validation_errors = models.JSONField(default=list, blank=True)
+    validation_warnings = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "exam_date", "shift"],
+                name="unique_slot_blueprint_per_session",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.session.name} - {self.exam_date} {self.shift} ({self.status} v{self.version})"
+
+
+class RoomBlueprint(models.Model):
+    room_blueprint_id = models.AutoField(primary_key=True)
+    slot_blueprint = models.ForeignKey(
+        SlotBlueprint,
+        on_delete=models.CASCADE,
+        related_name="room_blueprints",
+    )
+    room = models.ForeignKey(
+        Room,
+        on_delete=models.PROTECT,
+        related_name="slot_blueprints",
+    )
+    room_order = models.PositiveIntegerField(default=0)
+    pattern = models.CharField(max_length=20, default="ABC")
+    capacity = models.PositiveIntegerField(default=45)
+    total_students = models.PositiveIntegerField(default=0)
+    unused_capacity = models.PositiveIntegerField(default=0)
+    department_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["room_order", "room__room_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["slot_blueprint", "room"],
+                name="unique_room_per_slot_blueprint",
+            )
+        ]
+
+    def __str__(self):
+        return f"Room {self.room.room_number} ({self.pattern}) in Blueprint {self.slot_blueprint_id}"
+
+
+class StreamBlueprintAssignment(models.Model):
+    assignment_id = models.AutoField(primary_key=True)
+    room_blueprint = models.ForeignKey(
+        RoomBlueprint,
+        on_delete=models.CASCADE,
+        related_name="stream_assignments",
+    )
+    stream_name = models.CharField(max_length=5)  # "A", "B", "C"
+    department_code = models.CharField(max_length=50, blank=True, default="")
+    class_name = models.CharField(max_length=100, blank=True, default="")
+    subject_code = models.CharField(max_length=50, blank=True, default="")
+    subject_name = models.CharField(max_length=200, blank=True, default="")
+    subject_category = models.CharField(max_length=50, default="NORMAL")
+    student_count = models.PositiveIntegerField(default=0)
+    student_rolls = models.JSONField(default=list, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["stream_name", "order", "assignment_id"]
+
+    def __str__(self):
+        return f"Room {self.room_blueprint.room.room_number} Stream {self.stream_name}: {self.subject_code or self.department_code} ({self.student_count})"
+

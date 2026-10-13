@@ -228,21 +228,23 @@ def save_session_seat_plan(
 
         exam = exam_lookup.get(exam_key)
 
+        roll = student.roll_no or student.register_no
+
         registration_key = (
             student.subject_code,
             student.exam_date,
             student.session,
-            student.register_no,
+            roll,
         )
 
         registration = registrations.get(registration_key)
         if registration is None:
-            registration = reg_by_roll.get((student.exam_date, student.session, student.register_no))
+            registration = reg_by_roll.get((student.exam_date, student.session, roll))
 
         if registration is None:
             raise SessionAllocationError(
                 "Student is not registered for the expected exam: "
-                f"{student.register_no} / "
+                f"{roll} / "
                 f"{student.subject_code}"
             )
 

@@ -54,7 +54,7 @@ class GroupBuilder:
                 sections = sorted(set(s.section for s in bucket if s.section))
                 section_label = "".join(sections)
 
-            bucket.sort(key=lambda s: (s.section, s.roll_no or s.register_no))
+            bucket.sort(key=lambda s: (s.roll_no or s.register_no))
 
             group = Group(
                 group_id=group_id,

@@ -1,3 +1,5 @@
+import math
+from collections import defaultdict
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Prefetch
@@ -6,7 +8,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_POST
-from collections import defaultdict
 
 
 from .models import (
@@ -576,7 +577,314 @@ def session_allocation_result(request, session_id):
         },
     )
 
+
+# ── Blueprint Views & APIs (Two-Stage Allocation) ──────────────────────────
+
+def blueprint_review(request, session_id):
+    """
+    Stage B: Display and review the editable room-by-room department blueprint
+    for the selected exam slot.
+    """
+    from exam_allocator.models import SlotBlueprint, RoomBlueprint, StreamBlueprintAssignment, Room, Exam, Allocation
+    from exam_allocator.services.blueprint_service import BlueprintService
+
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+
+    # Fetch available Date-Session slots
+    exam_slots = (
+        Exam.objects.filter(subject__session=session)
+        .order_by("exam_date", "session")
+        .values("exam_date", "session")
+        .distinct()
+    )
+
+    slots = [
+        {"date": slot["exam_date"], "shift": slot["session"]}
+        for slot in exam_slots
+    ]
+
+    date_filter = request.GET.get("date")
+    shift_filter = request.GET.get("shift")
+
+    selected_slot = None
+    if date_filter and shift_filter:
+        for s in slots:
+            if str(s["date"]) == date_filter and s["shift"] == shift_filter:
+                selected_slot = s
+                break
+
+    if not selected_slot and slots:
+        selected_slot = slots[0]
+
+    blueprint = None
+    rooms_data = []
+    has_physical_seats = False
+    all_rooms = list(Room.objects.filter(session=session).order_by("room_number"))
+
+    if selected_slot:
+        blueprint = SlotBlueprint.objects.filter(
+            session=session,
+            exam_date=selected_slot["date"],
+            shift=selected_slot["shift"],
+        ).first()
+
+        # Check if physical allocations exist for this slot
+        has_physical_seats = Allocation.objects.filter(
+            exam__subject__session=session,
+            exam__exam_date=selected_slot["date"],
+            exam__session=selected_slot["shift"],
+        ).exists()
+
+        if blueprint:
+            rbs = (
+                blueprint.room_blueprints.all()
+                .select_related("room")
+                .prefetch_related("stream_assignments")
+                .order_by("room_order")
+            )
+            for rb in rbs:
+                assignments_by_stream = {"A": [], "B": [], "C": []}
+                stream_totals = {"A": 0, "B": 0, "C": 0}
+                all_stream_assignments = list(rb.stream_assignments.all())
+
+                for sa in all_stream_assignments:
+                    assignments_by_stream[sa.stream_name].append(sa)
+                    stream_totals[sa.stream_name] += sa.student_count
+
+                rooms_data.append({
+                    "room_blueprint_id": rb.room_blueprint_id,
+                    "room": rb.room,
+                    "room_number": rb.room.room_number,
+                    "room_order": rb.room_order,
+                    "pattern": rb.pattern,
+                    "capacity": rb.capacity,
+                    "total_students": rb.total_students,
+                    "unused_capacity": rb.unused_capacity,
+                    "department_count": rb.department_count,
+                    "stream_a": assignments_by_stream["A"],
+                    "stream_b": assignments_by_stream["B"],
+                    "stream_c": assignments_by_stream["C"],
+                    "stream_a_count": stream_totals["A"],
+                    "stream_b_count": stream_totals["B"],
+                    "stream_c_count": stream_totals["C"],
+                    "all_assignments": all_stream_assignments,
+                })
+
+    return render(
+        request,
+        "exam_allocator/blueprint_review.html",
+        {
+            "session": session,
+            "slots": slots,
+            "selected_slot": selected_slot,
+            "blueprint": blueprint,
+            "rooms_data": rooms_data,
+            "has_physical_seats": has_physical_seats,
+            "available_rooms": all_rooms,
+        },
+    )
+
+
+def api_blueprint_allocate(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    session = get_object_or_404(AllocationSession, session_id=session_id)
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    exam_date = data.get("date")
+    shift = data.get("shift")
+    force = bool(data.get("force", False))
+
+    if not exam_date or not shift:
+        return JsonResponse({"success": False, "error": "Exam date and shift are required."}, status=400)
+
+    try:
+        blueprint = BlueprintService.allocate_departments_for_slot(
+            session=session,
+            exam_date=exam_date,
+            shift=shift,
+            force_reallocate=force,
+        )
+        return JsonResponse({
+            "success": True,
+            "blueprint_id": blueprint.blueprint_id,
+            "status": blueprint.status,
+            "version": blueprint.version,
+            "allocated_students": blueprint.total_allocated_students,
+        })
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_validate(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    is_valid, errors, warnings, stats = BlueprintService.validate_blueprint(blueprint)
+    blueprint.save()
+
+    return JsonResponse({
+        "success": True,
+        "is_valid": is_valid,
+        "status": blueprint.status,
+        "errors": errors,
+        "warnings": warnings,
+        "stats": stats,
+    })
+
+
+def api_blueprint_move(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+    target_room_id = data.get("target_room_id")
+    target_stream = data.get("target_stream")
+    reject_invalid = data.get("reject_invalid", True)
+    if isinstance(reject_invalid, str):
+        reject_invalid = reject_invalid.lower() in ("true", "1", "yes")
+
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    try:
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+            target_room_id=int(target_room_id),
+            target_stream=str(target_stream).upper(),
+            reject_invalid=reject_invalid,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_finalize(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintValidationError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    try:
+        bp = BlueprintService.finalize_blueprint(blueprint)
+        return JsonResponse({
+            "success": True,
+            "status": bp.status,
+            "version": bp.version,
+        })
+    except BlueprintValidationError as exc:
+        return JsonResponse({"success": False, "errors": exc.errors}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=500)
+
+
+def api_blueprint_unfinalize(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    bp = BlueprintService.unfinalize_blueprint(blueprint)
+    return JsonResponse({
+        "success": True,
+        "status": bp.status,
+    })
+
+
+def api_blueprint_generate_seats(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    try:
+        allocations = BlueprintService.generate_seats_from_blueprint(blueprint)
+        return JsonResponse({
+            "success": True,
+            "status": blueprint.status,
+            "allocations_count": len(allocations),
+        })
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal seat generation error: {exc}"}, status=500)
+
+
 def generate_allocation(request, exam_id):
+
 
     if request.method != "POST":
         return JsonResponse(

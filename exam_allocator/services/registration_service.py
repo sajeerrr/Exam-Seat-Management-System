@@ -11,6 +11,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from django.db import transaction
+from django.db.models import Q
 
 from exam_allocator.models import (
     Exam,
@@ -168,10 +169,15 @@ def resolve_exam_branches(exam: Exam) -> list[str]:
 def _resolve_elective_students(exam: Exam) -> list[Student]:
     session = exam.subject.session
     code = exam.subject.subject_code.strip()
+    clean_code = re.sub(r"_[A-Za-z0-9]+$", "", code)
     elective_regs = list(
         ElectiveStudentRegistration.objects.filter(
-            elective_subject__group__session=session,
-            elective_subject__subject_code__iexact=code
+            Q(elective_subject__group__session=session)
+            & (
+                Q(elective_subject__subject_code__iexact=code)
+                | Q(elective_subject__subject_code__iexact=clean_code)
+                | Q(elective_subject__subject_code__istartswith=f"{clean_code}_")
+            )
         ).select_related("student", "elective_subject")
     )
     if not elective_regs:
@@ -247,7 +253,7 @@ def preview_exam_registration(exam: Exam) -> RegistrationPreview:
     all_students = (
         Student.objects.filter(student_class__department__session=session)
         .select_related("student_class", "student_class__department")
-        .order_by("student_class__class_name", "roll_number")
+        .order_by("roll_number")
     )
 
     for student in all_students:

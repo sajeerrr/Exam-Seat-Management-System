@@ -597,6 +597,11 @@
                     </button>
                 </form>
 
+                <a class="btn-secondary" href="{% url 'exam_allocator:blueprint_review' session.session_id %}"
+                    id="view-blueprint-btn" style="border-color: var(--accent); color: var(--accent-light);">
+                    📐 Department Blueprint (Two-Stage)
+                </a>
+
                 {% if allocations_count %}
                 <a class="btn-secondary" href="{% url 'exam_allocator:session_allocation_result' session.session_id %}"
                     id="view-allocations-btn">
@@ -604,6 +609,7 @@
                 </a>
                 {% endif %}
             </div>
+
 
         </div>
     </div>
