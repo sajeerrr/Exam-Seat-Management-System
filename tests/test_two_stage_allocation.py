@@ -593,3 +593,198 @@ class TwoStageAllocationTests(TestCase):
         self.assertEqual(SlotBlueprint.objects.filter(exam_date=self.exam_date, shift=self.shift).count(), 0)
         self.assertEqual(Allocation.objects.filter(exam__exam_date=self.exam_date, exam__session=self.shift).count(), 0)
 
+    # ── Test 27: Drag-and-drop move API updates and returns serialized rooms ──
+    def test_27_drag_and_drop_move_api_updates_and_returns_serialized_rooms(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign = rb1.stream_assignments.filter(stream_name="C").first()
+        self.assertIsNotNone(assign)
+
+        url = reverse("exam_allocator:api_blueprint_move", kwargs={"session_id": self.session.session_id})
+        response = self.client.post(
+            url,
+            data={
+                "blueprint_id": bp.blueprint_id,
+                "assignment_id": assign.assignment_id,
+                "target_room_id": self.room2.room_id,
+                "target_stream": "A",
+                "reject_invalid": True,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertFalse(data["rejected"])
+        self.assertIn("rooms", data)
+        self.assertGreaterEqual(len(data["rooms"]), 1)
+
+        # Check serialized payload fields
+        room_payload = next((r for r in data["rooms"] if r["room_id"] == self.room2.room_id), None)
+        self.assertIsNotNone(room_payload)
+        self.assertEqual(room_payload["room_number"], "102")
+        self.assertIn("stream_a", room_payload)
+        self.assertEqual(len(room_payload["stream_a"]), 1)
+        self.assertEqual(room_payload["stream_a"][0]["assignment_id"], assign.assignment_id)
+        self.assertEqual(room_payload["stream_a"][0]["student_count"], 15)
+
+        # Verify database state
+        assign.refresh_from_db()
+        self.assertEqual(assign.room_blueprint.room, self.room2)
+        self.assertEqual(assign.stream_name, "A")
+
+    # ── Test 28: Automatic group consolidation merges identical groups ───────
+    def test_28_automatic_group_consolidation_merges_identical_groups(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        rb2, _ = RoomBlueprint.objects.get_or_create(
+            slot_blueprint=bp,
+            room=self.room2,
+            defaults={"capacity": self.room2.capacity, "room_order": 2},
+        )
+
+        # Split the existing CE assignment (Stream A) into two chunks:
+        # chunk 1 (8 students) stays in Room 1 Stream A,
+        # chunk 2 (7 students) is temporarily placed in Room 2 Stream A
+        assign1 = rb1.stream_assignments.filter(stream_name="A").first()
+        self.assertIsNotNone(assign1)
+
+        rolls_part1 = [f"CE{i:02d}" for i in range(1, 9)]
+        rolls_part2 = [f"CE{i:02d}" for i in range(9, 16)]
+
+        assign1.student_rolls = rolls_part1
+        assign1.student_count = len(rolls_part1)
+        assign1.save()
+
+        assign2 = StreamBlueprintAssignment.objects.create(
+            room_blueprint=rb2,
+            stream_name="A",
+            department_code=assign1.department_code,
+            class_name=assign1.class_name,
+            subject_code=assign1.subject_code,
+            subject_name=assign1.subject_name,
+            student_count=len(rolls_part2),
+            student_rolls=rolls_part2,
+            order=1,
+        )
+
+        # Move assign2 from Room 2 Stream A into Room 1 Stream A
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign2.assignment_id,
+            target_room_id=self.room1.room_id,
+            target_stream="A",
+            reject_invalid=False,
+        )
+        self.assertTrue(res["success"])
+
+        # assign2 should be deleted / consolidated into assign1
+        self.assertFalse(StreamBlueprintAssignment.objects.filter(assignment_id=assign2.assignment_id).exists())
+
+        assign1.refresh_from_db()
+        self.assertEqual(assign1.student_count, 15)
+        self.assertEqual(len(assign1.student_rolls), 15)
+        self.assertEqual(assign1.student_rolls, [f"CE{i:02d}" for i in range(1, 16)])
+
+        # Room 1 total students updated to full 45 (15 CE + 15 ME + 15 CS)
+        rb1.refresh_from_db()
+        self.assertEqual(rb1.total_students, 45)
+        self.assertEqual(rb1.unused_capacity, 0)
+
+    # ── Test 29: Move exceeding stream capacity is rejected and rolled back ──
+    def test_29_move_exceeding_stream_capacity_is_rejected_and_rolled_back(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+
+        # Both Stream A and Stream B have 15 students. Moving Stream B into Stream A would result in 30 > 15!
+        assign_b = rb1.stream_assignments.filter(stream_name="B").first()
+        self.assertIsNotNone(assign_b)
+
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_b.assignment_id,
+            target_room_id=self.room1.room_id,
+            target_stream="A",
+            reject_invalid=True,
+        )
+        self.assertFalse(res["success"])
+        self.assertTrue(res["rejected"])
+        self.assertTrue(any("exceeds bench capacity" in err for err in res["errors"]))
+
+        # Database state preserved: assign_b remains in Stream B!
+        assign_b.refresh_from_db()
+        self.assertEqual(assign_b.stream_name, "B")
+        self.assertEqual(assign_b.room_blueprint, rb1)
+
+    # ── Test 30: Adjacent stream subject conflict move is rejected and rolled back
+    def test_30_adjacent_subject_conflict_move_is_rejected_and_rolled_back(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+
+        # Change assign_c to have the same subject CET301 as Stream A, but located in Room 2
+        rb2, _ = RoomBlueprint.objects.get_or_create(
+            slot_blueprint=bp,
+            room=self.room2,
+            defaults={"capacity": self.room2.capacity, "room_order": 2},
+        )
+        assign_dup = StreamBlueprintAssignment.objects.create(
+            room_blueprint=rb2,
+            stream_name="C",
+            department_code="CE_ALT",
+            class_name="CE ALT",
+            subject_code="CET301",
+            subject_name="Structural Analysis",
+            student_count=5,
+            student_rolls=[f"CE_DUP_{i}" for i in range(5)],
+            order=1,
+        )
+
+        # Move assign_dup into Room 1 Stream B (which is adjacent to Stream A with CET301)
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_dup.assignment_id,
+            target_room_id=self.room1.room_id,
+            target_stream="B",
+            reject_invalid=True,
+        )
+        self.assertFalse(res["success"])
+        self.assertTrue(res["rejected"])
+        self.assertTrue(any("adjacent Streams A and B" in err for err in res["errors"]))
+
+        # Rollback verified: assign_dup still in Room 2 Stream C
+        assign_dup.refresh_from_db()
+        self.assertEqual(assign_dup.room_blueprint, rb2)
+        self.assertEqual(assign_dup.stream_name, "C")
+
+    # ── Test 31: Swap API cleanly swaps two assignments ──────────────────────
+    def test_31_swap_api_cleanly_swaps_two_assignments(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+        assign_c = rb1.stream_assignments.filter(stream_name="C").first()
+        self.assertIsNotNone(assign_a)
+        self.assertIsNotNone(assign_c)
+
+        url = reverse("exam_allocator:api_blueprint_swap", kwargs={"session_id": self.session.session_id})
+        response = self.client.post(
+            url,
+            data={
+                "blueprint_id": bp.blueprint_id,
+                "assignment_id_1": assign_a.assignment_id,
+                "assignment_id_2": assign_c.assignment_id,
+                "reject_invalid": True,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertFalse(data["rejected"])
+
+        # Verify DB swap
+        assign_a.refresh_from_db()
+        assign_c.refresh_from_db()
+        self.assertEqual(assign_a.stream_name, "C")
+        self.assertEqual(assign_c.stream_name, "A")
+
+

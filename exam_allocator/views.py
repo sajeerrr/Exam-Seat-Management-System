@@ -723,6 +723,10 @@ def blueprint_review(request, session_id):
         ).exists()
 
         if blueprint:
+            from exam_allocator.models import Subject, ElectiveSubject
+            subject_map = dict(Subject.objects.filter(session=session).values_list("subject_code", "subject_name"))
+            elective_map = dict(ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name"))
+
             rbs = (
                 blueprint.room_blueprints.all()
                 .select_related("room")
@@ -735,6 +739,8 @@ def blueprint_review(request, session_id):
                 all_stream_assignments = list(rb.stream_assignments.all())
 
                 for sa in all_stream_assignments:
+                    if not sa.subject_name:
+                        sa.subject_name = subject_map.get(sa.subject_code) or elective_map.get(sa.subject_code) or ""
                     assignments_by_stream[sa.stream_name].append(sa)
                     stream_totals[sa.stream_name] += sa.student_count
 
@@ -877,6 +883,44 @@ def api_blueprint_move(request, session_id):
             assignment_id=int(assignment_id),
             target_room_id=int(target_room_id),
             target_stream=str(target_stream).upper(),
+            reject_invalid=reject_invalid,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_swap(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id_1 = data.get("assignment_id_1")
+    assignment_id_2 = data.get("assignment_id_2")
+    reject_invalid = data.get("reject_invalid", True)
+    if isinstance(reject_invalid, str):
+        reject_invalid = reject_invalid.lower() in ("true", "1", "yes")
+
+    blueprint = get_object_or_404(
+        SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id
+    )
+
+    try:
+        res = BlueprintService.swap_blueprint_assignments(
+            slot_blueprint=blueprint,
+            assignment_id_1=int(assignment_id_1),
+            assignment_id_2=int(assignment_id_2),
             reject_invalid=reject_invalid,
         )
         return JsonResponse(res)

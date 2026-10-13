@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/session/<int:session_id>/blueprint/allocate/", views.api_blueprint_allocate, name="api_blueprint_allocate"),
     path("api/session/<int:session_id>/blueprint/validate/", views.api_blueprint_validate, name="api_blueprint_validate"),
     path("api/session/<int:session_id>/blueprint/move/", views.api_blueprint_move, name="api_blueprint_move"),
+    path("api/session/<int:session_id>/blueprint/swap/", views.api_blueprint_swap, name="api_blueprint_swap"),
     path("api/session/<int:session_id>/blueprint/finalize/", views.api_blueprint_finalize, name="api_blueprint_finalize"),
     path("api/session/<int:session_id>/blueprint/unfinalize/", views.api_blueprint_unfinalize, name="api_blueprint_unfinalize"),
     path("api/session/<int:session_id>/blueprint/generate-seats/", views.api_blueprint_generate_seats, name="api_blueprint_generate_seats"),

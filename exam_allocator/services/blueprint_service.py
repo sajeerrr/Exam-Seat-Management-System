@@ -2,7 +2,7 @@ import logging
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Any
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils.dateparse import parse_date
 
 from engine.allocators.constrained_best_fit_allocator import ConstrainedBestFitAllocator
@@ -23,6 +23,8 @@ from exam_allocator.models import (
     RoomBlueprint,
     SlotBlueprint,
     StreamBlueprintAssignment,
+    Subject,
+    ElectiveSubject,
 )
 from exam_allocator.services.engine_adapter import (
     django_room_to_engine_classroom,
@@ -477,6 +479,73 @@ class BlueprintService:
         return is_valid, errors, warnings, stats
 
     @classmethod
+    def serialize_slot_rooms(cls, slot_blueprint: SlotBlueprint) -> List[Dict[str, Any]]:
+        """
+        Serialize all room blueprints and their stream assignments into structured dicts.
+        Ensures subject names and class names are populated accurately.
+        """
+        session = slot_blueprint.session
+        subject_map = dict(
+            Subject.objects.filter(session=session).values_list("subject_code", "subject_name")
+        )
+        elective_map = dict(
+            ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name")
+        )
+
+        rbs = (
+            slot_blueprint.room_blueprints.all()
+            .select_related("room")
+            .prefetch_related("stream_assignments")
+            .order_by("room_order")
+        )
+
+        rooms_list = []
+        for rb in rbs:
+            assignments_by_stream = {"A": [], "B": [], "C": []}
+            stream_totals = {"A": 0, "B": 0, "C": 0}
+
+            for sa in rb.stream_assignments.all():
+                subj_name = (
+                    sa.subject_name
+                    or subject_map.get(sa.subject_code)
+                    or elective_map.get(sa.subject_code)
+                    or ""
+                )
+                assign_data = {
+                    "assignment_id": sa.assignment_id,
+                    "stream_name": sa.stream_name,
+                    "department_code": sa.department_code,
+                    "class_name": sa.class_name,
+                    "subject_code": sa.subject_code,
+                    "subject_name": subj_name,
+                    "subject_category": sa.subject_category,
+                    "student_count": sa.student_count,
+                    "order": sa.order,
+                }
+                assignments_by_stream[sa.stream_name].append(assign_data)
+                stream_totals[sa.stream_name] += sa.student_count
+
+            rooms_list.append({
+                "room_blueprint_id": rb.room_blueprint_id,
+                "room_id": rb.room.room_id,
+                "room_number": rb.room.room_number,
+                "room_order": rb.room_order,
+                "pattern": rb.pattern,
+                "capacity": rb.capacity,
+                "total_students": rb.total_students,
+                "unused_capacity": rb.unused_capacity,
+                "department_count": rb.department_count,
+                "stream_a_count": stream_totals["A"],
+                "stream_b_count": stream_totals["B"],
+                "stream_c_count": stream_totals["C"],
+                "stream_a": assignments_by_stream["A"],
+                "stream_b": assignments_by_stream["B"],
+                "stream_c": assignments_by_stream["C"],
+            })
+
+        return rooms_list
+
+    @classmethod
     def modify_blueprint_assignment(
         cls,
         slot_blueprint: SlotBlueprint,
@@ -487,6 +556,8 @@ class BlueprintService:
     ) -> Dict[str, Any]:
         """
         Manually edit/move a stream assignment to another room or stream.
+        Consolidates groups if an identical department/class/subject assignment exists in the target stream.
+        Recalculates exact student counts from database registrations.
         Runs automatic backend validation immediately after the change.
         If reject_invalid is True and hard constraints fail, rolls back and preserves the last valid state.
         """
@@ -500,6 +571,7 @@ class BlueprintService:
                 assignment_id=assignment_id,
                 room_blueprint__slot_blueprint=slot_blueprint,
             )
+            old_room_bp = assignment.room_blueprint
             target_room = Room.objects.get(room_id=target_room_id, session=slot_blueprint.session)
             
             target_room_bp, _ = RoomBlueprint.objects.get_or_create(
@@ -511,11 +583,63 @@ class BlueprintService:
                 },
             )
 
-            # Move assignment
-            old_room_bp = assignment.room_blueprint
-            assignment.room_blueprint = target_room_bp
-            assignment.stream_name = target_stream
-            assignment.save()
+            # Check if moving to exact same room and stream
+            if old_room_bp.pk == target_room_bp.pk and assignment.stream_name == target_stream:
+                is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+                return {
+                    "success": True,
+                    "rejected": False,
+                    "errors": errors,
+                    "warnings": warnings,
+                    "stats": stats,
+                    "blueprint_status": slot_blueprint.status,
+                    "rooms": cls.serialize_slot_rooms(slot_blueprint),
+                }
+
+            # Check for existing compatible group in destination stream for consolidation
+            matching_assignment = (
+                target_room_bp.stream_assignments
+                .filter(
+                    stream_name=target_stream,
+                    department_code=assignment.department_code,
+                    class_name=assignment.class_name,
+                    subject_code=assignment.subject_code,
+                    subject_category=assignment.subject_category,
+                )
+                .exclude(assignment_id=assignment.assignment_id)
+                .first()
+            )
+
+            if matching_assignment:
+                # Merge student rolls maintaining uniqueness and order
+                seen = set()
+                merged_rolls = []
+                for r in (matching_assignment.student_rolls or []) + (assignment.student_rolls or []):
+                    r_str = str(r).strip()
+                    if r_str and r_str not in seen:
+                        seen.add(r_str)
+                        merged_rolls.append(r_str)
+
+                matching_assignment.student_rolls = merged_rolls
+                matching_assignment.student_count = len(merged_rolls)
+                if not matching_assignment.subject_name and assignment.subject_name:
+                    matching_assignment.subject_name = assignment.subject_name
+                matching_assignment.save()
+
+                # Source assignment is consolidated; delete it
+                assignment.delete()
+            else:
+                # Move assignment to target
+                assignment.room_blueprint = target_room_bp
+                assignment.stream_name = target_stream
+                assignment.student_count = len(assignment.student_rolls or [])
+                max_order = (
+                    target_room_bp.stream_assignments
+                    .filter(stream_name=target_stream)
+                    .aggregate(models.Max("order"))["order__max"] or 0
+                )
+                assignment.order = max_order + 1
+                assignment.save()
 
             # Invalidate any previously generated physical seating for this slot
             exams = cls.get_slot_exams(
@@ -525,7 +649,8 @@ class BlueprintService:
 
             # Recalculate room blueprint metrics
             cls._recalculate_room_blueprint(old_room_bp)
-            cls._recalculate_room_blueprint(target_room_bp)
+            if old_room_bp.pk != target_room_bp.pk:
+                cls._recalculate_room_blueprint(target_room_bp)
 
             # Clean up empty room blueprints if any
             if old_room_bp.stream_assignments.count() == 0:
@@ -558,15 +683,102 @@ class BlueprintService:
                 "warnings": warnings,
                 "stats": stats,
                 "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def swap_blueprint_assignments(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id_1: int,
+        assignment_id_2: int,
+        reject_invalid: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Swap two stream assignments between rooms/streams.
+        Runs validation and rolls back if hard constraints are violated.
+        """
+        if assignment_id_1 == assignment_id_2:
+            return {
+                "success": True,
+                "rejected": False,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+        with transaction.atomic():
+            sid = transaction.savepoint()
+
+            a1 = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id_1,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            a2 = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id_2,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+
+            r1, s1 = a1.room_blueprint, a1.stream_name
+            r2, s2 = a2.room_blueprint, a2.stream_name
+
+            a1.room_blueprint = r2
+            a1.stream_name = s2
+            a1.save()
+
+            a2.room_blueprint = r1
+            a2.stream_name = s1
+            a2.save()
+
+            # Invalidate generated seating
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(r1)
+            if r1.pk != r2.pk:
+                cls._recalculate_room_blueprint(r2)
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+
+            if not is_valid and reject_invalid:
+                transaction.savepoint_rollback(sid)
+                return {
+                    "success": False,
+                    "rejected": True,
+                    "errors": errors,
+                    "warnings": warnings,
+                    "message": "Proposed swap violated hard constraints and was rejected. Previous valid state preserved.",
+                }
+
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+            transaction.savepoint_commit(sid)
+
+            return {
+                "success": is_valid,
+                "rejected": False,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
             }
 
     @classmethod
     def _recalculate_room_blueprint(cls, room_bp: RoomBlueprint):
         """Recalculate total students, depts, unused capacity and pattern for a room."""
+        if not room_bp.pk:
+            return
         stream_depts = {"A": set(), "B": set(), "C": set()}
         total_students = 0
 
         for sa in room_bp.stream_assignments.all():
+            correct_count = len(sa.student_rolls or [])
+            if sa.student_count != correct_count:
+                sa.student_count = correct_count
+                sa.save(update_fields=["student_count"])
             total_students += sa.student_count
             if sa.department_code:
                 stream_depts[sa.stream_name].add(sa.department_code)

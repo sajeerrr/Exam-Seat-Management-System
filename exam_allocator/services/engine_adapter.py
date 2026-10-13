@@ -104,6 +104,7 @@ def django_registration_to_engine_student(registration):
         session=exam.session,
         roll_no=roll,
         subject_category=category,
+        class_name=student_class.class_name,
     )
 
 
@@ -127,6 +128,7 @@ def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session
         session=session,
         roll_no=reg.roll_number,
         subject_category=reg.elective_subject.elective_type or "ELECTIVE",
+        class_name=reg.class_name or "",
     )
 
 
