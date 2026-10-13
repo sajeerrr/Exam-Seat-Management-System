@@ -744,6 +744,101 @@
         font-family: inherit;
         font-size: 13px;
     }
+
+    /* ALLOCATION LOADING ANIMATION */
+    .inline-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-radius: 50%;
+        border-top-color: #ffffff;
+        animation: spin-kf 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    @keyframes spin-kf {
+        to { transform: rotate(360deg); }
+    }
+    .alloc-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease-out;
+    }
+    .alloc-loading-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 36px 40px;
+        text-align: center;
+        max-width: 440px;
+        width: 90%;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .alloc-spinner-ring {
+        width: 52px;
+        height: 52px;
+        border: 4px solid #e0e7ff;
+        border-top-color: #6366f1;
+        border-right-color: #818cf8;
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        animation: spin-kf 0.85s linear infinite;
+    }
+    .alloc-loading-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+    .alloc-loading-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 20px;
+        line-height: 1.4;
+    }
+    .alloc-progress-track {
+        height: 6px;
+        width: 100%;
+        background: #f1f5f9;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 14px;
+        position: relative;
+    }
+    .alloc-progress-fill {
+        height: 100%;
+        width: 40%;
+        background: linear-gradient(90deg, #6366f1, #818cf8, #a855f7);
+        border-radius: 999px;
+        position: absolute;
+        animation: allocIndeterminate 1.5s ease-in-out infinite;
+    }
+    @keyframes allocIndeterminate {
+        0% { left: -40%; width: 35%; }
+        50% { left: 30%; width: 50%; }
+        100% { left: 100%; width: 35%; }
+    }
+    .alloc-loading-steps {
+        font-size: 11.5px;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 500;
+    }
 </style>
 {% endblock %}
 
@@ -804,8 +899,8 @@
 
         <div class="btn-group">
             {% if not blueprint %}
-            <button class="action-btn btn-primary-action" id="btn-allocate-slot" onclick="allocateDepartments(false)">
-                ⚡ Allocate Departments for This Slot
+            <button class="action-btn btn-primary-action btn-allocate-slot-trigger" id="btn-allocate-slot" onclick="allocateDepartments(false)">
+                Allocate Departments for This Slot
             </button>
             {% else %}
                 <button class="action-btn btn-secondary-action" onclick="validateBlueprint()">
@@ -1173,8 +1268,8 @@
         <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
             Department blueprint has not been created for <strong>{{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</strong> yet.
         </p>
-        <button class="action-btn btn-primary-action" id="btn-allocate-slot" onclick="allocateDepartments(false)" style="padding: 12px 24px; font-size: 14px;">
-            ⚡ Allocate Departments for This Slot
+        <button class="action-btn btn-primary-action btn-allocate-slot-trigger" id="btn-allocate-slot-center" onclick="allocateDepartments(false)" style="padding: 12px 24px; font-size: 14px;">
+            Allocate Departments for This Slot
         </button>
     </div>
     {% endif %}
@@ -1185,6 +1280,25 @@
 
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- ALLOCATION PROGRESS / LOADING MODAL -->
+<div id="allocationLoadingOverlay" class="alloc-loading-overlay" style="display: none;">
+    <div class="alloc-loading-card">
+        <div class="alloc-spinner-ring"></div>
+        <div class="alloc-loading-title">Allocating Departments</div>
+        <div class="alloc-loading-subtitle" id="allocationLoadingSubtext">
+            Generating optimal room blueprint and balancing stream distributions...
+        </div>
+        <div class="alloc-progress-track">
+            <div class="alloc-progress-fill"></div>
+        </div>
+        <div class="alloc-loading-steps">
+            <span>Classroom assignment</span> •
+            <span>Stream separation</span> •
+            <span>Capacity balancing</span>
+        </div>
+    </div>
+</div>
 
 <!-- EDIT ROOM CAPACITY MODAL -->
 <div class="modal-overlay" id="capacityModal">
@@ -1355,7 +1469,7 @@
                 Select unallocated students/department below to place into a classroom and stream, or auto-allocate all remaining students.
             </div>
             <button type="button" class="action-btn btn-primary-action" onclick="autoAllocateAllUnallocated()" style="padding: 6px 14px; font-size: 12px;">
-                ⚡ Auto-Allocate All
+                Auto-Allocate All
             </button>
         </div>
 
@@ -2214,8 +2328,22 @@ function allocateDepartments(force) {
     if (force && !confirm("Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?")) {
         return;
     }
-    const btn = document.getElementById("btn-allocate-slot");
-    if (btn) btn.disabled = true;
+    const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
+    btns.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
+    });
+
+    const overlay = document.getElementById('allocationLoadingOverlay');
+    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+    const subtext = document.getElementById('allocationLoadingSubtext');
+    if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
+    if (subtext) {
+        subtext.textContent = force 
+            ? 'Recalculating classroom blueprint and balancing stream distributions...' 
+            : 'Generating optimal room blueprint and balancing stream distributions...';
+    }
+    if (overlay) overlay.style.display = 'flex';
 
     fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
         method: 'POST',
@@ -2234,13 +2362,21 @@ function allocateDepartments(force) {
         if (data.success) {
             window.location.reload();
         } else {
+            if (overlay) overlay.style.display = 'none';
+            btns.forEach(btn => {
+                btn.disabled = false;
+                btn.textContent = 'Allocate Departments for This Slot';
+            });
             alert("Allocation failed: " + (data.error || "Unknown error"));
-            if (btn) btn.disabled = false;
         }
     })
     .catch(err => {
+        if (overlay) overlay.style.display = 'none';
+        btns.forEach(btn => {
+            btn.disabled = false;
+            btn.textContent = 'Allocate Departments for This Slot';
+        });
         alert("Request error: " + err);
-        if (btn) btn.disabled = false;
     });
 }
 
@@ -2340,6 +2476,13 @@ function unfinalizeBlueprint() {
 
 function generateSeats() {
     if (!BLUEPRINT_ID) return;
+    const overlay = document.getElementById('allocationLoadingOverlay');
+    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+    const subtext = document.getElementById('allocationLoadingSubtext');
+    if (title) title.textContent = 'Generating Physical Seats';
+    if (subtext) subtext.textContent = 'Assigning eligible students to physical benches across rooms...';
+    if (overlay) overlay.style.display = 'flex';
+
     fetch(`/api/session/${SESSION_ID}/blueprint/generate-seats/`, {
         method: 'POST',
         headers: {
@@ -2353,10 +2496,14 @@ function generateSeats() {
         if (data.success) {
             window.location.reload();
         } else {
+            if (overlay) overlay.style.display = 'none';
             alert("Seat generation failed: " + (data.error || "Unknown constraint error"));
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => {
+        if (overlay) overlay.style.display = 'none';
+        alert("Request error: " + err);
+    });
 }
 
 // UNALLOCATED STUDENTS MODAL HANDLING
