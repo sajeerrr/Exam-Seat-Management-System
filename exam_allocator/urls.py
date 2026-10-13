@@ -36,6 +36,7 @@ urlpatterns = [
     path("api/session/<int:session_id>/blueprint/student/remove/", views.api_blueprint_student_remove, name="api_blueprint_student_remove"),
     path("api/session/<int:session_id>/blueprint/assignment/remove/", views.api_blueprint_assignment_remove, name="api_blueprint_assignment_remove"),
     path("api/session/<int:session_id>/blueprint/assignment/edit/", views.api_blueprint_assignment_edit, name="api_blueprint_assignment_edit"),
+    path("api/session/<int:session_id>/blueprint/split/", views.api_blueprint_split, name="api_blueprint_split"),
     path("api/session/<int:session_id>/blueprint/room/add/", views.api_blueprint_room_add, name="api_blueprint_room_add"),
     path("api/session/<int:session_id>/blueprint/room/remove/", views.api_blueprint_room_remove, name="api_blueprint_room_remove"),
     path("api/session/<int:session_id>/blueprint/unallocated-students/", views.api_blueprint_unallocated_students, name="api_blueprint_unallocated_students"),

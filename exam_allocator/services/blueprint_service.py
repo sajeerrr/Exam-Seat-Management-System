@@ -1167,6 +1167,160 @@ class BlueprintService:
             }
 
     @classmethod
+    def split_blueprint_assignment(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id: int,
+        keep_count: int,
+        target_room_id: Optional[int] = None,
+        target_stream: Optional[str] = None,
+        reject_invalid: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Split a stream assignment into two portions:
+        - keep_count students remain in the current assignment.
+        - The remaining (current_count - keep_count) students are moved to target_room_id and target_stream
+          (or left unallocated if no target room is specified).
+        Consolidates with existing compatible assignment in destination stream if one exists.
+        Recalculates metrics for affected rooms, invalidates physical seating, and reruns validation.
+        """
+        with transaction.atomic():
+            sid = transaction.savepoint()
+
+            assignment = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            old_room_bp = assignment.room_blueprint
+            current_rolls = [str(r).strip() for r in (assignment.student_rolls or []) if str(r).strip()]
+            total_students = len(current_rolls)
+
+            if total_students <= 1:
+                raise BlueprintServiceError("Cannot split a group with only 1 student.")
+
+            try:
+                keep_count = int(keep_count)
+            except (ValueError, TypeError):
+                raise BlueprintServiceError(f"Invalid keep_count: {keep_count}")
+
+            if keep_count < 1 or keep_count >= total_students:
+                raise BlueprintServiceError(
+                    f"Keep count must be between 1 and {total_students - 1} (current: {total_students})."
+                )
+
+            kept_rolls = current_rolls[:keep_count]
+            split_rolls = current_rolls[keep_count:]
+
+            # Update source assignment
+            assignment.student_rolls = kept_rolls
+            assignment.student_count = len(kept_rolls)
+            assignment.save()
+
+            target_room_bp = None
+            if target_room_id and target_stream:
+                target_stream = str(target_stream).upper().strip()
+                if target_stream not in ("A", "B", "C"):
+                    raise BlueprintServiceError(f"Invalid target stream: {target_stream}")
+
+                target_room = Room.objects.get(room_id=target_room_id, session=slot_blueprint.session)
+                target_room_bp, _ = RoomBlueprint.objects.get_or_create(
+                    slot_blueprint=slot_blueprint,
+                    room=target_room,
+                    defaults={
+                        "capacity": target_room.capacity,
+                        "room_order": slot_blueprint.room_blueprints.count() + 1,
+                    },
+                )
+
+                # Check if compatible assignment already exists in target stream
+                matching_assignment = (
+                    target_room_bp.stream_assignments
+                    .filter(
+                        stream_name=target_stream,
+                        department_code=assignment.department_code,
+                        subject_code=assignment.subject_code,
+                        subject_category=assignment.subject_category,
+                    )
+                    .first()
+                )
+
+                if matching_assignment:
+                    # Merge split_rolls into matching assignment
+                    seen = set(str(r).strip() for r in (matching_assignment.student_rolls or []))
+                    merged = list(matching_assignment.student_rolls or [])
+                    for r in split_rolls:
+                        if r not in seen:
+                            seen.add(r)
+                            merged.append(r)
+                    matching_assignment.student_rolls = merged
+                    matching_assignment.student_count = len(merged)
+                    matching_assignment.class_name = format_merged_class_names([matching_assignment.class_name, assignment.class_name])
+                    matching_assignment.save()
+                else:
+                    # Create new assignment in destination
+                    max_order = (
+                        target_room_bp.stream_assignments
+                        .filter(stream_name=target_stream)
+                        .aggregate(models.Max("order"))["order__max"] or 0
+                    )
+                    StreamBlueprintAssignment.objects.create(
+                        room_blueprint=target_room_bp,
+                        stream_name=target_stream,
+                        department_code=assignment.department_code,
+                        class_name=assignment.class_name,
+                        subject_code=assignment.subject_code,
+                        subject_name=assignment.subject_name,
+                        subject_category=assignment.subject_category,
+                        student_count=len(split_rolls),
+                        student_rolls=split_rolls,
+                        order=max_order + 1,
+                    )
+
+            # Invalidate physical seats for this slot
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            # Recalculate affected room blueprints
+            cls._recalculate_room_blueprint(old_room_bp)
+            if target_room_bp and target_room_bp.pk != old_room_bp.pk:
+                cls._recalculate_room_blueprint(target_room_bp)
+
+            # Validate blueprint
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            hard_errors = [
+                e for e in errors
+                if "exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower()
+            ]
+            if hard_errors and reject_invalid:
+                transaction.savepoint_rollback(sid)
+                return {
+                    "success": False,
+                    "rejected": True,
+                    "errors": errors,
+                    "warnings": warnings,
+                    "message": "Splitting this group violated seating constraints and was rejected.",
+                }
+
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+            transaction.savepoint_commit(sid)
+
+            return {
+                "success": True,
+                "rejected": False,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
     def edit_blueprint_assignment(
         cls,
         slot_blueprint: SlotBlueprint,

@@ -322,6 +322,7 @@ def session_allocation_result(request, session_id):
     
     # Fetch available Date-Session slots globally
     from exam_allocator.models import Exam, Allocation
+    from exam_allocator.services.blueprint_service import BlueprintService
     exam_slots = Exam.objects.filter(subject__session=session).order_by('exam_date', 'session').values('exam_date', 'session').distinct()
     
     slots = []
@@ -345,6 +346,7 @@ def session_allocation_result(request, session_id):
         selected_slot = slots[0]
         
     rooms_data = {}
+    all_slot_students = []
     
     missing_data_reason = ""
     if selected_slot:
@@ -1242,6 +1244,52 @@ def api_blueprint_assignment_edit(request, session_id):
             department_code=dept,
             class_name=cls_name,
             subject_code=subj_code,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_split(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+    keep_count = data.get("keep_count")
+    target_room_id = data.get("target_room_id")
+    target_stream = data.get("target_stream")
+    reject_invalid = data.get("reject_invalid", True)
+    if isinstance(reject_invalid, str):
+        reject_invalid = reject_invalid.lower() in ("true", "1", "yes")
+
+    if not blueprint_id or not assignment_id or keep_count is None:
+        return JsonResponse({"success": False, "error": "blueprint_id, assignment_id, and keep_count are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        target_room_int = int(target_room_id) if target_room_id and str(target_room_id).strip() else None
+        target_stream_str = str(target_stream).upper().strip() if target_stream and str(target_stream).strip() else None
+
+        res = BlueprintService.split_blueprint_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+            keep_count=int(keep_count),
+            target_room_id=target_room_int,
+            target_stream=target_stream_str,
+            reject_invalid=reject_invalid,
         )
         return JsonResponse(res)
     except BlueprintServiceError as exc:

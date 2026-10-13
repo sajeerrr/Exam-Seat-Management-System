@@ -912,14 +912,12 @@
                 <button class="action-btn btn-danger-action" onclick="resetBlueprint()" title="Reset and delete blueprint for this slot">
                     🗑️ Reset and Reallocate
                 </button>
-                {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                 <button class="action-btn btn-secondary-action" onclick="openUnallocatedModal()" title="View and allocate unallocated or deleted students">
                     📋 Allocate Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
                 </button>
                 <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
                     ➕ Add Classroom
                 </button>
-                {% endif %}
 
                 {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
                 <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()">
@@ -1082,7 +1080,7 @@
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
                              data-rolls="{{ a.student_rolls|join:',' }}"
-                             {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
+                             draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
@@ -1102,10 +1100,12 @@
                                 {% else %}
                                 <span></span>
                                 {% endif %}
-                                {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'A', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'A')" title="Split group into two">
+                                        ✂️ Split
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
                                         👥 {{ a.student_count }}
@@ -1117,7 +1117,6 @@
                                         🗑️
                                     </button>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                         {% empty %}
@@ -1147,7 +1146,7 @@
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
                              data-rolls="{{ a.student_rolls|join:',' }}"
-                             {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
+                             draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
@@ -1167,10 +1166,12 @@
                                 {% else %}
                                 <span></span>
                                 {% endif %}
-                                {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'B', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'B')" title="Split group into two">
+                                        ✂️ Split
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
                                         👥 {{ a.student_count }}
@@ -1182,7 +1183,6 @@
                                         🗑️
                                     </button>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                         {% empty %}
@@ -1212,7 +1212,7 @@
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
                              data-rolls="{{ a.student_rolls|join:',' }}"
-                             {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
+                             draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
@@ -1232,10 +1232,12 @@
                                 {% else %}
                                 <span></span>
                                 {% endif %}
-                                {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'C', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'C')" title="Split group into two">
+                                        ✂️ Split
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
                                         👥 {{ a.student_count }}
@@ -1247,7 +1249,6 @@
                                         🗑️
                                     </button>
                                 </div>
-                                {% endif %}
                             </div>
                         </div>
                         {% empty %}
@@ -1457,6 +1458,81 @@
     </div>
 </div>
 
+<!-- SPLIT GROUP MODAL -->
+<div class="modal-overlay" id="splitGroupModal">
+    <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+            <div class="modal-title">✂️ Split or Edit Student Count</div>
+            <button type="button" class="close-btn" onclick="closeSplitModal()">&times;</button>
+        </div>
+        <form id="splitGroupForm" onsubmit="submitSplitGroup(event)">
+            <input type="hidden" id="splitAssignmentId">
+            <input type="hidden" id="splitTotalStudents">
+            
+            <div class="form-group">
+                <label>Selected Group</label>
+                <div id="splitGroupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(99,102,241,0.08); border-radius: 6px; border: 1px solid rgba(99,102,241,0.2);">
+                    <!-- e.g. ME · ME 2K22 — Current: 15 students -->
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+                <div class="form-group">
+                    <label for="splitKeepCountInput">Keep in this stream</label>
+                    <input type="number" id="splitKeepCountInput" class="form-control" min="1" required oninput="handleSplitCountChange()">
+                    <small style="color: var(--text-muted); font-size: 11px;">Students staying here</small>
+                </div>
+                <div class="form-group">
+                    <label>Split-off students</label>
+                    <div id="splitOffCountDisplay" style="font-size: 16px; font-weight: 800; color: #f59e0b; padding: 7px 12px; background: rgba(245,158,11,0.1); border-radius: 6px; border: 1px solid rgba(245,158,11,0.25); text-align: center;">
+                        0 students
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 11px;">Students to reassign</small>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label style="font-weight: 700; margin-bottom: 6px; display: block; font-size: 12.5px;">Destination for split-off students:</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                        <input type="radio" name="splitDestinationType" value="MOVE" checked onchange="toggleSplitDestination()">
+                        <span>Move to another Classroom &amp; Stream</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                        <input type="radio" name="splitDestinationType" value="UNALLOCATED" onchange="toggleSplitDestination()">
+                        <span>Send to Unallocated Pool (assign later)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- DESTINATION ROOM & STREAM SELECTOR -->
+            <div id="splitDestinationFields" style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="form-group">
+                    <label for="splitTargetRoomSelect">Target Classroom</label>
+                    <select id="splitTargetRoomSelect" class="form-control">
+                        {% for rm in available_rooms %}
+                        <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="splitTargetStreamSelect">Target Stream</label>
+                    <select id="splitTargetStreamSelect" class="form-control">
+                        <option value="A">Stream A</option>
+                        <option value="B">Stream B</option>
+                        <option value="C">Stream C</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeSplitModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Confirm Split</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- ALLOCATE UNALLOCATED STUDENTS MODAL -->
 <div class="modal-overlay" id="unallocatedModal">
     <div class="modal-card" style="max-width: 680px; width: 100%;">
@@ -1592,8 +1668,6 @@ function showToast(message, type = 'info', duration = 4000) {
 
 // DRAG AND DROP INITIALIZATION
 function initDragAndDrop() {
-    if (IS_LOCKED) return;
-
     // Draggable Cards
     const cards = document.querySelectorAll('.group-card[draggable="true"]');
     cards.forEach(card => {
@@ -1616,7 +1690,6 @@ function initDragAndDrop() {
 }
 
 function handleDragStart(e) {
-    if (IS_LOCKED) return;
     draggedAssignmentId = this.dataset.assignmentId;
     draggedSourceRoomId = this.dataset.roomId;
     draggedSourceStream = this.dataset.stream;
@@ -1637,7 +1710,6 @@ function handleDragEnd(e) {
 }
 
 function handleColumnDragOver(e) {
-    if (IS_LOCKED) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     this.classList.add('drop-target-active');
@@ -1648,7 +1720,6 @@ function handleColumnDragLeave(e) {
 }
 
 function handleColumnDrop(e) {
-    if (IS_LOCKED) return;
     e.preventDefault();
     this.classList.remove('drop-target-active');
 
@@ -1668,7 +1739,6 @@ function handleColumnDrop(e) {
 }
 
 function handleCardDragOver(e) {
-    if (IS_LOCKED) return;
     e.preventDefault();
     e.stopPropagation();
     if (this.dataset.assignmentId !== draggedAssignmentId) {
@@ -1681,7 +1751,6 @@ function handleCardDragLeave(e) {
 }
 
 function handleCardDrop(e) {
-    if (IS_LOCKED) return;
     e.preventDefault();
     e.stopPropagation();
     this.classList.remove('drag-over-swap');
@@ -1974,7 +2043,7 @@ function buildGroupCardHTML(a, r, stream) {
              data-subj-name="${a.subject_name || ''}"
              data-count="${a.student_count}"
              data-rolls="${rollsList}"
-             draggable="${isDraggable}">
+             draggable="true">
             <div class="group-card-top">
                 <span class="group-handle">⠿</span>
                 <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
@@ -1988,14 +2057,13 @@ function buildGroupCardHTML(a, r, stream) {
             </div>
             <div class="group-card-bottom" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; flex-wrap: wrap;">
                 ${catPill}
-                ${!IS_LOCKED ? `
                 <div style="display: flex; align-items: center; gap: 4px;">
                     <button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>
+                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">✂️ Split</button>
                     <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" title="View and remove students">👥 ${a.student_count}</button>
                     <button type="button" class="btn-card-action" onclick="openAddStudentModal(${a.assignment_id}, '${escapeHtml(deptClass)}', '${a.subject_code}')" title="Add student">＋</button>
                     <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">🗑️</button>
                 </div>
-                ` : ''}
             </div>
         </div>
     `;
@@ -2321,6 +2389,105 @@ function submitMove(e) {
         btn.disabled = false;
         executeMove(assignId, targetRoom, targetStream);
     }
+}
+
+// SPLIT GROUP MODAL HANDLERS
+function openSplitModal(assignId, groupTitle, count, roomNo, stream) {
+    document.getElementById("splitAssignmentId").value = assignId;
+    document.getElementById("splitTotalStudents").value = count;
+    document.getElementById("splitGroupDetailsText").innerHTML = `
+        <strong>${escapeHtml(groupTitle)}</strong> · Room ${roomNo} Stream ${stream}<br>
+        <span style="font-size: 12px; opacity: 0.85;">Current Total: <strong>${count}</strong> students</span>
+    `;
+
+    // Default keep count: half, e.g. 8 of 15
+    const defaultKeep = Math.ceil(count / 2);
+    const keepInput = document.getElementById("splitKeepCountInput");
+    keepInput.max = count - 1;
+    keepInput.min = 1;
+    keepInput.value = defaultKeep;
+
+    handleSplitCountChange();
+    document.getElementById("splitGroupModal").style.display = "flex";
+}
+
+function closeSplitModal() {
+    document.getElementById("splitGroupModal").style.display = "none";
+}
+
+function handleSplitCountChange() {
+    const total = parseInt(document.getElementById("splitTotalStudents").value) || 0;
+    const keepInput = document.getElementById("splitKeepCountInput");
+    let keep = parseInt(keepInput.value) || 0;
+    if (keep >= total) {
+        keep = total - 1;
+        keepInput.value = keep;
+    }
+    if (keep < 1) {
+        keep = 1;
+        keepInput.value = keep;
+    }
+    const splitOff = total - keep;
+    const display = document.getElementById("splitOffCountDisplay");
+    if (display) {
+        display.textContent = `${splitOff} students`;
+    }
+}
+
+function toggleSplitDestination() {
+    const isMove = document.querySelector('input[name="splitDestinationType"]:checked').value === 'MOVE';
+    const fields = document.getElementById("splitDestinationFields");
+    if (fields) {
+        fields.style.display = isMove ? "block" : "none";
+    }
+}
+
+function submitSplitGroup(e) {
+    e.preventDefault();
+    const assignId = document.getElementById("splitAssignmentId").value;
+    const keepCount = parseInt(document.getElementById("splitKeepCountInput").value);
+    const destType = document.querySelector('input[name="splitDestinationType"]:checked').value;
+
+    let targetRoomId = null;
+    let targetStream = null;
+    if (destType === 'MOVE') {
+        targetRoomId = document.getElementById("splitTargetRoomSelect").value;
+        targetStream = document.getElementById("splitTargetStreamSelect").value;
+    }
+
+    closeSplitModal();
+    showToast('Splitting and validating group...', 'info', 2500);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/split/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignId,
+            keep_count: keepCount,
+            target_room_id: targetRoomId,
+            target_stream: targetStream,
+            reject_invalid: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.rejected) {
+            const errList = data.errors && data.errors.length ? data.errors.join('<br>• ') : 'Violates seating constraints';
+            showToast(`<strong>⚠️ Split Rejected:</strong><br>• ${errList}`, 'error', 6000);
+        } else if (data.success) {
+            showToast('✓ Group split and validated successfully!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to split group'), 'error', 5000);
+        }
+    })
+    .catch(err => {
+        showToast('Request error: ' + err, 'error', 4000);
+    });
 }
 
 // ALLOCATE, RESET, VALIDATE, FINALIZE ACTIONS
