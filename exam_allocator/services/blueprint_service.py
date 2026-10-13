@@ -1,4 +1,5 @@
 import logging
+import math
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -384,7 +385,7 @@ class BlueprintService:
                     stream_subjects[sa.stream_name].add(sa.subject_code.strip().upper())
 
             # Stream capacity check
-            stream_cap = rb.room.benches or 15
+            stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else (rb.room.benches or 15)
             for s_name in ["A", "B", "C"]:
                 if stream_counts[s_name] > stream_cap:
                     errors.append(
@@ -468,7 +469,7 @@ class BlueprintService:
         slot_blueprint.duplicate_count = len(duplicate_rolls)
         slot_blueprint.rooms_used = rooms_used
         slot_blueprint.total_room_capacity = total_room_cap
-        slot_blueprint.remaining_capacity = remaining_cap
+        slot_blueprint.remaining_capacity = max(0, remaining_cap)
         slot_blueprint.department_scattering = dept_scattering
         slot_blueprint.room_utilization = room_utilization
         slot_blueprint.pattern_distribution = pattern_summary
@@ -503,6 +504,7 @@ class BlueprintService:
         for rb in rbs:
             assignments_by_stream = {"A": [], "B": [], "C": []}
             stream_totals = {"A": 0, "B": 0, "C": 0}
+            stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else (rb.room.benches or 15)
 
             for sa in rb.stream_assignments.all():
                 subj_name = (
@@ -520,6 +522,7 @@ class BlueprintService:
                     "subject_name": subj_name,
                     "subject_category": sa.subject_category,
                     "student_count": sa.student_count,
+                    "student_rolls": sa.student_rolls or [],
                     "order": sa.order,
                 }
                 assignments_by_stream[sa.stream_name].append(assign_data)
@@ -532,6 +535,7 @@ class BlueprintService:
                 "room_order": rb.room_order,
                 "pattern": rb.pattern,
                 "capacity": rb.capacity,
+                "stream_limit": stream_cap,
                 "total_students": rb.total_students,
                 "unused_capacity": rb.unused_capacity,
                 "department_count": rb.department_count,
@@ -767,6 +771,440 @@ class BlueprintService:
             }
 
     @classmethod
+    def update_room_capacity(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        room_id: int,
+        new_capacity: int,
+    ) -> Dict[str, Any]:
+        """
+        Dynamically update configured capacity for a room in this blueprint.
+        Recalculates stream and room limits, total/unused capacity, and validation status immediately.
+        If capacity is reduced below current allocation, marks room invalid (NEEDS_REVIEW)
+        and blocks finalization without automatically truncating students.
+        Invalidates generated physical seats.
+        """
+        new_capacity = int(new_capacity)
+        if new_capacity < 1:
+            raise BlueprintServiceError("Capacity must be at least 1.")
+
+        with transaction.atomic():
+            rb = RoomBlueprint.objects.select_for_update().get(
+                slot_blueprint=slot_blueprint,
+                room__room_id=room_id,
+            )
+            rb.capacity = new_capacity
+            rb.unused_capacity = max(0, rb.capacity - rb.total_students)
+            rb.save()
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def add_student_to_assignment(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id: int,
+        roll_number: str,
+        allow_capacity_increase: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Controlled workflow to add an individual student to a stream assignment.
+        1. Checks eligibility: student registered for an exam in this slot.
+        2. Verifies uniqueness: student is not already allocated in this slot blueprint.
+        3. Verifies subject match: registered subject matches assignment subject.
+        4. Verifies stream and room capacity (unless allow_capacity_increase is True).
+        5. Appends student roll, increments count, invalidates physical seats, reruns validation.
+        """
+        roll_clean = str(roll_number).strip()
+        if not roll_clean:
+            raise BlueprintServiceError("Roll number cannot be empty.")
+
+        with transaction.atomic():
+            assignment = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            room_bp = assignment.room_blueprint
+
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            expected_students = []
+            for ex in exams:
+                expected_students.extend(get_engine_students(ex))
+
+            target_student = None
+            for s in expected_students:
+                r = (getattr(s, "roll_no", None) or getattr(s, "register_no", "")).strip()
+                if r.upper() == roll_clean.upper():
+                    target_student = s
+                    break
+
+            if not target_student:
+                raise BlueprintServiceError(
+                    f"Student '{roll_clean}' is not registered or eligible for an exam in slot {slot_blueprint.exam_date} {slot_blueprint.shift}."
+                )
+
+            # Check subject match
+            student_subj = getattr(target_student, "subject_code", "").strip().upper()
+            assign_subj = assignment.subject_code.strip().upper()
+            if student_subj != assign_subj:
+                raise BlueprintServiceError(
+                    f"Student {roll_clean} is taking subject '{student_subj}', which does not match assignment subject '{assign_subj}'."
+                )
+
+            # Check uniqueness across all rooms & streams in this slot blueprint
+            all_assignments = StreamBlueprintAssignment.objects.filter(
+                room_blueprint__slot_blueprint=slot_blueprint
+            )
+            for sa in all_assignments:
+                existing_rolls = [str(r).strip().upper() for r in (sa.student_rolls or [])]
+                if roll_clean.upper() in existing_rolls:
+                    raise BlueprintServiceError(
+                        f"Student {roll_clean} is already allocated in Room {sa.room_blueprint.room.room_number}, Stream {sa.stream_name}."
+                    )
+
+            # Check stream capacity
+            stream_assignments = room_bp.stream_assignments.filter(stream_name=assignment.stream_name)
+            current_stream_count = sum(sa.student_count for sa in stream_assignments)
+            stream_cap = math.ceil(room_bp.capacity / 3) if room_bp.capacity else (room_bp.room.benches or 15)
+
+            if current_stream_count + 1 > stream_cap:
+                if allow_capacity_increase:
+                    new_cap = (current_stream_count + 1) * 3
+                    if new_cap > room_bp.capacity:
+                        room_bp.capacity = new_cap
+                        room_bp.save()
+                else:
+                    raise BlueprintServiceError(
+                        f"Adding student would exceed Stream {assignment.stream_name} capacity ({current_stream_count + 1} > {stream_cap}). Enable capacity expansion to override."
+                    )
+
+            # Check room capacity
+            if room_bp.total_students + 1 > room_bp.capacity:
+                if allow_capacity_increase:
+                    room_bp.capacity = room_bp.total_students + 1
+                    room_bp.save()
+                else:
+                    raise BlueprintServiceError(
+                        f"Adding student would exceed Room {room_bp.room.room_number} capacity ({room_bp.total_students + 1} > {room_bp.capacity}). Enable capacity expansion to override."
+                    )
+
+            rolls = list(assignment.student_rolls or [])
+            rolls.append(roll_clean)
+            assignment.student_rolls = rolls
+            assignment.student_count = len(rolls)
+            assignment.save()
+
+            # Invalidate physical seats
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(room_bp)
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def remove_student_from_assignment(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id: int,
+        roll_number: str,
+    ) -> Dict[str, Any]:
+        """
+        Remove an individual student from an assignment.
+        The student becomes unallocated for the slot.
+        """
+        roll_clean = str(roll_number).strip()
+        with transaction.atomic():
+            assignment = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            room_bp = assignment.room_blueprint
+
+            rolls = [r for r in (assignment.student_rolls or []) if str(r).strip().upper() != roll_clean.upper()]
+            if len(rolls) == len(assignment.student_rolls or []):
+                raise BlueprintServiceError(f"Student {roll_clean} not found in this assignment.")
+
+            if not rolls:
+                assignment.delete()
+            else:
+                assignment.student_rolls = rolls
+                assignment.student_count = len(rolls)
+                assignment.save()
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(room_bp)
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def remove_blueprint_assignment(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id: int,
+    ) -> Dict[str, Any]:
+        """
+        Remove an entire stream assignment from the room blueprint.
+        Its students become unallocated.
+        """
+        with transaction.atomic():
+            assignment = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            room_bp = assignment.room_blueprint
+            assignment.delete()
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(room_bp)
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def edit_blueprint_assignment(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        assignment_id: int,
+        department_code: Optional[str] = None,
+        class_name: Optional[str] = None,
+        subject_code: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Directly update metadata for a stream assignment.
+        """
+        with transaction.atomic():
+            assignment = StreamBlueprintAssignment.objects.select_for_update().get(
+                assignment_id=assignment_id,
+                room_blueprint__slot_blueprint=slot_blueprint,
+            )
+            if department_code is not None:
+                assignment.department_code = department_code.strip()
+            if class_name is not None:
+                assignment.class_name = class_name.strip()
+            if subject_code is not None:
+                assignment.subject_code = subject_code.strip()
+            assignment.save()
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(assignment.room_blueprint)
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def add_room_to_blueprint(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        room_id: int,
+    ) -> Dict[str, Any]:
+        """
+        Add an available classroom from the session into this slot blueprint.
+        """
+        with transaction.atomic():
+            room = Room.objects.get(room_id=room_id, session=slot_blueprint.session)
+            if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=room).exists():
+                raise BlueprintServiceError(f"Room {room.room_number} is already in the blueprint.")
+
+            next_order = (slot_blueprint.room_blueprints.aggregate(models.Max("room_order"))["room_order__max"] or 0) + 1
+            RoomBlueprint.objects.create(
+                slot_blueprint=slot_blueprint,
+                room=room,
+                capacity=room.capacity,
+                room_order=next_order,
+                pattern="EMPTY",
+                unused_capacity=room.capacity,
+            )
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def remove_room_from_blueprint(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        room_id: int,
+    ) -> Dict[str, Any]:
+        """
+        Remove a classroom from this slot blueprint.
+        Any assignments previously in that room are removed and their students become unallocated.
+        """
+        with transaction.atomic():
+            room_bp = RoomBlueprint.objects.filter(
+                slot_blueprint=slot_blueprint,
+                room__room_id=room_id,
+            ).first()
+            if not room_bp:
+                raise BlueprintServiceError("Room is not part of this blueprint.")
+
+            room_bp.delete()
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def get_unallocated_students(cls, slot_blueprint: SlotBlueprint) -> List[Dict[str, Any]]:
+        """
+        Return all students registered for exams in this slot who are not currently allocated
+        to any stream assignment in this slot blueprint.
+        """
+        exams = cls.get_slot_exams(
+            slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+        )
+        expected_students = []
+        for ex in exams:
+            expected_students.extend(get_engine_students(ex))
+
+        allocated_rolls = set()
+        for sa in StreamBlueprintAssignment.objects.filter(
+            room_blueprint__slot_blueprint=slot_blueprint
+        ):
+            for r in (sa.student_rolls or []):
+                clean_r = str(r).strip().upper()
+                if clean_r:
+                    allocated_rolls.add(clean_r)
+
+        unallocated = []
+        for s in expected_students:
+            roll = (getattr(s, "roll_no", None) or getattr(s, "register_no", "")).strip()
+            if roll and roll.upper() not in allocated_rolls:
+                unallocated.append({
+                    "roll_number": roll,
+                    "name": getattr(s, "name", ""),
+                    "department": getattr(s, "department", ""),
+                    "class_name": getattr(s, "class_name", ""),
+                    "subject_code": getattr(s, "subject_code", ""),
+                    "subject_name": getattr(s, "subject_name", ""),
+                    "subject_category": getattr(s, "subject_category", "REGULAR"),
+                })
+
+        return sorted(unallocated, key=lambda x: (x["department"], x["class_name"], x["roll_number"]))
+
+    @classmethod
     def _recalculate_room_blueprint(cls, room_bp: RoomBlueprint):
         """Recalculate total students, depts, unused capacity and pattern for a room."""
         if not room_bp.pk:
@@ -883,7 +1321,7 @@ class BlueprintService:
 
         room_allocations = []
         for rb in room_blueprints:
-            classroom = django_room_to_engine_classroom(rb.room)
+            classroom = django_room_to_engine_classroom(rb.room, capacity=rb.capacity)
             ra = RoomAllocation(classroom=classroom)
 
             for stream_name in ["A", "B", "C"]:
@@ -913,12 +1351,14 @@ class BlueprintService:
         seat_plan = seat_generator.generate(context)
 
         # Validate physical seats & save transactionally
+        room_capacities = {rb.room.room_id: rb.capacity for rb in room_blueprints}
         with transaction.atomic():
             allocations = save_session_seat_plan(
                 session=slot_blueprint.session,
                 seat_plan=seat_plan,
                 exams=exams,
                 expected_students=len(slot_students),
+                room_capacities=room_capacities,
             )
             slot_blueprint.status = SlotBlueprint.Status.SEATS_GENERATED
             slot_blueprint.save()

@@ -744,6 +744,7 @@ def blueprint_review(request, session_id):
                     assignments_by_stream[sa.stream_name].append(sa)
                     stream_totals[sa.stream_name] += sa.student_count
 
+                stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else (rb.room.benches or 15)
                 rooms_data.append({
                     "room_blueprint_id": rb.room_blueprint_id,
                     "room": rb.room,
@@ -751,6 +752,7 @@ def blueprint_review(request, session_id):
                     "room_order": rb.room_order,
                     "pattern": rb.pattern,
                     "capacity": rb.capacity,
+                    "stream_limit": stream_cap,
                     "total_students": rb.total_students,
                     "unused_capacity": rb.unused_capacity,
                     "department_count": rb.department_count,
@@ -763,6 +765,13 @@ def blueprint_review(request, session_id):
                     "all_assignments": all_stream_assignments,
                 })
 
+        unallocated_students = []
+        unassigned_rooms = []
+        if blueprint:
+            unallocated_students = BlueprintService.get_unallocated_students(blueprint)
+            assigned_room_ids = set(rb.room_id for rb in blueprint.room_blueprints.all())
+            unassigned_rooms = [r for r in all_rooms if r.room_id not in assigned_room_ids]
+
     return render(
         request,
         "exam_allocator/blueprint_review.html",
@@ -774,6 +783,8 @@ def blueprint_review(request, session_id):
             "rooms_data": rooms_data,
             "has_physical_seats": has_physical_seats,
             "available_rooms": all_rooms,
+            "unassigned_rooms": unassigned_rooms,
+            "unallocated_students": unallocated_students,
             "eligible_students_count": eligible_students_count,
             "diagnostic_message": diagnostic_message,
         },
@@ -1048,6 +1059,272 @@ def api_blueprint_reset(request, session_id):
         BlueprintService.reset_slot_blueprint(blueprint)
 
     return JsonResponse({"success": True, "message": "Blueprint reset successfully."})
+
+
+def api_blueprint_room_capacity(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    room_id = data.get("room_id")
+    capacity = data.get("capacity")
+
+    if not blueprint_id or not room_id or capacity is None:
+        return JsonResponse({"success": False, "error": "blueprint_id, room_id, and capacity are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.update_room_capacity(
+            slot_blueprint=blueprint,
+            room_id=int(room_id),
+            new_capacity=int(capacity),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_student_add(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+    roll_number = data.get("roll_number")
+    allow_capacity_increase = data.get("allow_capacity_increase", False)
+    if isinstance(allow_capacity_increase, str):
+        allow_capacity_increase = allow_capacity_increase.lower() in ("true", "1", "yes")
+
+    if not blueprint_id or not assignment_id or not roll_number:
+        return JsonResponse({"success": False, "error": "blueprint_id, assignment_id, and roll_number are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.add_student_to_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+            roll_number=str(roll_number),
+            allow_capacity_increase=allow_capacity_increase,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_student_remove(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+    roll_number = data.get("roll_number")
+
+    if not blueprint_id or not assignment_id or not roll_number:
+        return JsonResponse({"success": False, "error": "blueprint_id, assignment_id, and roll_number are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.remove_student_from_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+            roll_number=str(roll_number),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_assignment_remove(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+
+    if not blueprint_id or not assignment_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and assignment_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.remove_blueprint_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_assignment_edit(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    assignment_id = data.get("assignment_id")
+    dept = data.get("department_code")
+    cls_name = data.get("class_name")
+    subj_code = data.get("subject_code")
+
+    if not blueprint_id or not assignment_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and assignment_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.edit_blueprint_assignment(
+            slot_blueprint=blueprint,
+            assignment_id=int(assignment_id),
+            department_code=dept,
+            class_name=cls_name,
+            subject_code=subj_code,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_room_add(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    room_id = data.get("room_id")
+
+    if not blueprint_id or not room_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and room_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.add_room_to_blueprint(
+            slot_blueprint=blueprint,
+            room_id=int(room_id),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_room_remove(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    room_id = data.get("room_id")
+
+    if not blueprint_id or not room_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and room_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.remove_room_from_blueprint(
+            slot_blueprint=blueprint,
+            room_id=int(room_id),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_unallocated_students(request, session_id):
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    blueprint_id = request.GET.get("blueprint_id")
+    if not blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id is required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        students = BlueprintService.get_unallocated_students(blueprint)
+        return JsonResponse({"success": True, "students": students})
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
 
 
 

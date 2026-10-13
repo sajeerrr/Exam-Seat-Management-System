@@ -787,4 +787,316 @@ class TwoStageAllocationTests(TestCase):
         self.assertEqual(assign_a.stream_name, "C")
         self.assertEqual(assign_c.stream_name, "A")
 
+    # ── Test 32: Update room capacity dynamically expands stream limits ─────
+    def test_32_update_room_capacity_expands_stream_limit(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        self.assertEqual(rb1.capacity, 45)
+
+        res = BlueprintService.update_room_capacity(
+            slot_blueprint=bp,
+            room_id=self.room1.room_id,
+            new_capacity=48,
+        )
+        self.assertTrue(res["success"])
+        rb1.refresh_from_db()
+        self.assertEqual(rb1.capacity, 48)
+        self.assertEqual(res["rooms"][0]["capacity"], 48)
+        self.assertEqual(res["rooms"][0]["stream_limit"], 16)
+
+    # ── Test 33: Reducing room capacity below allocation marks invalid ──────
+    def test_33_reducing_room_capacity_below_allocation_marks_invalid(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        self.assertEqual(rb1.total_students, 45)
+
+        # Reduce capacity to 30 (when 45 students are assigned)
+        res = BlueprintService.update_room_capacity(
+            slot_blueprint=bp,
+            room_id=self.room1.room_id,
+            new_capacity=30,
+        )
+        self.assertTrue(res["success"])  # Operation saved
+        self.assertFalse(res["is_valid"])  # Blueprint is invalid!
+        self.assertEqual(res["blueprint_status"], SlotBlueprint.Status.NEEDS_REVIEW)
+        self.assertTrue(any("exceeds room capacity: 45 > 30" in err for err in res["errors"]))
+
+        # Verify students are NOT truncated
+        rb1.refresh_from_db()
+        self.assertEqual(rb1.capacity, 30)
+        self.assertEqual(rb1.total_students, 45)
+
+        # Attempt to finalize -> MUST be blocked
+        with self.assertRaises(BlueprintValidationError):
+            BlueprintService.finalize_blueprint(bp)
+
+        # Restore capacity back to 45 -> becomes valid and finalization succeeds
+        res_restore = BlueprintService.update_room_capacity(
+            slot_blueprint=bp,
+            room_id=self.room1.room_id,
+            new_capacity=45,
+        )
+        self.assertTrue(res_restore["is_valid"])
+        bp.refresh_from_db()
+        finalized_bp = BlueprintService.finalize_blueprint(bp)
+        self.assertEqual(finalized_bp.status, SlotBlueprint.Status.FINALIZED)
+
+    # ── Test 34: Add eligible individual student to assignment ──────────────
+    def test_34_add_individual_student_success(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # Create an extra eligible student CE16 registered for exam_ce
+        s_extra = Student.objects.create(
+            student_class=self.class_ce,
+            roll_number="CE16",
+            student_name="CE Student 16",
+        )
+        ExamRegistration.objects.create(student=s_extra, exam=self.exam_ce)
+
+        # Expand capacity of room 101 to 48 so Stream A can hold 16
+        BlueprintService.update_room_capacity(bp, self.room1.room_id, 48)
+
+        # Add CE16 to Stream A assignment
+        res = BlueprintService.add_student_to_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_a.assignment_id,
+            roll_number="CE16",
+            allow_capacity_increase=False,
+        )
+        self.assertTrue(res["success"])
+        assign_a.refresh_from_db()
+        self.assertIn("CE16", assign_a.student_rolls)
+        self.assertEqual(assign_a.student_count, 16)
+        rb1.refresh_from_db()
+        self.assertEqual(rb1.total_students, 46)
+
+    # ── Test 35: Reject invalid additions (unregistered, wrong subject, duplicate)
+    def test_35_reject_invalid_student_additions(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # 1. Non-existent / unregistered student
+        with self.assertRaises(BlueprintServiceError) as ctx1:
+            BlueprintService.add_student_to_assignment(
+                slot_blueprint=bp,
+                assignment_id=assign_a.assignment_id,
+                roll_number="FAKE999",
+            )
+        self.assertIn("not registered or eligible", str(ctx1.exception))
+
+        # 2. Student registered for ME subject (MET301) cannot be added to Stream A (CET301)
+        # Create unallocated ME student
+        s_me_extra = Student.objects.create(
+            student_class=self.class_me,
+            roll_number="ME99",
+            student_name="ME Student 99",
+        )
+        ExamRegistration.objects.create(student=s_me_extra, exam=self.exam_me)
+
+        with self.assertRaises(BlueprintServiceError) as ctx2:
+            BlueprintService.add_student_to_assignment(
+                slot_blueprint=bp,
+                assignment_id=assign_a.assignment_id,
+                roll_number="ME99",
+            )
+        self.assertIn("does not match assignment subject", str(ctx2.exception))
+
+        # 3. Student already allocated in this slot (CE01 is already in Stream A)
+        with self.assertRaises(BlueprintServiceError) as ctx3:
+            BlueprintService.add_student_to_assignment(
+                slot_blueprint=bp,
+                assignment_id=assign_a.assignment_id,
+                roll_number="CE01",
+            )
+        self.assertIn("already allocated", str(ctx3.exception))
+
+    # ── Test 36: Capacity expansion control when adding student ──────────────
+    def test_36_capacity_expansion_control(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # Stream A currently has 15/15 capacity (room capacity 45)
+        s_extra = Student.objects.create(
+            student_class=self.class_ce,
+            roll_number="CE17",
+            student_name="CE Student 17",
+        )
+        ExamRegistration.objects.create(student=s_extra, exam=self.exam_ce)
+
+        # Without allow_capacity_increase -> fails
+        with self.assertRaises(BlueprintServiceError) as ctx:
+            BlueprintService.add_student_to_assignment(
+                slot_blueprint=bp,
+                assignment_id=assign_a.assignment_id,
+                roll_number="CE17",
+                allow_capacity_increase=False,
+            )
+        self.assertIn("would exceed Stream A capacity", str(ctx.exception))
+
+        # With allow_capacity_increase=True -> succeeds, expanding capacity
+        res = BlueprintService.add_student_to_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_a.assignment_id,
+            roll_number="CE17",
+            allow_capacity_increase=True,
+        )
+        self.assertTrue(res["success"])
+        rb1.refresh_from_db()
+        self.assertGreaterEqual(rb1.capacity, 48)
+
+    # ── Test 37: Remove individual student from assignment ───────────────────
+    def test_37_remove_individual_student(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+        self.assertIn("CE01", assign_a.student_rolls)
+        self.assertEqual(assign_a.student_count, 15)
+
+        res = BlueprintService.remove_student_from_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_a.assignment_id,
+            roll_number="CE01",
+        )
+        assign_a.refresh_from_db()
+        self.assertNotIn("CE01", assign_a.student_rolls)
+        self.assertEqual(assign_a.student_count, 14)
+
+        # Check that CE01 is in unallocated students
+        unallocated = BlueprintService.get_unallocated_students(bp)
+        unallocated_rolls = [u["roll_number"] for u in unallocated]
+        self.assertIn("CE01", unallocated_rolls)
+
+    # ── Test 38: Remove entire blueprint assignment ──────────────────────────
+    def test_38_remove_blueprint_assignment(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_c = rb1.stream_assignments.filter(stream_name="C").first()
+        self.assertIsNotNone(assign_c)
+
+        res = BlueprintService.remove_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=assign_c.assignment_id,
+        )
+        rb1.refresh_from_db()
+        self.assertEqual(rb1.stream_assignments.filter(stream_name="C").count(), 0)
+        self.assertEqual(rb1.total_students, 30)
+
+    # ── Test 39: Add and remove classroom from blueprint ─────────────────────
+    def test_39_add_and_remove_room_blueprint(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        self.assertFalse(bp.room_blueprints.filter(room=self.room2).exists())
+
+        # Add room 2
+        res_add = BlueprintService.add_room_to_blueprint(bp, self.room2.room_id)
+        self.assertTrue(res_add["success"])
+        self.assertTrue(bp.room_blueprints.filter(room=self.room2).exists())
+
+        # Remove room 2
+        res_rem = BlueprintService.remove_room_from_blueprint(bp, self.room2.room_id)
+        self.assertTrue(res_rem["success"])
+        self.assertFalse(bp.room_blueprints.filter(room=self.room2).exists())
+
+    # ── Test 40: Room capacity API endpoint ──────────────────────────────────
+    def test_40_room_capacity_api_endpoint(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        url = reverse("exam_allocator:api_blueprint_room_capacity", kwargs={"session_id": self.session.session_id})
+
+        response = self.client.post(
+            url,
+            data={
+                "blueprint_id": bp.blueprint_id,
+                "room_id": self.room1.room_id,
+                "capacity": 48,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["rooms"][0]["capacity"], 48)
+
+    # ── Test 41: Student add/remove API endpoints ────────────────────────────
+    def test_41_student_add_remove_api_endpoints(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # Remove student CE01 via API
+        url_remove = reverse("exam_allocator:api_blueprint_student_remove", kwargs={"session_id": self.session.session_id})
+        resp_rem = self.client.post(
+            url_remove,
+            data={
+                "blueprint_id": bp.blueprint_id,
+                "assignment_id": assign_a.assignment_id,
+                "roll_number": "CE01",
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp_rem.status_code, 200)
+        self.assertTrue(resp_rem.json()["success"])
+
+        # Add student CE01 back via API
+        url_add = reverse("exam_allocator:api_blueprint_student_add", kwargs={"session_id": self.session.session_id})
+        resp_add = self.client.post(
+            url_add,
+            data={
+                "blueprint_id": bp.blueprint_id,
+                "assignment_id": assign_a.assignment_id,
+                "roll_number": "CE01",
+                "allow_capacity_increase": False,
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(resp_add.status_code, 200)
+        self.assertTrue(resp_add.json()["success"])
+
+    # ── Test 42: Unallocated students API endpoint ───────────────────────────
+    def test_42_unallocated_students_api_endpoint(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # Remove CE01
+        BlueprintService.remove_student_from_assignment(bp, assign_a.assignment_id, "CE01")
+
+        url = reverse("exam_allocator:api_blueprint_unallocated_students", kwargs={"session_id": self.session.session_id})
+        resp = self.client.get(f"{url}?blueprint_id={bp.blueprint_id}")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        rolls = [s["roll_number"] for s in data["students"]]
+        self.assertIn("CE01", rolls)
+
+    # ── Test 43: Seat generation with dynamic room capacity ──────────────────
+    def test_43_seat_generation_with_dynamic_room_capacity(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+        assign_a = rb1.stream_assignments.filter(stream_name="A").first()
+
+        # Create 1 extra student and add to Stream A with capacity expansion (48)
+        s_extra = Student.objects.create(
+            student_class=self.class_ce,
+            roll_number="CE16",
+            student_name="CE Student 16",
+        )
+        ExamRegistration.objects.create(student=s_extra, exam=self.exam_ce)
+        BlueprintService.update_room_capacity(bp, self.room1.room_id, 48)
+        BlueprintService.add_student_to_assignment(bp, assign_a.assignment_id, "CE16")
+
+        # Finalize and generate seats
+        BlueprintService.finalize_blueprint(bp)
+        allocations = BlueprintService.generate_seats_from_blueprint(bp)
+        self.assertEqual(len(allocations), 46)
+
+        # Check physical allocations
+        ce_allocs = Allocation.objects.filter(exam=self.exam_ce)
+        self.assertEqual(ce_allocs.count(), 16)
+        max_bench = max(a.bench_number for a in ce_allocs)
+        self.assertEqual(max_bench, 16)
+
+
 

@@ -519,12 +519,85 @@
         display: inline-flex;
         align-items: center;
         gap: 3px;
-        margin-left: auto;
     }
     .btn-card-move:hover {
         background: rgba(255, 255, 255, 0.08);
         border-color: var(--border);
         color: var(--text-primary);
+    }
+    .btn-sm-action {
+        background: rgba(99,102,241,0.12);
+        border: 1px solid rgba(99,102,241,0.25);
+        color: #a5b4fc;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-sm-action:hover {
+        background: rgba(99,102,241,0.25);
+        color: #fff;
+    }
+    .btn-sm-danger {
+        background: rgba(239,68,68,0.12);
+        border: 1px solid rgba(239,68,68,0.25);
+        color: #f87171;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-sm-danger:hover {
+        background: rgba(239,68,68,0.25);
+        color: #fff;
+    }
+    .btn-card-action {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-card-action:hover {
+        background: rgba(99,102,241,0.15);
+        border-color: var(--accent);
+        color: var(--text-primary);
+    }
+    .btn-card-danger {
+        background: transparent;
+        border: 1px solid transparent;
+        color: #f87171;
+        font-size: 11px;
+        padding: 2px 5px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .btn-card-danger:hover {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    .student-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+    .student-list-item:hover {
+        background: rgba(255, 255, 255, 0.06);
     }
 
     /* EMPTY STREAM DROP ZONE */
@@ -703,6 +776,11 @@
                 <button class="action-btn btn-danger-action" onclick="resetBlueprint()" title="Reset and delete blueprint for this slot">
                     🗑️ Reset and Reallocate
                 </button>
+                {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
+                    ➕ Add Classroom
+                </button>
+                {% endif %}
 
                 {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
                 <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()">
@@ -740,6 +818,7 @@
     {% endif %}
 
     <!-- VALIDATION ALERTS -->
+    <div id="validationAlertsContainer">
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
         <strong>⚠️ Blueprint Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
@@ -767,6 +846,7 @@
         ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
     </div>
     {% endif %}
+    </div>
 
     <!-- METRICS PANEL -->
     {% if blueprint %}
@@ -823,13 +903,21 @@
                         {{ r.department_count }} Dept{% if r.department_count != 1 %}s{% endif %}
                     </span>
                 </div>
-                <div class="room-meta-right">
+                <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
                     <span class="room-occupancy">
-                        Students: <strong id="totalCount-{{ r.room_blueprint_id }}">{{ r.total_students }}</strong> / {{ r.capacity }}
+                        Students: <strong id="totalCount-{{ r.room_blueprint_id }}">{{ r.total_students }}</strong> / <span id="roomCap-{{ r.room_blueprint_id }}">{{ r.capacity }}</span>
                     </span>
                     <span class="room-unused-pill {% if r.unused_capacity > 0 %}has-unused{% endif %}" id="unusedPill-{{ r.room_blueprint_id }}">
                         {{ r.unused_capacity }} Unused
                     </span>
+                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                    <button type="button" class="btn-sm-action" onclick="openCapacityModal({{ r.room.room_id }}, '{{ r.room_number }}', {{ r.capacity }})" title="Edit Room Capacity">
+                        ✏️ Edit Cap
+                    </button>
+                    <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint({{ r.room.room_id }}, '{{ r.room_number }}')" title="Remove Classroom">
+                        ✕
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -838,8 +926,8 @@
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="A">
                     <div class="stream-col-header">
                         <span class="stream-name">Stream A</span>
-                        <span class="stream-count {% if r.stream_a_count >= 15 %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-A">
-                            {{ r.stream_a_count }} / 15
+                        <span class="stream-count {% if r.stream_a_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-A">
+                            {{ r.stream_a_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
                     </div>
                     <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-A">
@@ -854,6 +942,7 @@
                              data-subj-code="{{ a.subject_code }}"
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
@@ -872,9 +961,20 @@
                                 <span></span>
                                 {% endif %}
                                 {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
-                                <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'A', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
-                                    ⇄ Move
-                                </button>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'A', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -888,8 +988,8 @@
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="B">
                     <div class="stream-col-header">
                         <span class="stream-name">Stream B</span>
-                        <span class="stream-count {% if r.stream_b_count >= 15 %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-B">
-                            {{ r.stream_b_count }} / 15
+                        <span class="stream-count {% if r.stream_b_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-B">
+                            {{ r.stream_b_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
                     </div>
                     <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-B">
@@ -904,6 +1004,7 @@
                              data-subj-code="{{ a.subject_code }}"
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
@@ -922,9 +1023,20 @@
                                 <span></span>
                                 {% endif %}
                                 {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
-                                <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'B', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
-                                    ⇄ Move
-                                </button>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'B', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -938,8 +1050,8 @@
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="C">
                     <div class="stream-col-header">
                         <span class="stream-name">Stream C</span>
-                        <span class="stream-count {% if r.stream_c_count >= 15 %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-C">
-                            {{ r.stream_c_count }} / 15
+                        <span class="stream-count {% if r.stream_c_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-C">
+                            {{ r.stream_c_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
                     </div>
                     <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-C">
@@ -954,6 +1066,7 @@
                              data-subj-code="{{ a.subject_code }}"
                              data-subj-name="{{ a.subject_name }}"
                              data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
@@ -972,9 +1085,20 @@
                                 <span></span>
                                 {% endif %}
                                 {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
-                                <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'C', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
-                                    ⇄ Move
-                                </button>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'C', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
                                 {% endif %}
                             </div>
                         </div>
@@ -1008,6 +1132,103 @@
 
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- EDIT ROOM CAPACITY MODAL -->
+<div class="modal-overlay" id="capacityModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="capacityModalTitle">Edit Classroom Capacity</div>
+            <button type="button" class="close-btn" onclick="closeCapacityModal()">&times;</button>
+        </div>
+        <form id="capacityForm" onsubmit="submitRoomCapacity(event)">
+            <input type="hidden" id="capModalRoomId">
+            <div class="form-group">
+                <label for="capModalInput">New Capacity (Total Seats)</label>
+                <input type="number" id="capModalInput" class="form-control" min="1" max="500" required>
+                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                    Stream bench limits will automatically recalculate (⌈Capacity ÷ 3⌉). If reduced below current allocated student count, the blueprint will be flagged as NEEDS REVIEW.
+                </small>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeCapacityModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Save Capacity</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD CLASSROOM MODAL -->
+<div class="modal-overlay" id="addRoomModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">Add Classroom to Blueprint</div>
+            <button type="button" class="close-btn" onclick="closeAddRoomModal()">&times;</button>
+        </div>
+        <form id="addRoomForm" onsubmit="submitAddRoom(event)">
+            <div class="form-group">
+                <label for="addRoomSelect">Select Classroom</label>
+                <select id="addRoomSelect" class="form-control" required>
+                    <option value="">-- Choose Classroom --</option>
+                    {% for rm in unassigned_rooms %}
+                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }}, Benches: {{ rm.benches }})</option>
+                    {% empty %}
+                    <option value="" disabled>All available classrooms are already assigned</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAddRoomModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Add Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MANAGE STUDENTS MODAL -->
+<div class="modal-overlay" id="manageStudentsModal">
+    <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-header">
+            <div class="modal-title" id="manageStudentsModalTitle">Assigned Students</div>
+            <button type="button" class="close-btn" onclick="closeManageStudentsModal()">&times;</button>
+        </div>
+        <div id="manageStudentsList" style="max-height: 360px; overflow-y: auto; padding: 4px 0;">
+            <!-- Populated dynamically via JS -->
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+            <button type="button" class="action-btn btn-secondary-action" onclick="closeManageStudentsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="addStudentModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="addStudentModalTitle">Add Student to Group</div>
+            <button type="button" class="close-btn" onclick="closeAddStudentModal()">&times;</button>
+        </div>
+        <form id="addStudentForm" onsubmit="submitAddStudent(event)">
+            <input type="hidden" id="addStudentAssignmentId">
+            <div class="form-group">
+                <label for="addStudentRollInput">Student Roll Number</label>
+                <input type="text" id="addStudentRollInput" class="form-control" placeholder="e.g. CE01" required>
+                <small id="addStudentHint" style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                    Must be registered for this exam slot with matching subject.
+                </small>
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="addStudentAllowExpand">
+                    <span>Allow room & stream capacity expansion if needed</span>
+                </label>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAddStudentModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Add Student</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <!-- MOVE / SWAP GROUP MODAL -->
 <div class="modal-overlay" id="moveModal">
@@ -1283,6 +1504,58 @@ function updateBoardFromData(data) {
         }
     }
 
+    // Update Validation Alerts
+    const alertsContainer = document.getElementById('validationAlertsContainer');
+    if (alertsContainer) {
+        let alertsHtml = '';
+        if (data.errors && data.errors.length) {
+            alertsHtml += `
+            <div class="alert-box alert-danger">
+                <strong>⚠️ Blueprint Hard Constraint Errors (${data.errors.length}):</strong>
+                <ul style="margin: 6px 0 0 18px; padding: 0;">
+                    ${data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+                </ul>
+            </div>`;
+        }
+        if (data.warnings && data.warnings.length) {
+            alertsHtml += `
+            <div class="alert-box alert-warning">
+                <strong>ℹ️ Optimization Warnings:</strong>
+                <ul style="margin: 6px 0 0 18px; padding: 0;">
+                    ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                </ul>
+            </div>`;
+        }
+        if ((!data.errors || !data.errors.length) && (!data.warnings || !data.warnings.length)) {
+            alertsHtml += `
+            <div class="alert-box alert-success">
+                ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
+            </div>`;
+        }
+        alertsContainer.innerHTML = alertsHtml;
+    }
+
+    // Update Status Badge
+    if (data.blueprint_status) {
+        const stageBadge = document.querySelector('.stage-badge');
+        if (stageBadge) {
+            stageBadge.className = `stage-badge stage-${data.blueprint_status}`;
+            stageBadge.textContent = data.blueprint_status.replace(/_/g, ' ');
+        }
+    }
+
+    // Enable/Disable Finalize Button
+    const finalizeBtn = document.querySelector('button[onclick="finalizeBlueprint()"]');
+    if (finalizeBtn) {
+        if (data.errors && data.errors.length) {
+            finalizeBtn.disabled = true;
+            finalizeBtn.title = 'Fix errors before finalizing';
+        } else {
+            finalizeBtn.disabled = false;
+            finalizeBtn.title = 'Finalize Blueprint';
+        }
+    }
+
     const container = document.getElementById('roomBoardContainer');
     if (!container) return;
 
@@ -1302,7 +1575,6 @@ function updateBoardFromData(data) {
     data.rooms.forEach(r => {
         let card = document.getElementById(`roomCard-${r.room_blueprint_id}`);
         if (!card) {
-            // Create new room card if missing
             card = document.createElement('div');
             card.className = 'room-card';
             card.id = `roomCard-${r.room_blueprint_id}`;
@@ -1310,8 +1582,6 @@ function updateBoardFromData(data) {
             card.dataset.roomId = r.room_id;
             container.appendChild(card);
         }
-
-        // Render card content
         card.innerHTML = buildRoomCardHTML(r);
     });
 
@@ -1320,9 +1590,10 @@ function updateBoardFromData(data) {
 }
 
 function buildRoomCardHTML(r) {
-    const isFullA = r.stream_a_count >= 15 ? 'is-full' : '';
-    const isFullB = r.stream_b_count >= 15 ? 'is-full' : '';
-    const isFullC = r.stream_c_count >= 15 ? 'is-full' : '';
+    const streamLimit = r.stream_limit || 15;
+    const isFullA = r.stream_a_count >= streamLimit ? 'is-full' : '';
+    const isFullB = r.stream_b_count >= streamLimit ? 'is-full' : '';
+    const isFullC = r.stream_c_count >= streamLimit ? 'is-full' : '';
     const hasUnused = r.unused_capacity > 0 ? 'has-unused' : '';
 
     return `
@@ -1336,13 +1607,21 @@ function buildRoomCardHTML(r) {
                     ${r.department_count} Dept${r.department_count !== 1 ? 's' : ''}
                 </span>
             </div>
-            <div class="room-meta-right">
+            <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
                 <span class="room-occupancy">
-                    Students: <strong id="totalCount-${r.room_blueprint_id}">${r.total_students}</strong> / ${r.capacity}
+                    Students: <strong id="totalCount-${r.room_blueprint_id}">${r.total_students}</strong> / <span id="roomCap-${r.room_blueprint_id}">${r.capacity}</span>
                 </span>
                 <span class="room-unused-pill ${hasUnused}" id="unusedPill-${r.room_blueprint_id}">
                     ${r.unused_capacity} Unused
                 </span>
+                ${!IS_LOCKED ? `
+                <button type="button" class="btn-sm-action" onclick="openCapacityModal(${r.room_id}, '${r.room_number}', ${r.capacity})" title="Edit Room Capacity">
+                    ✏️ Edit Cap
+                </button>
+                <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint(${r.room_id}, '${r.room_number}')" title="Remove Classroom">
+                    ✕
+                </button>
+                ` : ''}
             </div>
         </div>
 
@@ -1352,7 +1631,7 @@ function buildRoomCardHTML(r) {
                 <div class="stream-col-header">
                     <span class="stream-name">Stream A</span>
                     <span class="stream-count ${isFullA}" id="streamCount-${r.room_blueprint_id}-A">
-                        ${r.stream_a_count} / 15
+                        ${r.stream_a_count} / ${streamLimit} students
                     </span>
                 </div>
                 <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-A">
@@ -1365,7 +1644,7 @@ function buildRoomCardHTML(r) {
                 <div class="stream-col-header">
                     <span class="stream-name">Stream B</span>
                     <span class="stream-count ${isFullB}" id="streamCount-${r.room_blueprint_id}-B">
-                        ${r.stream_b_count} / 15
+                        ${r.stream_b_count} / ${streamLimit} students
                     </span>
                 </div>
                 <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-B">
@@ -1378,7 +1657,7 @@ function buildRoomCardHTML(r) {
                 <div class="stream-col-header">
                     <span class="stream-name">Stream C</span>
                     <span class="stream-count ${isFullC}" id="streamCount-${r.room_blueprint_id}-C">
-                        ${r.stream_c_count} / 15
+                        ${r.stream_c_count} / ${streamLimit} students
                     </span>
                 </div>
                 <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-C">
@@ -1395,9 +1674,7 @@ function buildGroupCardHTML(a, r, stream) {
     const catPill = (a.subject_category && a.subject_category !== 'NORMAL') 
         ? `<span class="group-category-pill">${a.subject_category}</span>` 
         : `<span></span>`;
-    const moveBtn = !IS_LOCKED 
-        ? `<button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>` 
-        : ``;
+    const rollsList = (a.student_rolls || []).join(',');
 
     return `
         <div class="group-card"
@@ -1410,21 +1687,281 @@ function buildGroupCardHTML(a, r, stream) {
              data-subj-code="${a.subject_code || ''}"
              data-subj-name="${a.subject_name || ''}"
              data-count="${a.student_count}"
+             data-rolls="${rollsList}"
              draggable="${isDraggable}">
             <div class="group-card-top">
                 <span class="group-handle">⠿</span>
-                <span class="group-dept-class" title="${deptClass}">${deptClass}</span>
+                <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
                 <span class="group-badge-count">${a.student_count} st</span>
             </div>
             <div class="group-subject" title="${a.subject_code} — ${a.subject_name}">
-                <strong>${a.subject_code}</strong>${a.subject_name ? ' · ' + a.subject_name : ''}
+                <strong>${a.subject_code}</strong>${a.subject_name ? ' · ' + escapeHtml(a.subject_name) : ''}
             </div>
-            <div class="group-card-bottom">
+            <div class="group-card-bottom" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; flex-wrap: wrap;">
                 ${catPill}
-                ${moveBtn}
+                ${!IS_LOCKED ? `
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>
+                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" title="View and remove students">👥 ${a.student_count}</button>
+                    <button type="button" class="btn-card-action" onclick="openAddStudentModal(${a.assignment_id}, '${escapeHtml(deptClass)}', '${a.subject_code}')" title="Add student">＋</button>
+                    <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">🗑️</button>
+                </div>
+                ` : ''}
             </div>
         </div>
     `;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function openCapacityModal(roomId, roomNumber, currentCap) {
+    document.getElementById('capModalRoomId').value = roomId;
+    document.getElementById('capModalInput').value = currentCap;
+    document.getElementById('capacityModalTitle').textContent = `Edit Capacity — Room ${roomNumber}`;
+    document.getElementById('capacityModal').style.display = 'flex';
+}
+
+function closeCapacityModal() {
+    document.getElementById('capacityModal').style.display = 'none';
+}
+
+function submitRoomCapacity(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('capModalRoomId').value;
+    const capacity = document.getElementById('capModalInput').value;
+    closeCapacityModal();
+
+    showToast('Updating room capacity and validating...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room-capacity/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId,
+            capacity: capacity
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Room capacity updated!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to update capacity'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openAddRoomModal() {
+    document.getElementById('addRoomModal').style.display = 'flex';
+}
+
+function closeAddRoomModal() {
+    document.getElementById('addRoomModal').style.display = 'none';
+}
+
+function submitAddRoom(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('addRoomSelect').value;
+    if (!roomId) return;
+    closeAddRoomModal();
+
+    showToast('Adding classroom to blueprint...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Classroom added!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to add room'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function removeRoomFromBlueprint(roomId, roomNumber) {
+    if (!confirm(`Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`)) return;
+
+    showToast('Removing classroom...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Classroom removed from blueprint.', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove room'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openManageStudentsModal(assignmentId, deptClass, count) {
+    document.getElementById('manageStudentsModalTitle').textContent = `Students: ${deptClass} (${count})`;
+    const listEl = document.getElementById('manageStudentsList');
+    listEl.innerHTML = '';
+
+    const card = document.getElementById(`groupCard-${assignmentId}`);
+    const rolls = card && card.dataset.rolls ? card.dataset.rolls.split(',').filter(Boolean) : [];
+
+    if (!rolls.length) {
+        listEl.innerHTML = '<div style="color: var(--text-muted); padding: 12px; text-align: center;">No students in this group.</div>';
+    } else {
+        rolls.forEach(roll => {
+            const item = document.createElement('div');
+            item.className = 'student-list-item';
+            item.innerHTML = `
+                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(roll)}</span>
+                ${!IS_LOCKED ? `<button type="button" class="btn-card-danger" onclick="removeStudent(${assignmentId}, '${escapeHtml(roll)}')" title="Remove student">✕ Remove</button>` : ''}
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    document.getElementById('manageStudentsModal').style.display = 'flex';
+}
+
+function closeManageStudentsModal() {
+    document.getElementById('manageStudentsModal').style.display = 'none';
+}
+
+function removeStudent(assignmentId, rollNumber) {
+    if (!confirm(`Remove student ${rollNumber} from this group?`)) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/student/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId,
+            roll_number: rollNumber
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✓ Student ${rollNumber} removed.`, 'success', 3000);
+            updateBoardFromData(data);
+            const card = document.getElementById(`groupCard-${assignmentId}`);
+            if (card) {
+                openManageStudentsModal(assignmentId, card.dataset.dept, card.dataset.count);
+            } else {
+                closeManageStudentsModal();
+            }
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove student'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openAddStudentModal(assignmentId, deptClass, subjectCode) {
+    document.getElementById('addStudentAssignmentId').value = assignmentId;
+    document.getElementById('addStudentModalTitle').textContent = `Add Student to ${deptClass} (${subjectCode})`;
+    document.getElementById('addStudentRollInput').value = '';
+    document.getElementById('addStudentAllowExpand').checked = false;
+    document.getElementById('addStudentModal').style.display = 'flex';
+}
+
+function closeAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'none';
+}
+
+function submitAddStudent(e) {
+    e.preventDefault();
+    const assignmentId = document.getElementById('addStudentAssignmentId').value;
+    const roll = document.getElementById('addStudentRollInput').value.trim();
+    const allowExpand = document.getElementById('addStudentAllowExpand').checked;
+    if (!roll) return;
+    closeAddStudentModal();
+
+    showToast(`Adding student ${roll}...`, 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/student/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId,
+            roll_number: roll,
+            allow_capacity_increase: allowExpand
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✓ Student ${roll} added successfully!`, 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to add student'), 'error', 6000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function removeGroup(assignmentId) {
+    if (!confirm('Remove this entire group from the blueprint? Its students will become unallocated.')) return;
+
+    showToast('Removing group...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/assignment/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Group removed.', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove group'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
 }
 
 // MODAL HANDLING

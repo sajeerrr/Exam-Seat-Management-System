@@ -167,6 +167,7 @@ def save_session_seat_plan(
     seat_plan,
     exams,
     expected_students=None,
+    room_capacities=None,
 ):
     """
     Save allocations for one examination time slot.
@@ -299,9 +300,14 @@ def save_session_seat_plan(
     for a in allocations:
         room_counts[a.room] += 1
     for r_obj, cnt in room_counts.items():
-        if cnt > r_obj.capacity:
+        effective_cap = (
+            room_capacities.get(r_obj.room_id, r_obj.capacity)
+            if room_capacities and r_obj.room_id in room_capacities
+            else r_obj.capacity
+        )
+        if cnt > effective_cap:
             raise SessionAllocationError(
-                f"Room capacity exceeded in Room {r_obj.room_number}: {cnt} allocated > capacity {r_obj.capacity}."
+                f"Room capacity exceeded in Room {r_obj.room_number}: {cnt} allocated > capacity {effective_cap}."
             )
 
     # 5. Special subject rules: No same-subject students adjacent in Moore 8-neighborhood
