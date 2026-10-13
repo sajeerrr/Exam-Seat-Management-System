@@ -1098,5 +1098,122 @@ class TwoStageAllocationTests(TestCase):
         max_bench = max(a.bench_number for a in ce_allocs)
         self.assertEqual(max_bench, 16)
 
+    # ── Test 44: Automatic consolidation of duplicate stream assignments ─────
+    def test_44_consolidate_duplicate_assignments_in_stream(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+
+        # Simulate fragmentation in Stream B by splitting an assignment into two
+        assign_b = rb1.stream_assignments.filter(stream_name="B").first()
+        rolls = list(assign_b.student_rolls or [])
+        if len(rolls) >= 2:
+            slice1_rolls = rolls[:1]
+            slice2_rolls = rolls[1:]
+
+            assign_b.student_rolls = slice1_rolls
+            assign_b.student_count = len(slice1_rolls)
+            assign_b.save()
+
+            StreamBlueprintAssignment.objects.create(
+                room_blueprint=rb1,
+                stream_name="B",
+                department_code=assign_b.department_code,
+                class_name=assign_b.class_name,
+                subject_code=assign_b.subject_code,
+                subject_name=assign_b.subject_name,
+                subject_category=assign_b.subject_category,
+                student_count=len(slice2_rolls),
+                student_rolls=slice2_rolls,
+                order=assign_b.order + 1,
+            )
+
+            # Before consolidation, Stream B has 2 assignments with the same (dept, class, subject)
+            matching_before = rb1.stream_assignments.filter(
+                stream_name="B",
+                department_code=assign_b.department_code,
+                class_name=assign_b.class_name,
+                subject_code=assign_b.subject_code,
+            )
+            self.assertEqual(matching_before.count(), 2)
+
+            # Run consolidate_slot_assignments
+            consolidated = BlueprintService.consolidate_slot_assignments(bp)
+            self.assertTrue(consolidated)
+
+            # After consolidation, only 1 assignment exists in Stream B with all rolls merged
+            matching_after = rb1.stream_assignments.filter(
+                stream_name="B",
+                department_code=assign_b.department_code,
+                class_name=assign_b.class_name,
+                subject_code=assign_b.subject_code,
+            )
+            self.assertEqual(matching_after.count(), 1)
+            merged_assign = matching_after.first()
+            self.assertEqual(merged_assign.student_count, len(rolls))
+            self.assertEqual(merged_assign.student_rolls, rolls)
+
+    # ── Test 45: Blueprint review page renders with consolidated cards ───────
+    def test_45_blueprint_review_page_renders_with_consolidated_cards(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        url = reverse("exam_allocator:blueprint_review", kwargs={"session_id": self.session.session_id})
+        resp = self.client.get(f"{url}?date={self.exam_date}&shift={self.shift}")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Department Blueprint")
+        self.assertContains(resp, "Edit Cap")
+        self.assertContains(resp, "btn-card-move")
+
+    # ── Test 46: Merge section A and B into one department card ──────────────
+    def test_46_merge_section_a_and_b_into_one_department_card(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        rb1 = bp.room_blueprints.filter(room=self.room1).first()
+
+        assign_b = rb1.stream_assignments.filter(stream_name="B").first()
+        rolls = list(assign_b.student_rolls or [])
+
+        # Simulate two different sections in the same department and subject:
+        # e.g., "ECE 2K22 A" (2 students) and "ECE 2K22 B" (13 students)
+        assign_b.class_name = "ECE 2K22 A"
+        assign_b.student_rolls = ["ECE01", "ECE02"]
+        assign_b.student_count = 2
+        assign_b.save()
+
+        sec_b = StreamBlueprintAssignment.objects.create(
+            room_blueprint=rb1,
+            stream_name="B",
+            department_code=assign_b.department_code,
+            class_name="ECE 2K22 B",
+            subject_code=assign_b.subject_code,
+            subject_name=assign_b.subject_name,
+            subject_category=assign_b.subject_category,
+            student_count=3,
+            student_rolls=["ECE03", "ECE04", "ECE05"],
+            order=assign_b.order + 1,
+        )
+
+        # Before consolidation: 2 separate cards in Stream B
+        stream_b_assignments = rb1.stream_assignments.filter(
+            stream_name="B",
+            department_code=assign_b.department_code,
+            subject_code=assign_b.subject_code,
+        )
+        self.assertEqual(stream_b_assignments.count(), 2)
+
+        # Consolidate
+        changed = BlueprintService.consolidate_slot_assignments(bp)
+        self.assertTrue(changed)
+
+        # After consolidation: Exactly 1 card in Stream B combining sections A and B
+        stream_b_after = rb1.stream_assignments.filter(
+            stream_name="B",
+            department_code=assign_b.department_code,
+            subject_code=assign_b.subject_code,
+        )
+        self.assertEqual(stream_b_after.count(), 1)
+        merged = stream_b_after.first()
+        self.assertEqual(merged.student_count, 5)
+        self.assertEqual(merged.student_rolls, ["ECE01", "ECE02", "ECE03", "ECE04", "ECE05"])
+        self.assertEqual(merged.class_name, "ECE 2K22 A, B")
+
+
 
 

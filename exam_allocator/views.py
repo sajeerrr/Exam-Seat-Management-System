@@ -723,6 +723,7 @@ def blueprint_review(request, session_id):
         ).exists()
 
         if blueprint:
+            BlueprintService.consolidate_slot_assignments(blueprint)
             from exam_allocator.models import Subject, ElectiveSubject
             subject_map = dict(Subject.objects.filter(session=session).values_list("subject_code", "subject_name"))
             elective_map = dict(ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name"))

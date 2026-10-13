@@ -1,5 +1,6 @@
 import logging
 import math
+import re
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -38,6 +39,49 @@ from exam_allocator.services.session_allocation_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def format_merged_class_names(class_names: List[str]) -> str:
+    """
+    Format merged class/section names cleanly.
+    Example:
+      ["ECE 2K22 A", "ECE 2K22 B"] -> "ECE 2K22 A, B"
+      ["B.Arch 2K24A", "B.Arch 2K24B"] -> "B.Arch 2K24 A, B"
+      ["ME 2K22 C"] -> "ME 2K22 C"
+    """
+    cleaned = []
+    for c in class_names:
+        if not c:
+            continue
+        c_str = str(c).strip()
+        if c_str:
+            cleaned.append(c_str)
+
+    if not cleaned:
+        return ""
+    if len(cleaned) == 1:
+        return cleaned[0]
+
+    all_sections = set()
+    all_bases = set()
+
+    for item in cleaned:
+        match_multi = re.match(r"^(.*?)(?:\s+|-)?([A-Za-z](?:\s*,\s*[A-Za-z])*)$", item)
+        if match_multi:
+            base = match_multi.group(1).strip()
+            secs = [s.strip().upper() for s in match_multi.group(2).split(",") if s.strip()]
+            all_bases.add(base)
+            all_sections.update(secs)
+        else:
+            all_bases.add(item)
+
+    if len(all_bases) == 1 and all_sections:
+        base = next(iter(all_bases))
+        sorted_secs = sorted(list(all_sections))
+        return f"{base} {', '.join(sorted_secs)}"
+
+    distinct = list(dict.fromkeys(cleaned))
+    return ", ".join(distinct)
 
 
 class BlueprintServiceError(Exception):
@@ -220,15 +264,14 @@ class BlueprintService:
                 )
                 order_idx += 1
 
-                # Group students in each stream by contiguous (dept, class, subject)
+                # Group students in each stream by (dept, subject, category), merging all sections (A, B, etc.)
                 for stream_name in ["A", "B", "C"]:
                     students_in_stream = ra.streams[stream_name].students
                     if not students_in_stream:
                         continue
 
-                    # Group into contiguous chunks
-                    chunks = []
-                    curr_chunk = None
+                    # Group all students in this stream by (dept, subj_code, subj_name, category)
+                    grouped_chunks = {}
                     for stu in students_in_stream:
                         roll = getattr(stu, "roll_no", None) or getattr(stu, "register_no", "")
                         d_code = getattr(stu, "department", "") or ""
@@ -237,27 +280,30 @@ class BlueprintService:
                         s_name = getattr(stu, "subject_name", "") or ""
                         cat = getattr(stu, "subject_category", "NORMAL") or "NORMAL"
 
-                        key = (d_code, c_name, s_code, s_name, cat)
-                        if curr_chunk and curr_chunk["key"] == key:
-                            curr_chunk["rolls"].append(roll)
-                        else:
-                            curr_chunk = {
-                                "key": key,
+                        key = (d_code, s_code, s_name, cat)
+                        if key not in grouped_chunks:
+                            grouped_chunks[key] = {
                                 "dept": d_code,
-                                "class": c_name,
+                                "classes": [c_name] if c_name else [],
                                 "subj_code": s_code,
                                 "subj_name": s_name,
                                 "category": cat,
-                                "rolls": [roll],
+                                "rolls": [],
                             }
-                            chunks.append(curr_chunk)
+                        if c_name and c_name not in grouped_chunks[key]["classes"]:
+                            grouped_chunks[key]["classes"].append(c_name)
+                        if roll and roll not in grouped_chunks[key]["rolls"]:
+                            grouped_chunks[key]["rolls"].append(roll)
+
+                    chunks = list(grouped_chunks.values())
 
                     for assign_order, chk in enumerate(chunks, start=1):
+                        combined_class = format_merged_class_names(chk["classes"])
                         StreamBlueprintAssignment.objects.create(
                             room_blueprint=room_bp,
                             stream_name=stream_name,
                             department_code=chk["dept"],
-                            class_name=chk["class"],
+                            class_name=combined_class,
                             subject_code=chk["subj_code"],
                             subject_name=chk["subj_name"],
                             subject_category=chk["category"],
@@ -480,11 +526,64 @@ class BlueprintService:
         return is_valid, errors, warnings, stats
 
     @classmethod
+    def consolidate_slot_assignments(cls, slot_blueprint: SlotBlueprint) -> bool:
+        """
+        Consolidates any duplicate StreamBlueprintAssignment records in the same room and stream
+        sharing the same (department_code, class_name, subject_code, subject_category).
+        Merges student roll lists, updates student counts, and removes duplicate card records.
+        Returns True if any duplicates were consolidated.
+        """
+        changed = False
+        with transaction.atomic():
+            for rb in slot_blueprint.room_blueprints.all():
+                rb_changed = False
+                for stream_name in ["A", "B", "C"]:
+                    assignments = list(
+                        rb.stream_assignments.filter(stream_name=stream_name).order_by("order", "assignment_id")
+                    )
+                    seen_keys = {}
+                    for sa in assignments:
+                        key = (
+                            sa.department_code,
+                            sa.subject_code,
+                            sa.subject_category,
+                        )
+                        if key not in seen_keys:
+                            seen_keys[key] = sa
+                        else:
+                            primary = seen_keys[key]
+                            existing_rolls = list(primary.student_rolls or [])
+                            for r in (sa.student_rolls or []):
+                                r_str = str(r).strip()
+                                if r_str and r_str not in existing_rolls:
+                                    existing_rolls.append(r_str)
+                            primary.student_rolls = existing_rolls
+                            primary.student_count = len(existing_rolls)
+                            if not primary.subject_name and sa.subject_name:
+                                primary.subject_name = sa.subject_name
+                            primary.class_name = format_merged_class_names([primary.class_name, sa.class_name])
+                            primary.save()
+                            sa.delete()
+                            rb_changed = True
+                            changed = True
+
+                if rb_changed:
+                    cls._recalculate_room_blueprint(rb)
+
+            if changed:
+                is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+                slot_blueprint.save()
+        return changed
+
+    @classmethod
     def serialize_slot_rooms(cls, slot_blueprint: SlotBlueprint) -> List[Dict[str, Any]]:
         """
         Serialize all room blueprints and their stream assignments into structured dicts.
         Ensures subject names and class names are populated accurately.
         """
+        # Automatically consolidate duplicate cards if any exist
+        cls.consolidate_slot_assignments(slot_blueprint)
+
         session = slot_blueprint.session
         subject_map = dict(
             Subject.objects.filter(session=session).values_list("subject_code", "subject_name")
@@ -606,7 +705,6 @@ class BlueprintService:
                 .filter(
                     stream_name=target_stream,
                     department_code=assignment.department_code,
-                    class_name=assignment.class_name,
                     subject_code=assignment.subject_code,
                     subject_category=assignment.subject_category,
                 )
@@ -628,6 +726,7 @@ class BlueprintService:
                 matching_assignment.student_count = len(merged_rolls)
                 if not matching_assignment.subject_name and assignment.subject_name:
                     matching_assignment.subject_name = assignment.subject_name
+                matching_assignment.class_name = format_merged_class_names([matching_assignment.class_name, assignment.class_name])
                 matching_assignment.save()
 
                 # Source assignment is consolidated; delete it
