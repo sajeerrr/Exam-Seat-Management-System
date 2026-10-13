@@ -24,17 +24,25 @@ class LocalOptimizer:
         self.validator = AllocationValidator()
 
     def optimize(self, context):
-        changed = True
-        passes = 0
+        snapshot_start = context.snapshot()
+        try:
+            changed = True
+            passes = 0
 
-        while changed and passes < AllocationLimits.MAX_OPTIMIZATION_PASSES:
-            changed = self._repair_tiny_fragments(context)
-            passes += 1
+            while changed and passes < AllocationLimits.MAX_OPTIMIZATION_PASSES:
+                changed = self._repair_tiny_fragments(context)
+                passes += 1
 
-        context = self.pattern_optimizer.optimize(context)
+            context = self.pattern_optimizer.optimize(context)
 
-        # Validate after optimization to ensure no constraint violations
-        return self._validate_optimization(context)
+            result = self.validator.validate(context)
+            if not result.success:
+                context.restore(snapshot_start)
+                return context
+            return context
+        except Exception:
+            context.restore(snapshot_start)
+            return context
 
     def _repair_tiny_fragments(self, context):
         """Move tiny fragments to consolidate department placements.
@@ -72,7 +80,8 @@ class LocalOptimizer:
                     after = self.pattern_evaluator.score_context(context)
                     after_abc = self.pattern_evaluator.abc_count(context)
 
-                    if after >= before and after_abc >= before_abc:
+                    val = self.validator.validate(context)
+                    if val.success and after >= before and after_abc >= before_abc:
                         return True
 
                     context.restore(snapshot)

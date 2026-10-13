@@ -139,10 +139,18 @@ class AllocationValidator:
 
     def validate_unallocated_groups(self, context, result):
         missing = 0
+        total_capacity = sum(r.classroom.capacity for r in context.room_allocations) if context.room_allocations else 0
+        total_students = sum(g.strength for g in context.groups)
+
         for group in context.groups:
             if group.remaining_count > 0:
                 missing += group.remaining_count
-                result.add_error(
-                    f"{group.group_id} has {group.remaining_count} unallocated student(s)"
-                )
+                if total_capacity >= total_students:
+                    result.add_error(
+                        f"{group.group_id} has {group.remaining_count} unallocated student(s)"
+                    )
+                else:
+                    result.warnings.append(
+                        f"{group.group_id} has {group.remaining_count} unallocated student(s) (insufficient room capacity: {total_capacity} seats for {total_students} students)"
+                    )
         result.missing_students = missing

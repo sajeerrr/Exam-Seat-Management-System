@@ -577,33 +577,31 @@
 
             {% if allocations_count %}
             <p>
-                <strong style="color:var(--text-primary)">{{ allocations_count }}</strong> allocation records currently
+                <strong style="color:var(--text-primary)">{{ allocations_count }}</strong> physical allocation records currently
                 exist for this session.
-                You can regenerate the complete session-wide allocation — this will run the allocation
-                engine across all examination time slots and replace existing allocations.
+                You can review, edit blueprints, and allocate on-demand for any specific examination slot below.
             </p>
             {% else %}
             <p>
-                No seat allocations have been generated yet. The allocation engine will process
-                all examinations together according to their examination date and FN/AN session.
+                Manage and generate exam seating slot-by-slot on demand. Select an examination slot, generate the department blueprint, review and edit room assignments, and generate physical seats.
             </p>
             {% endif %}
 
             <div class="btn-row">
-                <form method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-primary" id="generate-allocation-btn">
-                        ⚡ Generate Seat Allocations
-                    </button>
-                </form>
+                <a class="btn-primary" href="{% url 'exam_allocator:blueprint_review' session.session_id %}"
+                    id="start-allocation-btn">
+                    ⚡ Allocate Seating by Exam Slot
+                </a>
 
                 {% if allocations_count %}
                 <a class="btn-secondary" href="{% url 'exam_allocator:session_allocation_result' session.session_id %}"
                     id="view-allocations-btn">
-                    View Seat Allocations →
+                    View Seating Plan →
                 </a>
                 {% endif %}
             </div>
+
+
 
         </div>
     </div>

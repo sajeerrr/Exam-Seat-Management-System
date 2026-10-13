@@ -60,7 +60,7 @@ def django_registration_to_engine_student(registration):
     student_class = student.student_class
     department = student_class.department
 
-    reg_no = student.roll_number or student.uni_reg_no or student.admission_no or str(student.student_id)
+    roll = (student.roll_number or str(student.student_id)).strip()
 
     subj_code = exam.subject.subject_code
     subj_name = exam.subject.subject_name
@@ -93,7 +93,7 @@ def django_registration_to_engine_student(registration):
         category = exam.subject.subject_category
 
     return EngineStudent(
-        register_no=reg_no,
+        register_no=roll,
         name=student.student_name,
         department=department.department_code,
         semester=student_class.semester,
@@ -102,8 +102,9 @@ def django_registration_to_engine_student(registration):
         subject_name=subj_name,
         exam_date=exam.exam_date.strftime("%d-%m-%Y"),
         session=exam.session,
-        roll_no=student.roll_number,
+        roll_no=roll,
         subject_category=category,
+        class_name=student_class.class_name,
     )
 
 
@@ -127,6 +128,7 @@ def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session
         session=session,
         roll_no=reg.roll_number,
         subject_category=reg.elective_subject.elective_type or "ELECTIVE",
+        class_name=reg.class_name or "",
     )
 
 
@@ -140,10 +142,7 @@ def get_engine_students(exam):
             "exam",
             "exam__subject",
         )
-        .order_by(
-            "student__student_class__class_name",
-            "student__roll_number",
-        )
+        .order_by("student__roll_number")
     )
 
     return [
@@ -152,12 +151,12 @@ def get_engine_students(exam):
     ]
 
 
-def django_room_to_engine_classroom(room):
+def django_room_to_engine_classroom(room, capacity=None):
     """
     Convert a Django Room to an EngineClassroom.
 
     The engine needs rows, benches_per_row, and seats_per_bench.
-    We derive these from the stored bench count:
+    We derive these from stored bench count or dynamic capacity:
 
         benches == rows * benches_per_row
 
@@ -165,8 +164,10 @@ def django_room_to_engine_classroom(room):
     For rooms with a different bench count we compute the best fit
     (3 benches per row, n rows).
     """
-
-    benches = room.benches or 15
+    if capacity is not None and capacity > 0:
+        benches = max(room.benches or 0, math.ceil(capacity / 3))
+    else:
+        benches = room.benches or (math.ceil(room.capacity / 3) if room.capacity else 15)
     seats_per_bench = 3  # always 3 seats per bench in this system
     benches_per_row = 3  # always 3 benches across per row
 

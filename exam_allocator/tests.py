@@ -419,3 +419,102 @@ class StudentPDFParserTests(TestCase):
 
 
 from tests.test_special_subject_allocation import SpecialSubjectAllocationEngineTests
+
+
+class BlueprintSplitAndAllocationResultTests(TestCase):
+    def setUp(self):
+        from exam_allocator.models import SlotBlueprint, RoomBlueprint, StreamBlueprintAssignment, Room
+        self.session = AllocationSession.objects.create(name="Split Test Session")
+        self.room1 = Room.objects.create(session=self.session, room_number="101", capacity=45, benches=15)
+        self.room2 = Room.objects.create(session=self.session, room_number="102", capacity=45, benches=15)
+        self.bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date="2026-03-12",
+            shift="AN",
+            status=SlotBlueprint.Status.NEEDS_REVIEW
+        )
+        self.rbp1 = RoomBlueprint.objects.create(
+            slot_blueprint=self.bp,
+            room=self.room1,
+            capacity=45,
+            room_order=1
+        )
+        self.rbp2 = RoomBlueprint.objects.create(
+            slot_blueprint=self.bp,
+            room=self.room2,
+            capacity=45,
+            room_order=2
+        )
+        self.assign1 = StreamBlueprintAssignment.objects.create(
+            room_blueprint=self.rbp1,
+            stream_name="A",
+            department_code="CSE",
+            class_name="CSE 2026",
+            subject_code="CS301",
+            subject_name="Data Structures",
+            student_count=15,
+            student_rolls=[f"CS{i:02d}" for i in range(1, 16)],
+            order=1
+        )
+
+    def test_split_blueprint_assignment_to_another_room(self):
+        from exam_allocator.services.blueprint_service import BlueprintService, StreamBlueprintAssignment
+        res = BlueprintService.split_blueprint_assignment(
+            slot_blueprint=self.bp,
+            assignment_id=self.assign1.assignment_id,
+            keep_count=8,
+            target_room_id=self.room2.room_id,
+            target_stream="B"
+        )
+        self.assertTrue(res["success"])
+        self.assign1.refresh_from_db()
+        self.assertEqual(self.assign1.student_count, 8)
+        self.assertEqual(len(self.assign1.student_rolls), 8)
+        self.assertEqual(self.assign1.student_rolls, [f"CS{i:02d}" for i in range(1, 9)])
+
+        # Verify new assignment in Room 102 Stream B
+        new_assign = StreamBlueprintAssignment.objects.filter(
+            room_blueprint=self.rbp2,
+            stream_name="B"
+        ).first()
+        self.assertIsNotNone(new_assign)
+        self.assertEqual(new_assign.student_count, 7)
+        self.assertEqual(len(new_assign.student_rolls), 7)
+        self.assertEqual(new_assign.student_rolls, [f"CS{i:02d}" for i in range(9, 16)])
+
+    def test_split_blueprint_assignment_to_unallocated(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        res = BlueprintService.split_blueprint_assignment(
+            slot_blueprint=self.bp,
+            assignment_id=self.assign1.assignment_id,
+            keep_count=10,
+            target_room_id=None,
+            target_stream=None
+        )
+        self.assertTrue(res["success"])
+        self.assign1.refresh_from_db()
+        self.assertEqual(self.assign1.student_count, 10)
+        self.assertEqual(len(self.assign1.student_rolls), 10)
+
+    def test_api_blueprint_split_endpoint(self):
+        import json
+        client = Client()
+        url = reverse("exam_allocator:api_blueprint_split", args=[self.session.session_id])
+        payload = {
+            "blueprint_id": self.bp.blueprint_id,
+            "assignment_id": self.assign1.assignment_id,
+            "keep_count": 8,
+            "target_room_id": self.room2.room_id,
+            "target_stream": "A"
+        }
+        response = client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data.get("success"))
+
+    def test_session_allocation_result_view_renders_without_name_error(self):
+        client = Client()
+        url = reverse("exam_allocator:session_allocation_result", args=[self.session.session_id])
+        response = client.get(url + "?date=2026-03-12&shift=AN")
+        self.assertEqual(response.status_code, 200)
+

@@ -1,0 +1,2884 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}Department Blueprint — {{ session.name }} — ExamSeat{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="Department Allocation Blueprint for {{ session.name }}.">
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+    }
+    .page-wrapper {
+        max-width: 1560px;
+        margin: 0 auto;
+        padding: 24px 20px 80px;
+    }
+    .top-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .nav-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    .nav-breadcrumb a { color: var(--text-muted); text-decoration: none; }
+    .nav-breadcrumb a:hover { color: var(--accent-light); }
+    .nav-breadcrumb .sep { opacity: 0.4; }
+    .nav-breadcrumb .current { color: var(--text-primary); font-weight: 600; }
+
+    /* SLOT SELECTOR */
+    .slot-bar {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px 18px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .slot-lbl {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .slot-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: rgba(99,102,241,0.05);
+        border: 1px solid rgba(99,102,241,0.15);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .slot-pill:hover {
+        background: rgba(99,102,241,0.12);
+        border-color: rgba(99,102,241,0.3);
+        color: var(--text-primary);
+    }
+    .slot-pill.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+        box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    .slot-pill-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+    .slot-pill.active .slot-pill-badge {
+        background: rgba(0, 0, 0, 0.25);
+    }
+
+    /* ACTION BAR */
+    .action-bar {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .stage-status-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .stage-badge {
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stage-NOT_ALLOCATED { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .stage-DRAFT { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+    .stage-INVALID { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .stage-NEEDS_REVIEW { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .stage-READY_FOR_REVIEW { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+    .stage-VALIDATED { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
+    .stage-FINALIZED { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
+    .stage-SEATS_GENERATED { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+    .stage-REGEN_NEEDED { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+
+    .eligible-tag {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+
+    .btn-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        text-decoration: none;
+    }
+    .action-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .btn-primary-action {
+        background: var(--accent);
+        color: white;
+    }
+    .btn-primary-action:hover:not(:disabled) {
+        background: var(--accent-light);
+        box-shadow: 0 4px 12px var(--accent-glow);
+    }
+    .btn-secondary-action {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--border);
+        color: var(--text-primary);
+    }
+    .btn-secondary-action:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--border-hover);
+    }
+    .btn-success-action {
+        background: #059669;
+        color: white;
+    }
+    .btn-success-action:hover:not(:disabled) {
+        background: #10b981;
+    }
+    .btn-danger-action {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+    .btn-danger-action:hover:not(:disabled) {
+        background: rgba(239, 68, 68, 0.2);
+    }
+
+    /* STATS CHIPS */
+    .stats-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 14px;
+        text-align: center;
+    }
+    .stat-val {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    .stat-lbl {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* ALERTS */
+    .alert-box {
+        padding: 12px 16px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 20px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .alert-danger {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+    }
+    .alert-warning {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+    }
+    .alert-success {
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        color: #065f46;
+    }
+
+    /* ROOM ALLOCATION BOARD */
+    .room-board {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-bottom: 30px;
+    }
+    .room-card {
+        background: #ffffff;
+        border: 1px solid rgba(99, 102, 241, 0.22);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+    }
+    .room-card:hover {
+        border-color: rgba(99, 102, 241, 0.45);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.12);
+    }
+    .room-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 18px;
+        background: linear-gradient(180deg, #f8faff 0%, #f1f5f9 100%);
+        border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .room-meta-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .room-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e1b4b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .room-pattern-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 9px;
+        border-radius: 12px;
+        background: #eef2ff;
+        color: #4338ca;
+        border: 1px solid #c7d2fe;
+        letter-spacing: 0.5px;
+    }
+    .room-pattern-badge.pattern-ABA {
+        background: #fef3c7;
+        color: #b45309;
+        border-color: #fde68a;
+    }
+    .room-pattern-badge.pattern-MIXED {
+        background: #f3e8ff;
+        color: #7e22ce;
+        border-color: #e9d5ff;
+    }
+    .room-meta-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 12px;
+        color: #475569;
+    }
+    .room-occupancy {
+        font-weight: 600;
+        color: #475569;
+    }
+    .room-occupancy strong {
+        color: #0f172a;
+        font-weight: 700;
+    }
+    .room-unused-pill {
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #64748b;
+    }
+    .room-unused-pill.has-unused {
+        color: #0369a1;
+        border-color: #7dd3fc;
+        background: #e0f2fe;
+        font-weight: 700;
+    }
+    .room-depts-pill {
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+    }
+
+    /* 3-STREAM GRID */
+    .streams-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        padding: 14px 18px;
+        background: #fafcff;
+    }
+    @media (max-width: 960px) {
+        .streams-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .stream-column {
+        background: #ffffff;
+        border: 1px dashed #cbd5e1;
+        border-radius: var(--radius-sm);
+        padding: 12px;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+    .stream-column.drop-target-active {
+        border-color: var(--accent);
+        border-style: solid;
+        background: #eef2ff;
+        box-shadow: 0 0 12px rgba(99, 102, 241, 0.25) inset;
+    }
+    .stream-col-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stream-col-header .stream-name {
+        color: #1e1b4b;
+        font-weight: 700;
+    }
+    .stream-col-header .stream-count {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+    }
+    .stream-col-header .stream-count.is-full {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        font-weight: 700;
+    }
+    .stream-col-header .stream-count.is-over {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fca5a5;
+        font-weight: 700;
+    }
+
+    /* DRAGGABLE GROUP CARD */
+    .stream-groups {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+    }
+    .group-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        cursor: grab;
+        transition: all 0.15s ease;
+        user-select: none;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    .group-card:hover {
+        border-color: #6366f1;
+        background: #ffffff;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.14);
+    }
+    .group-card:active {
+        cursor: grabbing;
+    }
+    .group-card.is-dragging {
+        opacity: 0.35;
+        border-style: dashed;
+        border-color: var(--accent);
+        transform: scale(0.98);
+    }
+    .group-card.drag-over-swap {
+        border-color: #38bdf8;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+    .group-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+    }
+    .group-handle {
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1;
+        cursor: grab;
+        opacity: 0.8;
+    }
+    .group-dept-class {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #0f172a;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+    }
+    .group-badge-count {
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .group-sem-badge {
+        background: #e0e7ff;
+        border: 1px solid #c7d2fe;
+        color: #3730a3;
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .group-subject {
+        font-size: 12px;
+        color: #475569;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.35;
+    }
+    .group-subject strong {
+        color: #4338ca;
+        font-weight: 700;
+    }
+    .group-card-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        margin-top: 4px;
+    }
+    .group-category-pill {
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+    .btn-card-move {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .btn-card-move:hover {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #ffffff;
+    }
+    .btn-sm-action {
+        background: #eef2ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .btn-sm-action:hover {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+    }
+    .btn-sm-danger {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        font-size: 11.5px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .btn-sm-danger:hover {
+        background: #dc2626;
+        border-color: #dc2626;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+    }
+    .btn-card-action {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+    }
+    .btn-card-action:hover {
+        background: #eef2ff;
+        border-color: #a5b4fc;
+        color: #4338ca;
+    }
+    .btn-card-danger {
+        background: #fff1f2;
+        border: 1px solid #fecdd3;
+        color: #e11d48;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 7px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+    }
+    .btn-card-danger:hover {
+        background: #e11d48;
+        border-color: #e11d48;
+        color: #ffffff;
+    }
+    .student-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+    .student-list-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* EMPTY STREAM DROP ZONE */
+    .stream-empty-hint {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11.5px;
+        color: #94a3b8;
+        border: 1px dashed #cbd5e1;
+        border-radius: 6px;
+        padding: 18px 8px;
+        text-align: center;
+        pointer-events: none;
+        background: #f8fafc;
+    }
+
+    /* TOAST NOTIFICATION */
+    .toast-container {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 440px;
+        pointer-events: none;
+    }
+    .toast-msg {
+        background: #1e293b;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        pointer-events: auto;
+        animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        transition: all 0.2s ease;
+    }
+    .toast-msg.toast-success {
+        border-color: rgba(16, 185, 129, 0.5);
+        background: #064e3b;
+        color: #ecfdf5;
+    }
+    .toast-msg.toast-error {
+        border-color: rgba(239, 68, 68, 0.5);
+        background: #7f1d1d;
+        color: #fef2f2;
+    }
+    .toast-msg.toast-info {
+        border-color: rgba(99, 102, 241, 0.5);
+        background: #1e1b4b;
+        color: #e0e7ff;
+    }
+    @keyframes toastIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* MODAL */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(4px);
+    }
+    .modal-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        width: 100%;
+        max-width: 480px;
+        padding: 24px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .form-control {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 13px;
+    }
+
+    /* ALLOCATION LOADING ANIMATION */
+    .inline-spinner {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-radius: 50%;
+        border-top-color: #ffffff;
+        animation: spin-kf 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+    }
+    @keyframes spin-kf {
+        to { transform: rotate(360deg); }
+    }
+    .alloc-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.72);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease-out;
+    }
+    .alloc-loading-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 18px;
+        padding: 36px 40px;
+        text-align: center;
+        max-width: 440px;
+        width: 90%;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .alloc-spinner-ring {
+        width: 52px;
+        height: 52px;
+        border: 4px solid #e0e7ff;
+        border-top-color: #6366f1;
+        border-right-color: #818cf8;
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        animation: spin-kf 0.85s linear infinite;
+    }
+    .alloc-loading-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+    .alloc-loading-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 20px;
+        line-height: 1.4;
+    }
+    .alloc-progress-track {
+        height: 6px;
+        width: 100%;
+        background: #f1f5f9;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 14px;
+        position: relative;
+    }
+    .alloc-progress-fill {
+        height: 100%;
+        width: 40%;
+        background: linear-gradient(90deg, #6366f1, #818cf8, #a855f7);
+        border-radius: 999px;
+        position: absolute;
+        animation: allocIndeterminate 1.5s ease-in-out infinite;
+    }
+    @keyframes allocIndeterminate {
+        0% { left: -40%; width: 35%; }
+        50% { left: 30%; width: 50%; }
+        100% { left: 100%; width: 35%; }
+    }
+    .alloc-loading-steps {
+        font-size: 11.5px;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-wrapper">
+
+    <!-- TOP NAVIGATION -->
+    <nav class="top-nav">
+        <div class="nav-breadcrumb">
+            <a href="{% url 'exam_allocator:session_list' %}">Sessions</a>
+            <span class="sep">/</span>
+            <a href="{% url 'exam_allocator:session_detail' session.session_id %}">{{ session.name }}</a>
+            <span class="sep">/</span>
+            <span class="current">Department Blueprint</span>
+        </div>
+        <div>
+            {% if has_physical_seats and selected_slot %}
+            <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="action-btn btn-secondary-action">
+                🪑 View Seating Results →
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- EXAM SLOT SELECTOR -->
+    {% if slots %}
+    <div class="slot-bar">
+        <span class="slot-lbl">📅 Select Exam Slot:</span>
+        {% for slot in slots %}
+        <a href="?date={{ slot.date|date:'Y-m-d' }}&shift={{ slot.shift }}"
+           class="slot-pill {% if selected_slot and selected_slot.date == slot.date and selected_slot.shift == slot.shift %}active{% endif %}">
+            <span>{{ slot.date|date:"d M Y" }} ({{ slot.shift }})</span>
+            <span class="slot-pill-badge">{{ slot.status_label }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not selected_slot %}
+    <div class="alert-box alert-warning">
+        No exam timetable slots found for this session. Please import a timetable first.
+    </div>
+    {% else %}
+
+    <!-- ACTION / STATUS BAR -->
+    <div class="action-bar">
+        <div class="stage-status-group">
+            <span style="font-weight: 700; font-size: 15px;">
+                {{ selected_slot.date|date:"d-m-Y" }} ({{ selected_slot.shift }})
+            </span>
+            <span class="stage-badge stage-{{ selected_slot.status_key }}">
+                {{ selected_slot.status_label }}{% if blueprint %} (v{{ blueprint.version }}){% endif %}
+            </span>
+            <span class="eligible-tag">
+                👥 {{ eligible_students_count }} Eligible Students
+            </span>
+        </div>
+
+        <div class="btn-group">
+            {% if not blueprint %}
+            <button class="action-btn btn-primary-action btn-allocate-slot-trigger" id="btn-allocate-slot" onclick="allocateDepartments(false)">
+                Allocate Departments for This Slot
+            </button>
+            {% else %}
+                <button class="action-btn btn-secondary-action" onclick="validateBlueprint()">
+                    ✓ Validate Blueprint
+                </button>
+                <button class="action-btn btn-secondary-action" onclick="allocateDepartments(true)" title="Recalculate blueprint from scratch">
+                    🔄 Recalculate Allocation
+                </button>
+                <button class="action-btn btn-danger-action" onclick="resetBlueprint()" title="Reset and delete blueprint for this slot">
+                    🗑️ Reset and Reallocate
+                </button>
+                <button class="action-btn btn-secondary-action" onclick="openUnallocatedModal()" title="View and allocate unallocated or deleted students">
+                    📋 Allocate Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
+                </button>
+                <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
+                    ➕ Add Classroom
+                </button>
+
+                {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
+                <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()">
+                    🔓 Edit / Unfinalize
+                </button>
+                {% else %}
+                <button class="action-btn btn-success-action" onclick="finalizeBlueprint()"
+                        {% if blueprint.validation_errors %}disabled title="Fix errors before finalizing"{% endif %}>
+                    🔒 Finalize Blueprint
+                </button>
+                {% endif %}
+
+                {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
+                <button class="action-btn btn-primary-action" onclick="generateSeats()">
+                    🪑 {% if blueprint.status == "SEATS_GENERATED" %}Regenerate Seats{% else %}Generate Seats for This Slot{% endif %}
+                </button>
+                {% endif %}
+
+                {% if has_physical_seats %}
+                <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
+                   class="action-btn btn-secondary-action" style="background: rgba(99,102,241,0.15); color: #a5b4fc;">
+                    📋 View Seating Plan →
+                </a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- DIAGNOSTIC ALERT IF NO ELIGIBLE STUDENTS -->
+    {% if diagnostic_message %}
+    <div class="alert-box alert-warning">
+        <strong>⚠️ Student Eligibility Diagnostic:</strong><br>
+        {{ diagnostic_message }}
+    </div>
+    {% endif %}
+
+    <!-- VALIDATION ALERTS -->
+    <div id="validationAlertsContainer">
+    {% if blueprint and blueprint.validation_errors %}
+    <div class="alert-box alert-danger">
+        <strong>⚠️ Blueprint Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+        <ul style="margin: 6px 0 0 18px; padding: 0;">
+            {% for err in blueprint.validation_errors %}
+            <li>{{ err }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if blueprint and blueprint.validation_warnings %}
+    <div class="alert-box alert-warning">
+        <strong>ℹ️ Optimization Warnings:</strong>
+        <ul style="margin: 6px 0 0 18px; padding: 0;">
+            {% for w in blueprint.validation_warnings %}
+            <li>{{ w }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings %}
+    <div class="alert-box alert-success">
+        ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
+    </div>
+    {% endif %}
+    </div>
+
+    <!-- METRICS PANEL -->
+    {% if blueprint %}
+    <div class="stats-panel">
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.total_eligible_students }}</div>
+            <div class="stat-lbl">Eligible Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" style="color: #34d399;">{{ blueprint.total_allocated_students }}</div>
+            <div class="stat-lbl">Allocated Students</div>
+        </div>
+        <div class="stat-card" style="cursor: pointer;" onclick="openUnallocatedModal()" title="Click to view and allocate unallocated students">
+            <div class="stat-val" id="statUnallocatedCount" style="color: {% if blueprint.unallocated_count %}#f87171{% else %}#94a3b8{% endif %};">
+                {{ blueprint.unallocated_count }}
+            </div>
+            <div class="stat-lbl">Unallocated 📋</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.rooms_used }}</div>
+            <div class="stat-lbl">Rooms Used</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.total_room_capacity }}</div>
+            <div class="stat-lbl">Total Capacity</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.remaining_capacity }}</div>
+            <div class="stat-lbl">Remaining Cap</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.room_utilization }}%</div>
+            <div class="stat-lbl">Utilization</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val">{{ blueprint.department_scattering }}</div>
+            <div class="stat-lbl">Dept Scattering</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- MINIMALISTIC ROOM ALLOCATION BOARD -->
+    {% if rooms_data %}
+    <div class="room-board" id="roomBoardContainer">
+        {% for r in rooms_data %}
+        <div class="room-card" id="roomCard-{{ r.room_blueprint_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-room-id="{{ r.room.room_id }}">
+            <div class="room-card-header">
+                <div class="room-meta-left">
+                    <span class="room-title">🏛️ Room {{ r.room_number }}</span>
+                    <span class="room-pattern-badge pattern-{{ r.pattern }}" id="patternBadge-{{ r.room_blueprint_id }}">
+                        {{ r.pattern }}
+                    </span>
+                    <span class="room-depts-pill" id="deptsCount-{{ r.room_blueprint_id }}">
+                        {{ r.department_count }} Dept{% if r.department_count != 1 %}s{% endif %}
+                    </span>
+                </div>
+                <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
+                    <span class="room-occupancy">
+                        Students: <strong id="totalCount-{{ r.room_blueprint_id }}">{{ r.total_students }}</strong> / <span id="roomCap-{{ r.room_blueprint_id }}">{{ r.capacity }}</span>
+                    </span>
+                    <span class="room-unused-pill {% if r.unused_capacity > 0 %}has-unused{% endif %}" id="unusedPill-{{ r.room_blueprint_id }}">
+                        {{ r.unused_capacity }} Unused
+                    </span>
+                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                    <button type="button" class="btn-sm-action" onclick="openCapacityModal({{ r.room.room_id }}, '{{ r.room_number }}', {{ r.capacity }})" title="Edit Room Capacity">
+                        ✏️ Edit Cap
+                    </button>
+                    <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint({{ r.room.room_id }}, '{{ r.room_number }}')" title="Remove Classroom">
+                        ✕
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="streams-grid">
+                <!-- STREAM A -->
+                <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="A">
+                    <div class="stream-col-header">
+                        <span class="stream-name">Stream A</span>
+                        <span class="stream-count {% if r.stream_a_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-A">
+                            {{ r.stream_a_count }} / {{ r.stream_limit|default:15 }} students
+                        </span>
+                    </div>
+                    <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-A">
+                        {% for a in r.stream_a %}
+                        <div class="group-card"
+                             id="groupCard-{{ a.assignment_id }}"
+                             data-assignment-id="{{ a.assignment_id }}"
+                             data-room-id="{{ r.room.room_id }}"
+                             data-stream="A"
+                             data-dept="{{ a.department_code }}"
+                             data-class="{{ a.class_name }}"
+                             data-subj-code="{{ a.subject_code }}"
+                             data-subj-name="{{ a.subject_name }}"
+                             data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
+                             draggable="true">
+                            <div class="group-card-top">
+                                <span class="group-handle">⠿</span>
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
+                            </div>
+                            <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
+                                <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
+                            </div>
+                            <div class="group-card-bottom">
+                                {% if a.subject_category and a.subject_category != 'NORMAL' %}
+                                <span class="group-category-pill">{{ a.subject_category }}</span>
+                                {% else %}
+                                <span></span>
+                                {% endif %}
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'A', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'A')" title="Split group into two">
+                                        ✂️ Split
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="stream-empty-hint">Empty stream · Drop group here</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- STREAM B -->
+                <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="B">
+                    <div class="stream-col-header">
+                        <span class="stream-name">Stream B</span>
+                        <span class="stream-count {% if r.stream_b_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-B">
+                            {{ r.stream_b_count }} / {{ r.stream_limit|default:15 }} students
+                        </span>
+                    </div>
+                    <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-B">
+                        {% for a in r.stream_b %}
+                        <div class="group-card"
+                             id="groupCard-{{ a.assignment_id }}"
+                             data-assignment-id="{{ a.assignment_id }}"
+                             data-room-id="{{ r.room.room_id }}"
+                             data-stream="B"
+                             data-dept="{{ a.department_code }}"
+                             data-class="{{ a.class_name }}"
+                             data-subj-code="{{ a.subject_code }}"
+                             data-subj-name="{{ a.subject_name }}"
+                             data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
+                             draggable="true">
+                            <div class="group-card-top">
+                                <span class="group-handle">⠿</span>
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
+                            </div>
+                            <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
+                                <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
+                            </div>
+                            <div class="group-card-bottom">
+                                {% if a.subject_category and a.subject_category != 'NORMAL' %}
+                                <span class="group-category-pill">{{ a.subject_category }}</span>
+                                {% else %}
+                                <span></span>
+                                {% endif %}
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'B', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'B')" title="Split group into two">
+                                        ✂️ Split
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="stream-empty-hint">Empty stream · Drop group here</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- STREAM C -->
+                <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="C">
+                    <div class="stream-col-header">
+                        <span class="stream-name">Stream C</span>
+                        <span class="stream-count {% if r.stream_c_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-C">
+                            {{ r.stream_c_count }} / {{ r.stream_limit|default:15 }} students
+                        </span>
+                    </div>
+                    <div class="stream-groups" id="streamGroups-{{ r.room_blueprint_id }}-C">
+                        {% for a in r.stream_c %}
+                        <div class="group-card"
+                             id="groupCard-{{ a.assignment_id }}"
+                             data-assignment-id="{{ a.assignment_id }}"
+                             data-room-id="{{ r.room.room_id }}"
+                             data-stream="C"
+                             data-dept="{{ a.department_code }}"
+                             data-class="{{ a.class_name }}"
+                             data-subj-code="{{ a.subject_code }}"
+                             data-subj-name="{{ a.subject_name }}"
+                             data-count="{{ a.student_count }}"
+                             data-rolls="{{ a.student_rolls|join:',' }}"
+                             draggable="true">
+                            <div class="group-card-top">
+                                <span class="group-handle">⠿</span>
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                </span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
+                            </div>
+                            <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
+                                <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
+                            </div>
+                            <div class="group-card-bottom">
+                                {% if a.subject_category and a.subject_category != 'NORMAL' %}
+                                <span class="group-category-pill">{{ a.subject_category }}</span>
+                                {% else %}
+                                <span></span>
+                                {% endif %}
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'C', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
+                                        ⇄ Move
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'C')" title="Split group into two">
+                                        ✂️ Split
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
+                                        👥 {{ a.student_count }}
+                                    </button>
+                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
+                                        ＋
+                                    </button>
+                                    <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="stream-empty-hint">Empty stream · Drop group here</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif blueprint %}
+    <div class="alert-box alert-warning">
+        Blueprint has no rooms allocated yet. Click "Recalculate Allocation" to allocate rooms.
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px; background: var(--bg-card); border: 1px dashed var(--border); border-radius: var(--radius);">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
+            Department blueprint has not been created for <strong>{{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</strong> yet.
+        </p>
+        <button class="action-btn btn-primary-action btn-allocate-slot-trigger" id="btn-allocate-slot-center" onclick="allocateDepartments(false)" style="padding: 12px 24px; font-size: 14px;">
+            Allocate Departments for This Slot
+        </button>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ALLOCATION PROGRESS / LOADING MODAL -->
+<div id="allocationLoadingOverlay" class="alloc-loading-overlay" style="display: none;">
+    <div class="alloc-loading-card">
+        <div class="alloc-spinner-ring"></div>
+        <div class="alloc-loading-title">Allocating Departments</div>
+        <div class="alloc-loading-subtitle" id="allocationLoadingSubtext">
+            Generating optimal room blueprint and balancing stream distributions...
+        </div>
+        <div class="alloc-progress-track">
+            <div class="alloc-progress-fill"></div>
+        </div>
+        <div class="alloc-loading-steps">
+            <span>Classroom assignment</span> •
+            <span>Stream separation</span> •
+            <span>Capacity balancing</span>
+        </div>
+    </div>
+</div>
+
+<!-- EDIT ROOM CAPACITY MODAL -->
+<div class="modal-overlay" id="capacityModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="capacityModalTitle">Edit Classroom Capacity</div>
+            <button type="button" class="close-btn" onclick="closeCapacityModal()">&times;</button>
+        </div>
+        <form id="capacityForm" onsubmit="submitRoomCapacity(event)">
+            <input type="hidden" id="capModalRoomId">
+            <div class="form-group">
+                <label for="capModalInput">New Capacity (Total Seats)</label>
+                <input type="number" id="capModalInput" class="form-control" min="1" max="500" required>
+                <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                    Stream bench limits will automatically recalculate (⌈Capacity ÷ 3⌉). If reduced below current allocated student count, the blueprint will be flagged as NEEDS REVIEW.
+                </small>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeCapacityModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Save Capacity</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ADD CLASSROOM MODAL -->
+<div class="modal-overlay" id="addRoomModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title">Add Classroom to Blueprint</div>
+            <button type="button" class="close-btn" onclick="closeAddRoomModal()">&times;</button>
+        </div>
+        <form id="addRoomForm" onsubmit="submitAddRoom(event)">
+            <div class="form-group">
+                <label for="addRoomSelect">Select Classroom</label>
+                <select id="addRoomSelect" class="form-control" required>
+                    <option value="">-- Choose Classroom --</option>
+                    {% for rm in unassigned_rooms %}
+                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }}, Benches: {{ rm.benches }})</option>
+                    {% empty %}
+                    <option value="" disabled>All available classrooms are already assigned</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAddRoomModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Add Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MANAGE STUDENTS MODAL -->
+<div class="modal-overlay" id="manageStudentsModal">
+    <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-header">
+            <div class="modal-title" id="manageStudentsModalTitle">Assigned Students</div>
+            <button type="button" class="close-btn" onclick="closeManageStudentsModal()">&times;</button>
+        </div>
+        <div id="manageStudentsList" style="max-height: 360px; overflow-y: auto; padding: 4px 0;">
+            <!-- Populated dynamically via JS -->
+        </div>
+        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+            <button type="button" class="action-btn btn-secondary-action" onclick="closeManageStudentsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="addStudentModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="addStudentModalTitle">Add Student to Group</div>
+            <button type="button" class="close-btn" onclick="closeAddStudentModal()">&times;</button>
+        </div>
+        <form id="addStudentForm" onsubmit="submitAddStudent(event)">
+            <input type="hidden" id="addStudentAssignmentId">
+            <div class="form-group">
+                <label for="addStudentRollInput">Student Roll Number</label>
+                <input type="text" id="addStudentRollInput" class="form-control" placeholder="e.g. CE01" required>
+                <small id="addStudentHint" style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                    Must be registered for this exam slot with matching subject.
+                </small>
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                    <input type="checkbox" id="addStudentAllowExpand">
+                    <span>Allow room & stream capacity expansion if needed</span>
+                </label>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAddStudentModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Add Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MOVE / SWAP GROUP MODAL -->
+<div class="modal-overlay" id="moveModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Reassign Group</div>
+            <button type="button" class="close-btn" onclick="closeMoveModal()">&times;</button>
+        </div>
+        <form id="moveForm" onsubmit="submitMove(event)">
+            <input type="hidden" id="moveAssignmentId">
+            <div class="form-group">
+                <label>Selected Group</label>
+                <div id="groupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(99,102,241,0.08); border-radius: 6px; border: 1px solid rgba(99,102,241,0.2);"></div>
+            </div>
+
+            <div class="form-group" style="margin-top: 14px;">
+                <label for="modalModeSelect">Action Mode</label>
+                <select id="modalModeSelect" class="form-control" onchange="toggleModalMode()">
+                    <option value="MOVE">Move to Classroom & Stream</option>
+                    <option value="SWAP">Swap with Another Group</option>
+                </select>
+            </div>
+
+            <!-- MOVE SECTION -->
+            <div id="modalMoveSection">
+                <div class="form-group">
+                    <label for="targetRoomSelect">Target Classroom</label>
+                    <select id="targetRoomSelect" class="form-control">
+                        {% for rm in available_rooms %}
+                        <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="targetStreamSelect">Target Stream</label>
+                    <select id="targetStreamSelect" class="form-control">
+                        <option value="A">Stream A</option>
+                        <option value="B">Stream B</option>
+                        <option value="C">Stream C</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- SWAP SECTION -->
+            <div id="modalSwapSection" style="display: none;">
+                <div class="form-group">
+                    <label for="swapTargetSelect">Swap With Group</label>
+                    <select id="swapTargetSelect" class="form-control">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeMoveModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action" id="submitMoveBtn">Apply & Validate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SPLIT GROUP MODAL -->
+<div class="modal-overlay" id="splitGroupModal">
+    <div class="modal-card" style="max-width: 480px;">
+        <div class="modal-header">
+            <div class="modal-title">✂️ Split or Edit Student Count</div>
+            <button type="button" class="close-btn" onclick="closeSplitModal()">&times;</button>
+        </div>
+        <form id="splitGroupForm" onsubmit="submitSplitGroup(event)">
+            <input type="hidden" id="splitAssignmentId">
+            <input type="hidden" id="splitTotalStudents">
+            
+            <div class="form-group">
+                <label>Selected Group</label>
+                <div id="splitGroupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(99,102,241,0.08); border-radius: 6px; border: 1px solid rgba(99,102,241,0.2);">
+                    <!-- e.g. ME · ME 2K22 — Current: 15 students -->
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px;">
+                <div class="form-group">
+                    <label for="splitKeepCountInput">Keep in this stream</label>
+                    <input type="number" id="splitKeepCountInput" class="form-control" min="1" required oninput="handleSplitCountChange()">
+                    <small style="color: var(--text-muted); font-size: 11px;">Students staying here</small>
+                </div>
+                <div class="form-group">
+                    <label>Split-off students</label>
+                    <div id="splitOffCountDisplay" style="font-size: 16px; font-weight: 800; color: #f59e0b; padding: 7px 12px; background: rgba(245,158,11,0.1); border-radius: 6px; border: 1px solid rgba(245,158,11,0.25); text-align: center;">
+                        0 students
+                    </div>
+                    <small style="color: var(--text-muted); font-size: 11px;">Students to reassign</small>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 16px;">
+                <label style="font-weight: 700; margin-bottom: 6px; display: block; font-size: 12.5px;">Destination for split-off students:</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                        <input type="radio" name="splitDestinationType" value="MOVE" checked onchange="toggleSplitDestination()">
+                        <span>Move to another Classroom &amp; Stream</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                        <input type="radio" name="splitDestinationType" value="UNALLOCATED" onchange="toggleSplitDestination()">
+                        <span>Send to Unallocated Pool (assign later)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- DESTINATION ROOM & STREAM SELECTOR -->
+            <div id="splitDestinationFields" style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px;">
+                <div class="form-group">
+                    <label for="splitTargetRoomSelect">Target Classroom</label>
+                    <select id="splitTargetRoomSelect" class="form-control">
+                        {% for rm in available_rooms %}
+                        <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label for="splitTargetStreamSelect">Target Stream</label>
+                    <select id="splitTargetStreamSelect" class="form-control">
+                        <option value="A">Stream A</option>
+                        <option value="B">Stream B</option>
+                        <option value="C">Stream C</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeSplitModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action">Confirm Split</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ALLOCATE UNALLOCATED STUDENTS MODAL -->
+<div class="modal-overlay" id="unallocatedModal">
+    <div class="modal-card" style="max-width: 680px; width: 100%;">
+        <div class="modal-header">
+            <div class="modal-title">📋 Allocate Deleted / Unallocated Students</div>
+            <button type="button" class="close-btn" onclick="closeUnallocatedModal()">&times;</button>
+        </div>
+        <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+            <div style="font-size: 13px; color: var(--text-secondary);">
+                Select unallocated students/department below to place into a classroom and stream, or auto-allocate all remaining students.
+            </div>
+            <button type="button" class="action-btn btn-primary-action" onclick="autoAllocateAllUnallocated()" style="padding: 6px 14px; font-size: 12px;">
+                Auto-Allocate All
+            </button>
+        </div>
+
+        <div id="unallocatedLoadingState" style="text-align: center; padding: 24px; color: var(--text-muted); display: none;">
+            Loading unallocated students...
+        </div>
+
+        <div id="unallocatedEmptyState" style="text-align: center; padding: 28px; color: var(--text-muted); display: none;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">All students are allocated!</div>
+            <div style="font-size: 12px;">There are no deleted or unallocated students remaining for this exam slot.</div>
+        </div>
+
+        <div id="unallocatedContent">
+            <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;" id="unallocatedGroupsContainer">
+                <!-- Group radio items will be injected here -->
+            </div>
+
+            <form id="allocateUnallocatedForm" onsubmit="submitAllocateUnallocatedGroup(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="allocTargetRoomSelect" style="font-size: 12px;">Target Classroom</label>
+                        <select id="allocTargetRoomSelect" class="form-control" required>
+                            <option value="">-- Choose Classroom --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="allocTargetStreamSelect" style="font-size: 12px;">Target Stream</label>
+                        <select id="allocTargetStreamSelect" class="form-control" required>
+                            <option value="A">Stream A</option>
+                            <option value="B">Stream B</option>
+                            <option value="C">Stream C</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="allocAllowCapIncrease" value="1">
+                        <span>Allow increasing room capacity automatically if needed</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                    <button type="button" class="action-btn btn-secondary-action" onclick="closeUnallocatedModal()">Close</button>
+                    <button type="submit" class="action-btn btn-primary-action" id="btnSubmitAllocateGroup">
+                        Allocate Selected Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const SESSION_ID = '{{ session.session_id }}';
+const BLUEPRINT_ID = '{{ blueprint.blueprint_id|default:"" }}';
+const CURRENT_DATE = '{{ selected_slot.date|date:"Y-m-d"|default:"" }}';
+const CURRENT_SHIFT = '{{ selected_slot.shift|default:"" }}';
+const IS_LOCKED = {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}true{% else %}false{% endif %};
+
+let draggedAssignmentId = null;
+let draggedSourceRoomId = null;
+let draggedSourceStream = null;
+
+let autoScrollInterval = null;
+let autoScrollSpeed = 0;
+
+function handleDragAutoScroll(e) {
+    if (!draggedAssignmentId) return;
+    const threshold = 130;
+    const maxSpeed = 26;
+    const clientY = e.clientY;
+    const vh = window.innerHeight;
+
+    if (clientY < threshold && clientY >= 0) {
+        const intensity = (threshold - clientY) / threshold;
+        autoScrollSpeed = -Math.max(4, Math.round(intensity * maxSpeed));
+    } else if (clientY > vh - threshold && clientY <= vh) {
+        const intensity = (clientY - (vh - threshold)) / threshold;
+        autoScrollSpeed = Math.max(4, Math.round(intensity * maxSpeed));
+    } else {
+        autoScrollSpeed = 0;
+    }
+
+    if (autoScrollSpeed !== 0 && !autoScrollInterval) {
+        autoScrollInterval = setInterval(() => {
+            window.scrollBy({ top: autoScrollSpeed, behavior: 'auto' });
+        }, 16);
+    } else if (autoScrollSpeed === 0 && autoScrollInterval) {
+        stopAutoScroll();
+    }
+}
+
+function stopAutoScroll() {
+    if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        autoScrollInterval = null;
+    }
+    autoScrollSpeed = 0;
+}
+
+// TOAST NOTIFICATIONS
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast-msg toast-${type}`;
+    const icon = type === 'success' ? '✓' : type === 'error' ? '⚠️' : 'ℹ️';
+    toast.innerHTML = `<span style="font-weight: bold; font-size: 15px;">${icon}</span><div>${message}</div>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
+}
+
+// DRAG AND DROP INITIALIZATION
+function initDragAndDrop() {
+    // Draggable Cards
+    const cards = document.querySelectorAll('.group-card[draggable="true"]');
+    cards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+
+        // Allow dropping directly on another card to swap
+        card.addEventListener('dragover', handleCardDragOver);
+        card.addEventListener('dragleave', handleCardDragLeave);
+        card.addEventListener('drop', handleCardDrop);
+    });
+
+    // Stream Columns (Drop targets)
+    const columns = document.querySelectorAll('.stream-column');
+    columns.forEach(col => {
+        col.addEventListener('dragover', handleColumnDragOver);
+        col.addEventListener('dragleave', handleColumnDragLeave);
+        col.addEventListener('drop', handleColumnDrop);
+    });
+}
+
+function handleDragStart(e) {
+    draggedAssignmentId = this.dataset.assignmentId;
+    draggedSourceRoomId = this.dataset.roomId;
+    draggedSourceStream = this.dataset.stream;
+
+    this.classList.add('is-dragging');
+    e.dataTransfer.setData('text/plain', draggedAssignmentId);
+    e.dataTransfer.effectAllowed = 'move';
+
+    document.addEventListener('dragover', handleDragAutoScroll);
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('is-dragging');
+    document.querySelectorAll('.stream-column').forEach(c => c.classList.remove('drop-target-active'));
+    document.querySelectorAll('.group-card').forEach(c => c.classList.remove('drag-over-swap'));
+    document.removeEventListener('dragover', handleDragAutoScroll);
+    stopAutoScroll();
+}
+
+function handleColumnDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    this.classList.add('drop-target-active');
+}
+
+function handleColumnDragLeave(e) {
+    this.classList.remove('drop-target-active');
+}
+
+function handleColumnDrop(e) {
+    e.preventDefault();
+    this.classList.remove('drop-target-active');
+
+    const targetRoomId = this.dataset.roomId;
+    const targetStream = this.dataset.stream;
+
+    stopAutoScroll();
+
+    if (!draggedAssignmentId) return;
+
+    // If dropped in identical room & stream, ignore
+    if (String(draggedSourceRoomId) === String(targetRoomId) && String(draggedSourceStream) === String(targetStream)) {
+        return;
+    }
+
+    executeMove(draggedAssignmentId, targetRoomId, targetStream);
+}
+
+function handleCardDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.dataset.assignmentId !== draggedAssignmentId) {
+        this.classList.add('drag-over-swap');
+    }
+}
+
+function handleCardDragLeave(e) {
+    this.classList.remove('drag-over-swap');
+}
+
+function handleCardDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.classList.remove('drag-over-swap');
+    stopAutoScroll();
+
+    const targetAssignmentId = this.dataset.assignmentId;
+    if (!targetAssignmentId || targetAssignmentId === draggedAssignmentId) return;
+
+    // Swap action
+    executeSwap(draggedAssignmentId, targetAssignmentId);
+}
+
+// AJAX MOVE EXECUTION WITH LIVE DOM UPDATE
+function executeMove(assignId, targetRoomId, targetStream) {
+    showToast('Validating and moving department assignment...', 'info', 2000);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/move/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignId,
+            target_room_id: targetRoomId,
+            target_stream: targetStream,
+            reject_invalid: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.rejected) {
+            const errList = data.errors && data.errors.length ? data.errors.join('<br>• ') : 'Violates seating constraints';
+            showToast(`<strong>⚠️ Move Rejected:</strong><br>• ${errList}`, 'error', 6000);
+        } else if (data.success) {
+            showToast('✓ Blueprint updated and validated successfully!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to move assignment'), 'error', 5000);
+        }
+    })
+    .catch(err => {
+        showToast('Request error: ' + err, 'error', 4000);
+    });
+}
+
+// AJAX SWAP EXECUTION
+function executeSwap(assignId1, assignId2) {
+    showToast('Validating and swapping assignments...', 'info', 2000);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/swap/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id_1: assignId1,
+            assignment_id_2: assignId2,
+            reject_invalid: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.rejected) {
+            const errList = data.errors && data.errors.length ? data.errors.join('<br>• ') : 'Violates seating constraints';
+            showToast(`<strong>⚠️ Swap Rejected:</strong><br>• ${errList}`, 'error', 6000);
+        } else if (data.success) {
+            showToast('✓ Assignments swapped and validated successfully!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to swap assignments'), 'error', 5000);
+        }
+    })
+    .catch(err => {
+        showToast('Request error: ' + err, 'error', 4000);
+    });
+}
+
+// LIVE BOARD RE-RENDERING FROM JSON (NO PAGE RELOAD)
+function updateBoardFromData(data) {
+    if (!data.rooms) return;
+
+    // Update Stats Chips
+    if (data.stats) {
+        const stats = data.stats;
+        const statCards = document.querySelectorAll('.stat-card .stat-val');
+        if (statCards.length >= 8) {
+            statCards[0].textContent = stats.total_eligible_students || 0;
+            statCards[1].textContent = stats.total_allocated_students || 0;
+            statCards[2].textContent = stats.unallocated_count || 0;
+            statCards[2].style.color = (stats.unallocated_count > 0) ? '#f87171' : '#94a3b8';
+            statCards[3].textContent = stats.rooms_used || 0;
+            statCards[4].textContent = stats.total_room_capacity || 0;
+            statCards[5].textContent = stats.remaining_capacity || 0;
+            statCards[6].textContent = (stats.room_utilization || 0) + '%';
+            statCards[7].textContent = stats.department_scattering || 0;
+        }
+        const unallocBtn = document.getElementById('unallocatedBtnCount');
+        if (unallocBtn) {
+            unallocBtn.textContent = stats.unallocated_count || 0;
+        }
+    }
+
+    // Update Validation Alerts
+    const alertsContainer = document.getElementById('validationAlertsContainer');
+    if (alertsContainer) {
+        let alertsHtml = '';
+        if (data.errors && data.errors.length) {
+            alertsHtml += `
+            <div class="alert-box alert-danger">
+                <strong>⚠️ Blueprint Hard Constraint Errors (${data.errors.length}):</strong>
+                <ul style="margin: 6px 0 0 18px; padding: 0;">
+                    ${data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+                </ul>
+            </div>`;
+        }
+        if (data.warnings && data.warnings.length) {
+            alertsHtml += `
+            <div class="alert-box alert-warning">
+                <strong>ℹ️ Optimization Warnings:</strong>
+                <ul style="margin: 6px 0 0 18px; padding: 0;">
+                    ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                </ul>
+            </div>`;
+        }
+        if ((!data.errors || !data.errors.length) && (!data.warnings || !data.warnings.length)) {
+            alertsHtml += `
+            <div class="alert-box alert-success">
+                ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
+            </div>`;
+        }
+        alertsContainer.innerHTML = alertsHtml;
+    }
+
+    // Update Status Badge
+    if (data.blueprint_status) {
+        const stageBadge = document.querySelector('.stage-badge');
+        if (stageBadge) {
+            stageBadge.className = `stage-badge stage-${data.blueprint_status}`;
+            stageBadge.textContent = data.blueprint_status.replace(/_/g, ' ');
+        }
+    }
+
+    // Enable/Disable Finalize Button
+    const finalizeBtn = document.querySelector('button[onclick="finalizeBlueprint()"]');
+    if (finalizeBtn) {
+        if (data.errors && data.errors.length) {
+            finalizeBtn.disabled = true;
+            finalizeBtn.title = 'Fix errors before finalizing';
+        } else {
+            finalizeBtn.disabled = false;
+            finalizeBtn.title = 'Finalize Blueprint';
+        }
+    }
+
+    const container = document.getElementById('roomBoardContainer');
+    if (!container) return;
+
+    // Track active room blueprints
+    const activeBpIds = new Set(data.rooms.map(r => String(r.room_blueprint_id)));
+
+    // Remove deleted room cards
+    const existingCards = container.querySelectorAll('.room-card');
+    existingCards.forEach(c => {
+        const bpId = c.dataset.roomBpId;
+        if (!activeBpIds.has(String(bpId))) {
+            c.remove();
+        }
+    });
+
+    // Render or update room cards
+    data.rooms.forEach(r => {
+        let card = document.getElementById(`roomCard-${r.room_blueprint_id}`);
+        if (!card) {
+            card = document.createElement('div');
+            card.className = 'room-card';
+            card.id = `roomCard-${r.room_blueprint_id}`;
+            card.dataset.roomBpId = r.room_blueprint_id;
+            card.dataset.roomId = r.room_id;
+            container.appendChild(card);
+        }
+        card.innerHTML = buildRoomCardHTML(r);
+    });
+
+    // Rebind Drag and Drop listeners
+    initDragAndDrop();
+}
+
+function buildRoomCardHTML(r) {
+    const streamLimit = r.stream_limit || 15;
+    const isFullA = r.stream_a_count >= streamLimit ? 'is-full' : '';
+    const isFullB = r.stream_b_count >= streamLimit ? 'is-full' : '';
+    const isFullC = r.stream_c_count >= streamLimit ? 'is-full' : '';
+    const hasUnused = r.unused_capacity > 0 ? 'has-unused' : '';
+
+    return `
+        <div class="room-card-header">
+            <div class="room-meta-left">
+                <span class="room-title">🏛️ Room ${r.room_number}</span>
+                <span class="room-pattern-badge pattern-${r.pattern}" id="patternBadge-${r.room_blueprint_id}">
+                    ${r.pattern}
+                </span>
+                <span class="room-depts-pill" id="deptsCount-${r.room_blueprint_id}">
+                    ${r.department_count} Dept${r.department_count !== 1 ? 's' : ''}
+                </span>
+            </div>
+            <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
+                <span class="room-occupancy">
+                    Students: <strong id="totalCount-${r.room_blueprint_id}">${r.total_students}</strong> / <span id="roomCap-${r.room_blueprint_id}">${r.capacity}</span>
+                </span>
+                <span class="room-unused-pill ${hasUnused}" id="unusedPill-${r.room_blueprint_id}">
+                    ${r.unused_capacity} Unused
+                </span>
+                ${!IS_LOCKED ? `
+                <button type="button" class="btn-sm-action" onclick="openCapacityModal(${r.room_id}, '${r.room_number}', ${r.capacity})" title="Edit Room Capacity">
+                    ✏️ Edit Cap
+                </button>
+                <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint(${r.room_id}, '${r.room_number}')" title="Remove Classroom">
+                    ✕
+                </button>
+                ` : ''}
+            </div>
+        </div>
+
+        <div class="streams-grid">
+            <!-- STREAM A -->
+            <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="A">
+                <div class="stream-col-header">
+                    <span class="stream-name">Stream A</span>
+                    <span class="stream-count ${isFullA}" id="streamCount-${r.room_blueprint_id}-A">
+                        ${r.stream_a_count} / ${streamLimit} students
+                    </span>
+                </div>
+                <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-A">
+                    ${r.stream_a && r.stream_a.length ? r.stream_a.map(a => buildGroupCardHTML(a, r, 'A')).join('') : '<div class="stream-empty-hint">Empty stream · Drop group here</div>'}
+                </div>
+            </div>
+
+            <!-- STREAM B -->
+            <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="B">
+                <div class="stream-col-header">
+                    <span class="stream-name">Stream B</span>
+                    <span class="stream-count ${isFullB}" id="streamCount-${r.room_blueprint_id}-B">
+                        ${r.stream_b_count} / ${streamLimit} students
+                    </span>
+                </div>
+                <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-B">
+                    ${r.stream_b && r.stream_b.length ? r.stream_b.map(a => buildGroupCardHTML(a, r, 'B')).join('') : '<div class="stream-empty-hint">Empty stream · Drop group here</div>'}
+                </div>
+            </div>
+
+            <!-- STREAM C -->
+            <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="C">
+                <div class="stream-col-header">
+                    <span class="stream-name">Stream C</span>
+                    <span class="stream-count ${isFullC}" id="streamCount-${r.room_blueprint_id}-C">
+                        ${r.stream_c_count} / ${streamLimit} students
+                    </span>
+                </div>
+                <div class="stream-groups" id="streamGroups-${r.room_blueprint_id}-C">
+                    ${r.stream_c && r.stream_c.length ? r.stream_c.map(a => buildGroupCardHTML(a, r, 'C')).join('') : '<div class="stream-empty-hint">Empty stream · Drop group here</div>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function buildGroupCardHTML(a, r, stream) {
+    const isDraggable = !IS_LOCKED ? 'true' : 'false';
+    const displayClass = a.main_class_name || a.class_name || '';
+    const deptClass = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const semBadge = a.semester ? `<span class="group-sem-badge">S${a.semester}</span>` : '';
+    const catPill = (a.subject_category && a.subject_category !== 'NORMAL') 
+        ? `<span class="group-category-pill">${a.subject_category}</span>` 
+        : `<span></span>`;
+    const rollsList = (a.student_rolls || []).join(',');
+
+    return `
+        <div class="group-card"
+             id="groupCard-${a.assignment_id}"
+             data-assignment-id="${a.assignment_id}"
+             data-room-id="${r.room_id}"
+             data-stream="${stream}"
+             data-dept="${a.department_code || ''}"
+             data-class="${escapeHtml(displayClass)}"
+             data-subj-code="${a.subject_code || ''}"
+             data-subj-name="${a.subject_name || ''}"
+             data-count="${a.student_count}"
+             data-rolls="${rollsList}"
+             draggable="true">
+            <div class="group-card-top">
+                <span class="group-handle">⠿</span>
+                <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    ${semBadge}
+                    <span class="group-badge-count">${a.student_count} st</span>
+                </div>
+            </div>
+            <div class="group-subject" title="${a.subject_code} — ${a.subject_name}">
+                <strong>${a.subject_code}</strong>${a.subject_name ? ' · ' + escapeHtml(a.subject_name) : ''}
+            </div>
+            <div class="group-card-bottom" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; flex-wrap: wrap;">
+                ${catPill}
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>
+                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">✂️ Split</button>
+                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" title="View and remove students">👥 ${a.student_count}</button>
+                    <button type="button" class="btn-card-action" onclick="openAddStudentModal(${a.assignment_id}, '${escapeHtml(deptClass)}', '${a.subject_code}')" title="Add student">＋</button>
+                    <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">🗑️</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function openCapacityModal(roomId, roomNumber, currentCap) {
+    document.getElementById('capModalRoomId').value = roomId;
+    document.getElementById('capModalInput').value = currentCap;
+    document.getElementById('capacityModalTitle').textContent = `Edit Capacity — Room ${roomNumber}`;
+    document.getElementById('capacityModal').style.display = 'flex';
+}
+
+function closeCapacityModal() {
+    document.getElementById('capacityModal').style.display = 'none';
+}
+
+function submitRoomCapacity(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('capModalRoomId').value;
+    const capacity = document.getElementById('capModalInput').value;
+    closeCapacityModal();
+
+    showToast('Updating room capacity and validating...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room-capacity/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId,
+            capacity: capacity
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Room capacity updated!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to update capacity'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openAddRoomModal() {
+    document.getElementById('addRoomModal').style.display = 'flex';
+}
+
+function closeAddRoomModal() {
+    document.getElementById('addRoomModal').style.display = 'none';
+}
+
+function submitAddRoom(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('addRoomSelect').value;
+    if (!roomId) return;
+    closeAddRoomModal();
+
+    showToast('Adding classroom to blueprint...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Classroom added!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to add room'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function removeRoomFromBlueprint(roomId, roomNumber) {
+    if (!confirm(`Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`)) return;
+
+    showToast('Removing classroom...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/room/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Classroom removed from blueprint.', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove room'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openManageStudentsModal(assignmentId, deptClass, count) {
+    document.getElementById('manageStudentsModalTitle').textContent = `Students: ${deptClass} (${count})`;
+    const listEl = document.getElementById('manageStudentsList');
+    listEl.innerHTML = '';
+
+    const card = document.getElementById(`groupCard-${assignmentId}`);
+    const rolls = card && card.dataset.rolls ? card.dataset.rolls.split(',').filter(Boolean) : [];
+
+    if (!rolls.length) {
+        listEl.innerHTML = '<div style="color: var(--text-muted); padding: 12px; text-align: center;">No students in this group.</div>';
+    } else {
+        rolls.forEach(roll => {
+            const item = document.createElement('div');
+            item.className = 'student-list-item';
+            item.innerHTML = `
+                <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(roll)}</span>
+                ${!IS_LOCKED ? `<button type="button" class="btn-card-danger" onclick="removeStudent(${assignmentId}, '${escapeHtml(roll)}')" title="Remove student">✕ Remove</button>` : ''}
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    document.getElementById('manageStudentsModal').style.display = 'flex';
+}
+
+function closeManageStudentsModal() {
+    document.getElementById('manageStudentsModal').style.display = 'none';
+}
+
+function removeStudent(assignmentId, rollNumber) {
+    if (!confirm(`Remove student ${rollNumber} from this group?`)) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/student/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId,
+            roll_number: rollNumber
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✓ Student ${rollNumber} removed.`, 'success', 3000);
+            updateBoardFromData(data);
+            const card = document.getElementById(`groupCard-${assignmentId}`);
+            if (card) {
+                openManageStudentsModal(assignmentId, card.dataset.dept, card.dataset.count);
+            } else {
+                closeManageStudentsModal();
+            }
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove student'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function openAddStudentModal(assignmentId, deptClass, subjectCode) {
+    document.getElementById('addStudentAssignmentId').value = assignmentId;
+    document.getElementById('addStudentModalTitle').textContent = `Add Student to ${deptClass} (${subjectCode})`;
+    document.getElementById('addStudentRollInput').value = '';
+    document.getElementById('addStudentAllowExpand').checked = false;
+    document.getElementById('addStudentModal').style.display = 'flex';
+}
+
+function closeAddStudentModal() {
+    document.getElementById('addStudentModal').style.display = 'none';
+}
+
+function submitAddStudent(e) {
+    e.preventDefault();
+    const assignmentId = document.getElementById('addStudentAssignmentId').value;
+    const roll = document.getElementById('addStudentRollInput').value.trim();
+    const allowExpand = document.getElementById('addStudentAllowExpand').checked;
+    if (!roll) return;
+    closeAddStudentModal();
+
+    showToast(`Adding student ${roll}...`, 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/student/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId,
+            roll_number: roll,
+            allow_capacity_increase: allowExpand
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✓ Student ${roll} added successfully!`, 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to add student'), 'error', 6000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function removeGroup(assignmentId) {
+    if (!confirm('Remove this entire group from the blueprint? Its students will become unallocated.')) return;
+
+    showToast('Removing group...', 'info', 2000);
+    fetch(`/api/session/${SESSION_ID}/blueprint/assignment/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignmentId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Group removed.', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to remove group'), 'error', 5000);
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+// MODAL HANDLING
+function toggleModalMode() {
+    const mode = document.getElementById('modalModeSelect').value;
+    const moveSec = document.getElementById('modalMoveSection');
+    const swapSec = document.getElementById('modalSwapSection');
+    if (mode === 'SWAP') {
+        moveSec.style.display = 'none';
+        swapSec.style.display = 'block';
+    } else {
+        moveSec.style.display = 'block';
+        swapSec.style.display = 'none';
+    }
+}
+
+function openMoveModal(assignId, roomNo, stream, groupLabel, count) {
+    document.getElementById("moveAssignmentId").value = assignId;
+    document.getElementById("groupDetailsText").textContent = `${groupLabel} (${count} students) · Room ${roomNo} Stream ${stream}`;
+    document.getElementById("targetStreamSelect").value = stream;
+    document.getElementById("modalModeSelect").value = "MOVE";
+    toggleModalMode();
+
+    // Populate swap targets dynamically
+    const swapSelect = document.getElementById('swapTargetSelect');
+    swapSelect.innerHTML = '';
+    const otherCards = document.querySelectorAll(`.group-card:not([data-assignment-id="${assignId}"])`);
+    otherCards.forEach(c => {
+        const id = c.dataset.assignmentId;
+        const dept = c.dataset.dept;
+        const subj = c.dataset.subjCode;
+        const cnt = c.dataset.count;
+        const st = c.dataset.stream;
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = `${dept} (${subj}) · ${cnt} students [Stream ${st}]`;
+        swapSelect.appendChild(opt);
+    });
+
+    document.getElementById("moveModal").style.display = "flex";
+}
+
+function closeMoveModal() {
+    document.getElementById("moveModal").style.display = "none";
+}
+
+function submitMove(e) {
+    e.preventDefault();
+    const assignId = document.getElementById("moveAssignmentId").value;
+    const mode = document.getElementById("modalModeSelect").value;
+    const btn = document.getElementById("submitMoveBtn");
+    btn.disabled = true;
+
+    if (mode === 'SWAP') {
+        const swapTarget = document.getElementById("swapTargetSelect").value;
+        if (!swapTarget) {
+            alert("Please select a group to swap with.");
+            btn.disabled = false;
+            return;
+        }
+        closeMoveModal();
+        btn.disabled = false;
+        executeSwap(assignId, swapTarget);
+    } else {
+        const targetRoom = document.getElementById("targetRoomSelect").value;
+        const targetStream = document.getElementById("targetStreamSelect").value;
+        closeMoveModal();
+        btn.disabled = false;
+        executeMove(assignId, targetRoom, targetStream);
+    }
+}
+
+// SPLIT GROUP MODAL HANDLERS
+function openSplitModal(assignId, groupTitle, count, roomNo, stream) {
+    document.getElementById("splitAssignmentId").value = assignId;
+    document.getElementById("splitTotalStudents").value = count;
+    document.getElementById("splitGroupDetailsText").innerHTML = `
+        <strong>${escapeHtml(groupTitle)}</strong> · Room ${roomNo} Stream ${stream}<br>
+        <span style="font-size: 12px; opacity: 0.85;">Current Total: <strong>${count}</strong> students</span>
+    `;
+
+    // Default keep count: half, e.g. 8 of 15
+    const defaultKeep = Math.ceil(count / 2);
+    const keepInput = document.getElementById("splitKeepCountInput");
+    keepInput.max = count - 1;
+    keepInput.min = 1;
+    keepInput.value = defaultKeep;
+
+    handleSplitCountChange();
+    document.getElementById("splitGroupModal").style.display = "flex";
+}
+
+function closeSplitModal() {
+    document.getElementById("splitGroupModal").style.display = "none";
+}
+
+function handleSplitCountChange() {
+    const total = parseInt(document.getElementById("splitTotalStudents").value) || 0;
+    const keepInput = document.getElementById("splitKeepCountInput");
+    let keep = parseInt(keepInput.value) || 0;
+    if (keep >= total) {
+        keep = total - 1;
+        keepInput.value = keep;
+    }
+    if (keep < 1) {
+        keep = 1;
+        keepInput.value = keep;
+    }
+    const splitOff = total - keep;
+    const display = document.getElementById("splitOffCountDisplay");
+    if (display) {
+        display.textContent = `${splitOff} students`;
+    }
+}
+
+function toggleSplitDestination() {
+    const isMove = document.querySelector('input[name="splitDestinationType"]:checked').value === 'MOVE';
+    const fields = document.getElementById("splitDestinationFields");
+    if (fields) {
+        fields.style.display = isMove ? "block" : "none";
+    }
+}
+
+function submitSplitGroup(e) {
+    e.preventDefault();
+    const assignId = document.getElementById("splitAssignmentId").value;
+    const keepCount = parseInt(document.getElementById("splitKeepCountInput").value);
+    const destType = document.querySelector('input[name="splitDestinationType"]:checked').value;
+
+    let targetRoomId = null;
+    let targetStream = null;
+    if (destType === 'MOVE') {
+        targetRoomId = document.getElementById("splitTargetRoomSelect").value;
+        targetStream = document.getElementById("splitTargetStreamSelect").value;
+    }
+
+    closeSplitModal();
+    showToast('Splitting and validating group...', 'info', 2500);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/split/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            assignment_id: assignId,
+            keep_count: keepCount,
+            target_room_id: targetRoomId,
+            target_stream: targetStream,
+            reject_invalid: true
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.rejected) {
+            const errList = data.errors && data.errors.length ? data.errors.join('<br>• ') : 'Violates seating constraints';
+            showToast(`<strong>⚠️ Split Rejected:</strong><br>• ${errList}`, 'error', 6000);
+        } else if (data.success) {
+            showToast('✓ Group split and validated successfully!', 'success', 3000);
+            updateBoardFromData(data);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to split group'), 'error', 5000);
+        }
+    })
+    .catch(err => {
+        showToast('Request error: ' + err, 'error', 4000);
+    });
+}
+
+// ALLOCATE, RESET, VALIDATE, FINALIZE ACTIONS
+function allocateDepartments(force) {
+    if (force && !confirm("Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?")) {
+        return;
+    }
+    const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
+    btns.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
+    });
+
+    const overlay = document.getElementById('allocationLoadingOverlay');
+    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+    const subtext = document.getElementById('allocationLoadingSubtext');
+    if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
+    if (subtext) {
+        subtext.textContent = force 
+            ? 'Recalculating classroom blueprint and balancing stream distributions...' 
+            : 'Generating optimal room blueprint and balancing stream distributions...';
+    }
+    if (overlay) overlay.style.display = 'flex';
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            date: CURRENT_DATE,
+            shift: CURRENT_SHIFT,
+            force: force
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            if (overlay) overlay.style.display = 'none';
+            btns.forEach(btn => {
+                btn.disabled = false;
+                btn.textContent = 'Allocate Departments for This Slot';
+            });
+            alert("Allocation failed: " + (data.error || "Unknown error"));
+        }
+    })
+    .catch(err => {
+        if (overlay) overlay.style.display = 'none';
+        btns.forEach(btn => {
+            btn.disabled = false;
+            btn.textContent = 'Allocate Departments for This Slot';
+        });
+        alert("Request error: " + err);
+    });
+}
+
+function resetBlueprint() {
+    if (!confirm("Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.")) {
+        return;
+    }
+    fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            date: CURRENT_DATE,
+            shift: CURRENT_SHIFT
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert("Reset failed: " + (data.error || "Unknown error"));
+        }
+    })
+    .catch(err => alert("Request error: " + err));
+}
+
+function validateBlueprint() {
+    if (!BLUEPRINT_ID) return;
+    fetch(`/api/session/${SESSION_ID}/blueprint/validate/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ blueprint_id: BLUEPRINT_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert("Validation request failed: " + (data.error || "Unknown error"));
+        }
+    })
+    .catch(err => alert("Request error: " + err));
+}
+
+function finalizeBlueprint() {
+    if (!BLUEPRINT_ID) return;
+    if (!confirm("Finalizing the blueprint will freeze department-stream assignments and enable physical seat generation. Proceed?")) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/finalize/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ blueprint_id: BLUEPRINT_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert("Finalization blocked: \n" + (data.errors ? data.errors.join("\n") : (data.error || "Validation failed")));
+        }
+    })
+    .catch(err => alert("Request error: " + err));
+}
+
+function unfinalizeBlueprint() {
+    if (!BLUEPRINT_ID) return;
+    if (!confirm("Unfinalizing will unlock editing and mark any generated physical seating plan as outdated. Proceed?")) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/unfinalize/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ blueprint_id: BLUEPRINT_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert("Error: " + (data.error || "Failed to unfinalize"));
+        }
+    })
+    .catch(err => alert("Request error: " + err));
+}
+
+function generateSeats() {
+    if (!BLUEPRINT_ID) return;
+    const overlay = document.getElementById('allocationLoadingOverlay');
+    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+    const subtext = document.getElementById('allocationLoadingSubtext');
+    if (title) title.textContent = 'Generating Physical Seats';
+    if (subtext) subtext.textContent = 'Assigning eligible students to physical benches across rooms...';
+    if (overlay) overlay.style.display = 'flex';
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/generate-seats/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({ blueprint_id: BLUEPRINT_ID })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            if (overlay) overlay.style.display = 'none';
+            alert("Seat generation failed: " + (data.error || "Unknown constraint error"));
+        }
+    })
+    .catch(err => {
+        if (overlay) overlay.style.display = 'none';
+        alert("Request error: " + err);
+    });
+}
+
+// UNALLOCATED STUDENTS MODAL HANDLING
+let currentUnallocatedStudents = [];
+
+function openUnallocatedModal() {
+    if (!BLUEPRINT_ID) return;
+    const modal = document.getElementById('unallocatedModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const loading = document.getElementById('unallocatedLoadingState');
+    const emptyState = document.getElementById('unallocatedEmptyState');
+    const content = document.getElementById('unallocatedContent');
+
+    loading.style.display = 'block';
+    emptyState.style.display = 'none';
+    content.style.display = 'none';
+
+    // Populate Target Room Select from existing rooms on page
+    const roomSelect = document.getElementById('allocTargetRoomSelect');
+    if (roomSelect) {
+        roomSelect.innerHTML = '<option value="">-- Choose Classroom --</option>';
+        document.querySelectorAll('.room-card').forEach(card => {
+            const rId = card.dataset.roomId || (card.id ? card.id.replace('roomCard-', '') : null);
+            const rNumElem = card.querySelector('.room-title');
+            const rNum = rNumElem ? rNumElem.textContent.replace('🏛️', '').trim() : `Room ${rId}`;
+            const rCapElem = card.querySelector('.room-occupancy span');
+            const rCap = rCapElem ? rCapElem.textContent.trim() : '';
+            if (rId) {
+                const opt = document.createElement('option');
+                opt.value = rId;
+                opt.textContent = `${rNum} (Cap: ${rCap})`;
+                roomSelect.appendChild(opt);
+            }
+        });
+    }
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/unallocated-students/?blueprint_id=${BLUEPRINT_ID}`)
+        .then(r => r.json())
+        .then(data => {
+            loading.style.display = 'none';
+            if (data.success && data.students && data.students.length > 0) {
+                currentUnallocatedStudents = data.students;
+                renderUnallocatedModalData(data.students);
+                content.style.display = 'block';
+            } else {
+                currentUnallocatedStudents = [];
+                emptyState.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            loading.style.display = 'none';
+            showToast('Failed to load unallocated students: ' + err, 'error');
+        });
+}
+
+function closeUnallocatedModal() {
+    const modal = document.getElementById('unallocatedModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderUnallocatedModalData(students) {
+    const container = document.getElementById('unallocatedGroupsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const groups = {};
+    students.forEach(s => {
+        const key = `${s.department}__${s.subject_code}`;
+        if (!groups[key]) {
+            groups[key] = {
+                department: s.department,
+                class_name: s.class_name,
+                subject_code: s.subject_code,
+                subject_name: s.subject_name,
+                rolls: []
+            };
+        }
+        groups[key].rolls.push(s.roll_number);
+    });
+
+    let first = true;
+    for (const key in groups) {
+        const g = groups[key];
+        const row = document.createElement('label');
+        row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; margin: 0;';
+        row.onmouseover = () => row.style.background = 'rgba(99,102,241,0.06)';
+        row.onmouseout = () => row.style.background = 'transparent';
+
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="radio" name="unallocatedGroupSelect" value="${key}" data-dept="${escapeHtml(g.department)}" data-subj="${escapeHtml(g.subject_code)}" data-rolls="${g.rolls.join(',')}" ${first ? 'checked' : ''} style="accent-color: var(--accent);">
+                <div>
+                    <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">
+                        ${escapeHtml(g.department)} · ${g.rolls.length} students
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--text-secondary);">
+                        <strong>${escapeHtml(g.subject_code)}</strong> · ${escapeHtml(g.subject_name || '')}
+                    </div>
+                </div>
+            </div>
+            <span style="font-size: 11px; background: rgba(244,63,94,0.1); color: #f43f5e; border: 1px solid rgba(244,63,94,0.25); padding: 2px 8px; border-radius: 10px; font-weight: 700;">
+                ${g.rolls.length} unallocated
+            </span>
+        `;
+        container.appendChild(row);
+        first = false;
+    }
+}
+
+function submitAllocateUnallocatedGroup(e) {
+    e.preventDefault();
+    const selectedRadio = document.querySelector('input[name="unallocatedGroupSelect"]:checked');
+    if (!selectedRadio) {
+        alert('Please select an unallocated department group to allocate.');
+        return;
+    }
+
+    const roomId = document.getElementById('allocTargetRoomSelect').value;
+    const stream = document.getElementById('allocTargetStreamSelect').value;
+    const allowIncrease = document.getElementById('allocAllowCapIncrease').checked;
+
+    if (!roomId || !stream) {
+        alert('Please choose both a target classroom and a stream.');
+        return;
+    }
+
+    const dept = selectedRadio.dataset.dept;
+    const subj = selectedRadio.dataset.subj;
+    const rolls = selectedRadio.dataset.rolls ? selectedRadio.dataset.rolls.split(',') : [];
+
+    const submitBtn = document.getElementById('btnSubmitAllocateGroup');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Allocating...';
+    }
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            mode: 'manual',
+            target_room_id: roomId,
+            target_stream: stream,
+            department_code: dept,
+            subject_code: subj,
+            student_rolls: rolls,
+            allow_capacity_increase: allowIncrease
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Allocate Selected Group';
+        }
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`Allocated ${data.allocated_count || rolls.length} students into Room stream ${stream}`, 'success');
+            closeUnallocatedModal();
+        } else {
+            showToast('Allocation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Allocate Selected Group';
+        }
+        showToast('Request error: ' + err, 'error');
+    });
+}
+
+function autoAllocateAllUnallocated() {
+    if (!confirm('Automatically allocate all remaining unallocated students across rooms with available capacity?')) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            mode: 'auto'
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`Auto-allocated ${data.allocated_count || 0} students!`, 'success');
+            closeUnallocatedModal();
+        } else {
+            showToast('Auto-allocation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error'));
+}
+
+// INITIALIZE ON LOAD
+document.addEventListener('DOMContentLoaded', () => {
+    initDragAndDrop();
+});
+</script>
+{% endblock %}

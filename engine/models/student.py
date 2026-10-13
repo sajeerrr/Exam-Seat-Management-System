@@ -28,6 +28,7 @@ class Student:
     session: str              # FN / AN
     roll_no: str = field(default="")   # College Roll No  e.g. B23CEA01
     subject_category: str = field(default="NORMAL")  # NORMAL, ELECTIVE, MINOR, HONOURS
+    class_name: str = field(default="")
 
     def __post_init__(self):
         self.subject_category = normalize_subject_category(self.subject_category)
