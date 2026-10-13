@@ -500,7 +500,8 @@ def session_allocation_result(request, session_id):
             for r in records:
                 bench_map[r['bench_number']][r['seat_number']] = r
 
-            max_bench = max((r['bench_number'] for r in records), default=0)
+            room_benches_total = room.benches if room.benches else (math.ceil(room.capacity / 3) if room.capacity else 15)
+            max_bench = max(room_benches_total, max((r['bench_number'] for r in records), default=0))
             benches = []
             for b_num in range(1, max_bench + 1):
                 benches.append({

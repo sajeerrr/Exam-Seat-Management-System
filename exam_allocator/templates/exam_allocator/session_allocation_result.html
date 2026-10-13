@@ -528,56 +528,146 @@
         display: none;
     }
 
-    /* Bench Box */
-    .bench-box {
-        background: rgba(255,255,255,0.015);
+    /* ════════════════ 3-COLUMN CLASSROOM BENCH GRID (5, 5, 5 BENCHES) ════════════════ */
+    .classroom-legend {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 9px 14px;
+        background: rgba(255, 255, 255, 0.02);
         border: 1px solid var(--border);
         border-radius: 8px;
-        padding: 8px 9px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    .legend-pill {
+        display: inline-block;
+        padding: 1px 7px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+    .legend-pill-s1 {
+        background: rgba(99,102,241,0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99,102,241,0.35);
+    }
+    .legend-pill-s2 {
+        background: rgba(16,185,129,0.15);
+        color: #34d399;
+        border: 1px solid rgba(16,185,129,0.35);
+    }
+    .legend-pill-s3 {
+        background: rgba(245,158,11,0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245,158,11,0.35);
+    }
+    .legend-pill-empty {
+        background: rgba(255,255,255,0.04);
+        color: var(--text-muted);
+        border: 1px dashed var(--border);
+    }
+
+    .classroom-3col-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        align-items: start;
+    }
+
+    .column-wrap {
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.015);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        min-width: 0;
+    }
+
+    .column-header {
+        font-size: 11.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2px 4px 6px;
+        border-bottom: 2px solid rgba(99, 102, 241, 0.25);
+        margin-bottom: 2px;
+    }
+
+    /* Bench Box */
+    .bench-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 7px 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        transition: border-color 0.15s ease;
+        min-width: 0;
+    }
+    .bench-box:hover {
+        border-color: rgba(99,102,241,0.35);
     }
     .bench-box-title {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 700;
         color: var(--text-secondary);
-        padding: 0 2px;
+        padding: 0 2px 3px;
         letter-spacing: 0.02em;
+        border-bottom: 1px dashed rgba(255,255,255,0.06);
     }
     .bench-seats-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 6px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        min-width: 0;
     }
 
     /* ════════════════ MINIMALISTIC SEAT CELL ════════════════ */
     .seat-cell {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 8px 9px;
+        border-radius: 6px;
+        padding: 5px 6px;
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
         min-width: 0;
         transition: all 0.15s ease;
         position: relative;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
     .seat-cell:hover {
         border-color: var(--accent);
         transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        z-index: 2;
     }
     .seat-cell.highlight-class {
         border-color: var(--accent);
-        background: rgba(99,102,241,0.08);
-        box-shadow: 0 0 0 1px var(--accent);
+        background: rgba(99,102,241,0.12);
+        box-shadow: 0 0 0 2px var(--accent);
     }
 
     .seat-cell-s1 { border-top: 3px solid #6366f1; }
@@ -588,46 +678,50 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 4px;
-        margin-bottom: 2px;
+        gap: 3px;
+        margin-bottom: 1px;
+        min-width: 0;
     }
     .seat-stream-tag {
-        font-size: 10px;
-        font-weight: 700;
-        padding: 1px 6px;
-        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 800;
+        padding: 1px 4px;
+        border-radius: 3px;
         letter-spacing: 0.02em;
-        line-height: 1.3;
+        line-height: 1.2;
+        flex-shrink: 0;
     }
     .seat-stream-s1 {
-        background: rgba(99,102,241,0.12);
+        background: rgba(99,102,241,0.15);
         color: #818cf8;
-        border: 1px solid rgba(99,102,241,0.25);
+        border: 1px solid rgba(99,102,241,0.3);
     }
     .seat-stream-s2 {
-        background: rgba(16,185,129,0.12);
+        background: rgba(16,185,129,0.15);
         color: #34d399;
-        border: 1px solid rgba(16,185,129,0.25);
+        border: 1px solid rgba(16,185,129,0.3);
     }
     .seat-stream-s3 {
-        background: rgba(245,158,11,0.12);
+        background: rgba(245,158,11,0.15);
         color: #fbbf24;
-        border: 1px solid rgba(245,158,11,0.25);
+        border: 1px solid rgba(245,158,11,0.3);
     }
     .seat-dept-tag {
-        font-size: 10.5px;
+        font-size: 9.5px;
         font-weight: 700;
         color: var(--text-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        max-width: 50px;
+        text-align: right;
     }
 
     .seat-roll {
         font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-        font-size: 13.5px;
+        font-size: 11px;
         font-weight: 800;
-        letter-spacing: 0.02em;
+        letter-spacing: -0.01em;
         color: var(--text-primary);
         white-space: nowrap;
         overflow: hidden;
@@ -636,65 +730,71 @@
         margin: 1px 0;
     }
     .seat-name {
-        font-size: 11px;
+        font-size: 9.5px;
         font-weight: 500;
         color: var(--text-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        line-height: 1.25;
+        line-height: 1.2;
     }
 
     .seat-footer {
         display: flex;
         align-items: center;
-        gap: 4px;
-        margin-top: 4px;
-        padding-top: 4px;
+        justify-content: space-between;
+        gap: 2px;
+        margin-top: 2px;
+        padding-top: 2px;
         border-top: 1px solid rgba(255,255,255,0.06);
-        flex-wrap: wrap;
+        min-width: 0;
     }
     .seat-sub-tag {
-        font-size: 10px;
+        font-size: 8.5px;
         font-weight: 700;
-        padding: 1px 5px;
-        border-radius: 3px;
+        padding: 1px 3px;
+        border-radius: 2px;
         background: rgba(255,255,255,0.06);
         color: var(--text-primary);
         font-family: monospace;
         letter-spacing: 0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 58px;
     }
     .seat-cat-pill {
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 700;
-        padding: 1px 4px;
-        border-radius: 3px;
+        padding: 1px 3px;
+        border-radius: 2px;
         background: rgba(245,158,11,0.15);
         color: #fbbf24;
         text-transform: uppercase;
+        flex-shrink: 0;
     }
 
     /* Minimalist Empty Seat */
     .seat-empty {
-        background: rgba(255,255,255,0.015);
+        background: rgba(255,255,255,0.012);
         border: 1px dashed var(--border);
-        border-radius: 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 78px;
+        min-height: 58px;
         text-align: center;
-        padding: 6px;
+        padding: 3px;
         transition: all 0.15s;
     }
     .seat-empty:hover {
         background: rgba(255,255,255,0.03);
     }
     .seat-empty-label {
-        font-size: 11px;
+        font-size: 9.5px;
         font-weight: 500;
         color: var(--text-muted);
-        letter-spacing: 0.03em;
+        letter-spacing: 0.02em;
     }
 
     /* Responsive Sidebar */
@@ -878,7 +978,7 @@
         /* Hide all non-printable elements */
         .top-nav, .slot-bar, .slot-focus-card, .slot-drawer, .control-toolbar,
         .classroom-sidebar, .room-nav-btns, .view-switcher, .search-bar-wrap,
-        .sidebar-filter-group, #allocationLoadingOverlay, #view-summary,
+        .sidebar-filter-group, .classroom-legend, #allocationLoadingOverlay, #view-summary,
         #view-all-students, .messages, .btn-secondary, button {
             display: none !important;
         }
@@ -1398,17 +1498,28 @@
                         </div>
                     </div>
 
-                    <!-- Exactly 3 Bench Columns -->
+                    <!-- Spatial Stream Legend -->
+                    <div class="classroom-legend">
+                        <span class="legend-item"><span class="legend-pill legend-pill-s1">Seat 1 · A</span> <strong>Stream A</strong></span>
+                        <span class="legend-item"><span class="legend-pill legend-pill-s2">Seat 2 · B</span> <strong>Stream B</strong></span>
+                        <span class="legend-item"><span class="legend-pill legend-pill-s3">Seat 3 · C</span> <strong>Stream C</strong></span>
+                        <span class="legend-item"><span class="legend-pill legend-pill-empty">— Free —</span> <em>Available Seat</em></span>
+                    </div>
+
+                    <!-- Exactly 3 Bench Columns (5, 5, 5 Benches) -->
                     <div class="classroom-3col-grid">
                         {% for col in r.columns %}
                         <div class="column-wrap">
-                            <div class="column-header">{{ col.title }}</div>
+                            <div class="column-header">
+                                <span>{{ col.title }}</span>
+                                <span style="font-size:10px; opacity:0.75; font-weight:600;">{{ col.benches|length }} Benches</span>
+                            </div>
                             
                             {% for bench in col.benches %}
                             <div class="bench-box">
                                 <div class="bench-box-title">
                                     <span>Bench {{ bench.bench_number }}</span>
-                                    <span style="font-size:9.5px; opacity:0.6;">Seat 1 · Seat 2 · Seat 3</span>
+                                    <span style="font-size:9.5px; opacity:0.65;">Seat 1 (A) · Seat 2 (B) · Seat 3 (C)</span>
                                 </div>
                                 <div class="bench-seats-grid">
                                     
