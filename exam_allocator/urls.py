@@ -33,6 +33,8 @@ urlpatterns = [
     path("api/session/<int:session_id>/blueprint/finalize/", views.api_blueprint_finalize, name="api_blueprint_finalize"),
     path("api/session/<int:session_id>/blueprint/unfinalize/", views.api_blueprint_unfinalize, name="api_blueprint_unfinalize"),
     path("api/session/<int:session_id>/blueprint/generate-seats/", views.api_blueprint_generate_seats, name="api_blueprint_generate_seats"),
+    path("api/session/<int:session_id>/blueprint/reset/", views.api_blueprint_reset, name="api_blueprint_reset"),
+
 
     # ── Data API ──────────────────────────────────────────────────────────
     path("api/class/<int:class_id>/students/", views.api_class_students, name="api_class_students"),

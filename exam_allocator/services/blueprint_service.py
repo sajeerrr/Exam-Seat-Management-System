@@ -100,6 +100,17 @@ class BlueprintService:
             if parsed_date:
                 exam_date = parsed_date
 
+        existing_bp = SlotBlueprint.objects.filter(
+            session=session, exam_date=exam_date, shift=shift
+        ).first()
+        if (
+            existing_bp
+            and existing_bp.room_blueprints.exists()
+            and existing_bp.status in (SlotBlueprint.Status.FINALIZED, SlotBlueprint.Status.SEATS_GENERATED)
+            and not force_reallocate
+        ):
+            return existing_bp
+
         exams = cls.get_slot_exams(session, exam_date, shift)
         if not exams:
             raise BlueprintServiceError(
@@ -108,6 +119,7 @@ class BlueprintService:
 
         # Ensure registrations exist for all exams in this slot
         for ex in exams:
+
             if not ExamRegistration.objects.filter(exam=ex).exists():
                 create_exam_registrations(ex)
 
@@ -700,3 +712,18 @@ class BlueprintService:
             slot_blueprint.save()
 
         return allocations
+
+    @classmethod
+    def reset_slot_blueprint(cls, slot_blueprint: SlotBlueprint) -> None:
+        """
+        Delete a slot's blueprint, room blueprints, stream assignments,
+        and any physical seat allocations for this slot transactionally.
+        """
+        with transaction.atomic():
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+            slot_blueprint.room_blueprints.all().delete()
+            slot_blueprint.delete()
+

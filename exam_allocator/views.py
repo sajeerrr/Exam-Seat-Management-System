@@ -291,18 +291,30 @@ def generate_session_allocation(request, session_id):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Only POST requests are allowed."}, status=405)
 
-    try:
-        from exam_allocator.services.registration_service import create_all_exam_registrations
-        from exam_allocator.services.session_allocation_service import run_session_allocation
-        create_all_exam_registrations(session)
-        run_session_allocation(session)
-    except Exception as exc:
-        messages.warning(request, f"Allocation encountered an error: {exc}")
+    exam_date = request.POST.get("date")
+    shift = request.POST.get("shift")
+    force = request.POST.get("force", "false").lower() in ("true", "1")
 
-    return redirect(
-        "exam_allocator:session_allocation_result",
-        session_id=session.session_id,
-    )
+    if exam_date and shift:
+        try:
+            from exam_allocator.services.blueprint_service import BlueprintService
+            BlueprintService.allocate_departments_for_slot(
+                session=session,
+                exam_date=exam_date,
+                shift=shift,
+                force_reallocate=force,
+            )
+            messages.success(request, f"Department blueprint generated successfully for {exam_date} ({shift}).")
+            return redirect(
+                f"{reverse('exam_allocator:blueprint_review', kwargs={'session_id': session.session_id})}?date={exam_date}&shift={shift}"
+            )
+        except Exception as exc:
+            messages.error(request, f"Allocation error for {exam_date} {shift}: {exc}")
+            return redirect(
+                f"{reverse('exam_allocator:blueprint_review', kwargs={'session_id': session.session_id})}?date={exam_date}&shift={shift}"
+            )
+
+    return redirect("exam_allocator:blueprint_review", session_id=session.session_id)
 
 
 def session_allocation_result(request, session_id):
@@ -352,28 +364,15 @@ def session_allocation_result(request, session_id):
         if total_regs == 0:
             missing_data_reason = "No students are currently registered for the exams during this specific slot. This typically happens because the student list Excel files for the matching classes (like Semester 8) were not uploaded in the Import Data step!"
         else:
-            # If registrations exist but allocations do not yet exist for this slot, run allocation on the fly
+            # Check existing allocations without automatically triggering generation
             existing_allocs = Allocation.objects.filter(
                 exam__subject__session=session,
                 exam__exam_date=selected_slot['date'],
                 exam__session=selected_slot['shift']
             ).count()
             if existing_allocs == 0:
-                try:
-                    from exam_allocator.services.session_allocation_service import (
-                        _get_session_rooms, _allocate_slot, save_session_seat_plan
-                    )
-                    from exam_allocator.services.engine_adapter import get_engine_students
-                    slot_students = []
-                    for ex in exams_in_slot:
-                        slot_students.extend(get_engine_students(ex))
-                    rooms = _get_session_rooms(session)
-                    slot_tuple = (selected_slot['date'], selected_slot['shift'])
-                    seat_plan = _allocate_slot(session, slot_tuple, slot_students, rooms)
-                    if seat_plan:
-                        save_session_seat_plan(session, seat_plan, list(exams_in_slot))
-                except Exception as exc:
-                    pass
+                missing_data_reason = "No physical seat allocations have been generated for this exam slot yet. Please visit the Department Blueprint page to allocate departments, review the blueprint, and generate seats."
+
 
         # Pre-cache elective registrations for fast in-memory resolution
         from exam_allocator.models import ElectiveStudentRegistration
@@ -585,8 +584,9 @@ def blueprint_review(request, session_id):
     Stage B: Display and review the editable room-by-room department blueprint
     for the selected exam slot.
     """
-    from exam_allocator.models import SlotBlueprint, RoomBlueprint, StreamBlueprintAssignment, Room, Exam, Allocation
+    from exam_allocator.models import SlotBlueprint, RoomBlueprint, StreamBlueprintAssignment, Room, Exam, ExamRegistration, Allocation
     from exam_allocator.services.blueprint_service import BlueprintService
+    from django.db.models import Count
 
     session = get_object_or_404(AllocationSession, session_id=session_id)
 
@@ -598,10 +598,73 @@ def blueprint_review(request, session_id):
         .distinct()
     )
 
-    slots = [
-        {"date": slot["exam_date"], "shift": slot["session"]}
-        for slot in exam_slots
-    ]
+    # Pre-fetch all blueprints for this session
+    blueprints_map = {
+        (bp.exam_date, bp.shift): bp
+        for bp in SlotBlueprint.objects.filter(session=session)
+    }
+
+    # Pre-fetch slot allocations count
+    slot_alloc_counts = {
+        (a["exam__exam_date"], a["exam__session"]): a["count"]
+        for a in (
+            Allocation.objects.filter(exam__subject__session=session)
+            .values("exam__exam_date", "exam__session")
+            .annotate(count=Count("allocation_id"))
+        )
+    }
+
+    # Pre-fetch registered students per slot
+    slot_reg_counts = {
+        (r["exam__exam_date"], r["exam__session"]): r["count"]
+        for r in (
+            ExamRegistration.objects.filter(exam__subject__session=session)
+            .values("exam__exam_date", "exam__session")
+            .annotate(count=Count("registration_id"))
+        )
+    }
+
+    slots = []
+    for s in exam_slots:
+        slot_date = s["exam_date"]
+        slot_shift = s["session"]
+        key = (slot_date, slot_shift)
+        bp = blueprints_map.get(key)
+        alloc_count = slot_alloc_counts.get(key, 0)
+        reg_count = slot_reg_counts.get(key, 0)
+
+        if not bp:
+            status_key = "NOT_ALLOCATED"
+            status_label = "Not allocated"
+        elif bp.status == SlotBlueprint.Status.FINALIZED:
+            status_key = "FINALIZED"
+            status_label = "Blueprint finalized"
+        elif bp.status == SlotBlueprint.Status.SEATS_GENERATED:
+            if alloc_count > 0:
+                status_key = "SEATS_GENERATED"
+                status_label = "Seats generated"
+            else:
+                status_key = "REGEN_NEEDED"
+                status_label = "Seating plan requires regeneration"
+        elif bp.status == SlotBlueprint.Status.NEEDS_REVIEW or (bp.validation_errors and len(bp.validation_errors) > 0):
+            status_key = "INVALID"
+            status_label = "Blueprint invalid"
+        elif bp.status == SlotBlueprint.Status.VALIDATED:
+            status_key = "READY_FOR_REVIEW"
+            status_label = "Blueprint ready for review"
+        else:
+            status_key = "DRAFT"
+            status_label = "Draft"
+
+        slots.append({
+            "date": slot_date,
+            "shift": slot_shift,
+            "status_key": status_key,
+            "status_label": status_label,
+            "blueprint": bp,
+            "eligible_count": reg_count,
+            "allocations_count": alloc_count,
+        })
 
     date_filter = request.GET.get("date")
     shift_filter = request.GET.get("shift")
@@ -619,14 +682,38 @@ def blueprint_review(request, session_id):
     blueprint = None
     rooms_data = []
     has_physical_seats = False
+    eligible_students_count = 0
+    diagnostic_message = ""
     all_rooms = list(Room.objects.filter(session=session).order_by("room_number"))
 
     if selected_slot:
-        blueprint = SlotBlueprint.objects.filter(
-            session=session,
+        blueprint = selected_slot.get("blueprint")
+        if not blueprint:
+            blueprint = SlotBlueprint.objects.filter(
+                session=session,
+                exam_date=selected_slot["date"],
+                shift=selected_slot["shift"],
+            ).first()
+
+        # Check registrations
+        exams_in_slot = list(Exam.objects.filter(
+            subject__session=session,
             exam_date=selected_slot["date"],
-            shift=selected_slot["shift"],
-        ).first()
+            session=selected_slot["shift"],
+        ).select_related("subject"))
+
+        from exam_allocator.services.registration_service import create_exam_registrations
+        for ex in exams_in_slot:
+            if not ExamRegistration.objects.filter(exam=ex).exists():
+                create_exam_registrations(ex)
+
+        eligible_students_count = ExamRegistration.objects.filter(exam__in=exams_in_slot).count()
+        if eligible_students_count == 0:
+            subjs = ", ".join(f"{ex.subject.subject_code} ({ex.subject.subject_name})" for ex in exams_in_slot)
+            diagnostic_message = (
+                f"No eligible students found for exams scheduled in this slot: {subjs or 'None'}. "
+                f"Please verify that student lists for the matching classes/semesters were uploaded."
+            )
 
         # Check if physical allocations exist for this slot
         has_physical_seats = Allocation.objects.filter(
@@ -681,8 +768,11 @@ def blueprint_review(request, session_id):
             "rooms_data": rooms_data,
             "has_physical_seats": has_physical_seats,
             "available_rooms": all_rooms,
+            "eligible_students_count": eligible_students_count,
+            "diagnostic_message": diagnostic_message,
         },
     )
+
 
 
 def api_blueprint_allocate(request, session_id):
@@ -881,6 +971,40 @@ def api_blueprint_generate_seats(request, session_id):
         return JsonResponse({"success": False, "error": str(exc)}, status=400)
     except Exception as exc:
         return JsonResponse({"success": False, "error": f"Internal seat generation error: {exc}"}, status=500)
+
+
+def api_blueprint_reset(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    date_str = data.get("date")
+    shift_str = data.get("shift")
+
+    blueprint = None
+    if blueprint_id:
+        blueprint = SlotBlueprint.objects.filter(
+            blueprint_id=blueprint_id, session_id=session_id
+        ).first()
+    elif date_str and shift_str:
+        blueprint = SlotBlueprint.objects.filter(
+            session_id=session_id, exam_date=date_str, shift=shift_str
+        ).first()
+
+    if blueprint:
+        BlueprintService.reset_slot_blueprint(blueprint)
+
+    return JsonResponse({"success": True, "message": "Blueprint reset successfully."})
+
 
 
 def generate_allocation(request, exam_id):

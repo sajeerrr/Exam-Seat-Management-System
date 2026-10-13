@@ -512,3 +512,84 @@ class TwoStageAllocationTests(TestCase):
         self.assertContains(response, "MET301")
         self.assertContains(response, "CST301")
         self.assertContains(response, "ABC")
+
+    # ── Test 23: Opening page or selecting slot does not allocate automatically ─
+    def test_23_opening_page_or_selecting_slot_does_not_allocate_automatically(self):
+        # 1. Open allocation page (session_allocation_result)
+        res1 = self.client.get(reverse("exam_allocator:session_allocation_result", kwargs={"session_id": self.session.session_id}))
+        self.assertEqual(res1.status_code, 200)
+        self.assertEqual(Allocation.objects.count(), 0)
+        self.assertEqual(SlotBlueprint.objects.count(), 0)
+
+        # 2. Select slot via GET query
+        res2 = self.client.get(
+            f"{reverse('exam_allocator:session_allocation_result', kwargs={'session_id': self.session.session_id})}?date=2026-03-12&shift=FN"
+        )
+        self.assertEqual(res2.status_code, 200)
+        self.assertEqual(Allocation.objects.count(), 0)
+        self.assertEqual(SlotBlueprint.objects.count(), 0)
+
+        # 3. Open blueprint review page
+        res3 = self.client.get(
+            f"{reverse('exam_allocator:blueprint_review', kwargs={'session_id': self.session.session_id})}?date=2026-03-12&shift=FN"
+        )
+        self.assertEqual(res3.status_code, 200)
+        self.assertEqual(Allocation.objects.count(), 0)
+        self.assertEqual(SlotBlueprint.objects.count(), 0)
+
+    # ── Test 24: Clicking allocate departments processes only selected slot ──
+    def test_24_clicking_allocate_departments_processes_only_selected_slot(self):
+        # Create second slot: 2026-03-13 AN
+        date2 = datetime.date(2026, 3, 13)
+        exam2 = Exam.objects.create(subject=self.subj_me, exam_date=date2, session="AN", duration=180)
+        s2 = Student.objects.create(student_class=self.class_me, roll_number="ME_SLOT2_01", student_name="Slot 2 Stu")
+        ExamRegistration.objects.create(student=s2, exam=exam2)
+
+        # Allocate ONLY Slot 1 via API
+        response = self.client.post(
+            reverse("exam_allocator:api_blueprint_allocate", kwargs={"session_id": self.session.session_id}),
+            data='{"date": "2026-03-12", "shift": "FN"}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        # Verify Slot 1 is allocated into blueprint
+        self.assertEqual(SlotBlueprint.objects.filter(exam_date=self.exam_date, shift="FN").count(), 1)
+        # Verify Slot 2 is completely unallocated
+        self.assertEqual(SlotBlueprint.objects.filter(exam_date=date2, shift="AN").count(), 0)
+        self.assertEqual(Allocation.objects.count(), 0)
+
+    # ── Test 25: Slot with no eligible students produces clear diagnostic ────
+    def test_25_slot_with_no_eligible_students_produces_clear_diagnostic(self):
+        date3 = datetime.date(2026, 3, 15)
+        subj_empty = Subject.objects.create(session=self.session, subject_code="EMPTY301", subject_name="Empty Subj", semester=4)
+        Exam.objects.create(subject=subj_empty, exam_date=date3, session="FN", duration=180)
+
+        url = reverse("exam_allocator:blueprint_review", kwargs={"session_id": self.session.session_id})
+        response = self.client.get(f"{url}?date=2026-03-15&shift=FN")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Student Eligibility Diagnostic")
+        self.assertContains(response, "No eligible students found")
+        self.assertEqual(SlotBlueprint.objects.filter(exam_date=date3, shift="FN").count(), 0)
+
+    # ── Test 26: Reset and reallocate blueprint ──────────────────────────────
+    def test_26_reset_and_reallocate_blueprint(self):
+        bp = BlueprintService.allocate_departments_for_slot(self.session, self.exam_date, self.shift)
+        BlueprintService.finalize_blueprint(bp)
+        BlueprintService.generate_seats_from_blueprint(bp)
+        self.assertEqual(Allocation.objects.count(), 45)
+
+        # Reset via API
+        response = self.client.post(
+            reverse("exam_allocator:api_blueprint_reset", kwargs={"session_id": self.session.session_id}),
+            data=f'{{"blueprint_id": {bp.blueprint_id}}}',
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["success"])
+
+        # Both blueprint and allocations are deleted
+        self.assertEqual(SlotBlueprint.objects.filter(exam_date=self.exam_date, shift=self.shift).count(), 0)
+        self.assertEqual(Allocation.objects.filter(exam__exam_date=self.exam_date, exam__session=self.shift).count(), 0)
+

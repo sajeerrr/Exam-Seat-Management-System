@@ -60,6 +60,9 @@
         gap: 6px;
     }
     .slot-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
         padding: 6px 14px;
         border-radius: 20px;
         background: rgba(99,102,241,0.05);
@@ -81,6 +84,16 @@
         color: white;
         box-shadow: 0 4px 12px var(--accent-glow);
     }
+    .slot-pill-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.15);
+    }
+    .slot-pill.active .slot-pill-badge {
+        background: rgba(0, 0, 0, 0.25);
+    }
 
     /* ACTION BAR */
     .action-bar {
@@ -99,6 +112,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        flex-wrap: wrap;
     }
     .stage-badge {
         font-size: 12px;
@@ -108,11 +122,25 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
+    .stage-NOT_ALLOCATED { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25); }
     .stage-DRAFT { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, 0.3); }
+    .stage-INVALID { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
     .stage-NEEDS_REVIEW { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .stage-READY_FOR_REVIEW { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
     .stage-VALIDATED { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
     .stage-FINALIZED { background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); }
     .stage-SEATS_GENERATED { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.4); }
+    .stage-REGEN_NEEDED { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+    .eligible-tag {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
 
     .btn-group {
         display: flex;
@@ -160,6 +188,14 @@
     }
     .btn-success-action:hover:not(:disabled) {
         background: #10b981;
+    }
+    .btn-danger-action {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+    }
+    .btn-danger-action:hover:not(:disabled) {
+        background: rgba(239, 68, 68, 0.2);
     }
 
     /* STATS CHIPS */
@@ -368,7 +404,8 @@
         {% for slot in slots %}
         <a href="?date={{ slot.date|date:'Y-m-d' }}&shift={{ slot.shift }}"
            class="slot-pill {% if selected_slot and selected_slot.date == slot.date and selected_slot.shift == slot.shift %}active{% endif %}">
-            {{ slot.date|date:"d M Y" }} ({{ slot.shift }})
+            <span>{{ slot.date|date:"d M Y" }} ({{ slot.shift }})</span>
+            <span class="slot-pill-badge">{{ slot.status_label }}</span>
         </a>
         {% endfor %}
     </div>
@@ -383,29 +420,31 @@
     <!-- ACTION / STATUS BAR -->
     <div class="action-bar">
         <div class="stage-status-group">
-            <span style="font-weight: 700; font-size: 14px;">
-                {{ selected_slot.date|date:"d-m-Y" }} {{ selected_slot.shift }}
+            <span style="font-weight: 700; font-size: 15px;">
+                {{ selected_slot.date|date:"d-m-Y" }} ({{ selected_slot.shift }})
             </span>
-            {% if blueprint %}
-            <span class="stage-badge stage-{{ blueprint.status }}">
-                {{ blueprint.get_status_display }} (v{{ blueprint.version }})
+            <span class="stage-badge stage-{{ selected_slot.status_key }}">
+                {{ selected_slot.status_label }}{% if blueprint %} (v{{ blueprint.version }}){% endif %}
             </span>
-            {% else %}
-            <span class="stage-badge stage-DRAFT">Not Allocated</span>
-            {% endif %}
+            <span class="eligible-tag">
+                👥 {{ eligible_students_count }} Eligible Students
+            </span>
         </div>
 
         <div class="btn-group">
             {% if not blueprint %}
-            <button class="action-btn btn-primary-action" onclick="allocateDepartments(false)">
-                ⚡ Allocate Departments
+            <button class="action-btn btn-primary-action" id="btn-allocate-slot" onclick="allocateDepartments(false)">
+                ⚡ Allocate Departments for This Slot
             </button>
             {% else %}
-                <button class="action-btn btn-secondary-action" onclick="allocateDepartments(true)" title="Recalculate blueprint from scratch">
-                    🔄 Recalculate / Balance
-                </button>
                 <button class="action-btn btn-secondary-action" onclick="validateBlueprint()">
                     ✓ Validate Blueprint
+                </button>
+                <button class="action-btn btn-secondary-action" onclick="allocateDepartments(true)" title="Recalculate blueprint from scratch">
+                    🔄 Recalculate Allocation
+                </button>
+                <button class="action-btn btn-danger-action" onclick="resetBlueprint()" title="Reset and delete blueprint for this slot">
+                    🗑️ Reset and Reallocate
                 </button>
 
                 {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
@@ -419,20 +458,29 @@
                 </button>
                 {% endif %}
 
-                <button class="action-btn btn-primary-action" onclick="generateSeats()"
-                        {% if blueprint.status != "FINALIZED" %}disabled title="Blueprint must be finalized before generating seats"{% endif %}>
-                    🪑 Generate Seats for This Slot
+                {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
+                <button class="action-btn btn-primary-action" onclick="generateSeats()">
+                    🪑 {% if blueprint.status == "SEATS_GENERATED" %}Regenerate Seats{% else %}Generate Seats for This Slot{% endif %}
                 </button>
+                {% endif %}
 
                 {% if has_physical_seats %}
                 <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
                    class="action-btn btn-secondary-action" style="background: rgba(99,102,241,0.15); color: #a5b4fc;">
-                    📋 Seating Plan Results →
+                    📋 View Seating Plan →
                 </a>
                 {% endif %}
             {% endif %}
         </div>
     </div>
+
+    <!-- DIAGNOSTIC ALERT IF NO ELIGIBLE STUDENTS -->
+    {% if diagnostic_message %}
+    <div class="alert-box alert-warning">
+        <strong>⚠️ Student Eligibility Diagnostic:</strong><br>
+        {{ diagnostic_message }}
+    </div>
+    {% endif %}
 
     <!-- VALIDATION ALERTS -->
     {% if blueprint and blueprint.validation_errors %}
@@ -602,15 +650,15 @@
     </div>
     {% elif blueprint %}
     <div class="alert-box alert-warning">
-        Blueprint has no rooms allocated yet. Click "Recalculate / Balance" to allocate rooms.
+        Blueprint has no rooms allocated yet. Click "Recalculate Allocation" to allocate rooms.
     </div>
     {% else %}
     <div style="text-align: center; padding: 60px 20px; background: var(--bg-card); border: 1px dashed var(--border); border-radius: var(--radius);">
-        <p style="color: var(--text-secondary); margin-bottom: 16px;">
+        <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 14px;">
             Department blueprint has not been created for <strong>{{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</strong> yet.
         </p>
-        <button class="action-btn btn-primary-action" onclick="allocateDepartments(false)" style="padding: 12px 24px; font-size: 14px;">
-            ⚡ Run Department Allocation (Stage A)
+        <button class="action-btn btn-primary-action" id="btn-allocate-slot" onclick="allocateDepartments(false)" style="padding: 12px 24px; font-size: 14px;">
+            ⚡ Allocate Departments for This Slot
         </button>
     </div>
     {% endif %}
@@ -664,9 +712,12 @@ const CURRENT_DATE = '{{ selected_slot.date|date:"Y-m-d"|default:"" }}';
 const CURRENT_SHIFT = '{{ selected_slot.shift|default:"" }}';
 
 function allocateDepartments(force) {
-    if (force && !confirm("Rebalance will overwrite any manual adjustments for this slot. Continue?")) {
+    if (force && !confirm("Recalculate will re-run the allocation engine and overwrite any manual adjustments for this slot. Continue?")) {
         return;
     }
+    const btn = document.getElementById("btn-allocate-slot");
+    if (btn) btn.disabled = true;
+
     fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
         method: 'POST',
         headers: {
@@ -685,6 +736,37 @@ function allocateDepartments(force) {
             window.location.reload();
         } else {
             alert("Allocation failed: " + (data.error || "Unknown error"));
+            if (btn) btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        alert("Request error: " + err);
+        if (btn) btn.disabled = false;
+    });
+}
+
+function resetBlueprint() {
+    if (!confirm("Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.")) {
+        return;
+    }
+    fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            date: CURRENT_DATE,
+            shift: CURRENT_SHIFT
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert("Reset failed: " + (data.error || "Unknown error"));
         }
     })
     .catch(err => alert("Request error: " + err));
@@ -829,4 +911,3 @@ function submitMove(e) {
 }
 </script>
 {% endblock %}
-
