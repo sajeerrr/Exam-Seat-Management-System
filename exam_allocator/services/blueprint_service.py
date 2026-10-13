@@ -41,13 +41,35 @@ from exam_allocator.services.session_allocation_service import (
 logger = logging.getLogger(__name__)
 
 
+def strip_section_suffix(class_name: str) -> str:
+    """
+    Strips trailing section indicators (e.g. 'A', 'B', 'C', 'A, B', '-A', etc.)
+    keeping strictly the main class name.
+    Examples:
+      "ECE 2K22 A" -> "ECE 2K22"
+      "ECE 2K22 B" -> "ECE 2K22"
+      "ECE 2K22 A, B" -> "ECE 2K22"
+      "ME 2K22 C" -> "ME 2K22"
+      "B.Arch 2K24A" -> "B.Arch 2K24"
+      "CE 2K22 B" -> "CE 2K22"
+    """
+    if not class_name:
+        return ""
+    c_str = str(class_name).strip()
+    # Strip comma-separated or space-separated section letters like " A, B", " A", " C", "-A" at the end
+    cleaned = re.sub(r"(?:\s+|-|/)\b[A-Za-z](?:\s*,\s*[A-Za-z])*\b$", "", c_str)
+    if cleaned != c_str and cleaned:
+        return cleaned.strip()
+    # Strip attached section letter after batch/year numbers like "2K24A" -> "2K24", "2024A" -> "2024", "S8A" -> "S8"
+    cleaned_attached = re.sub(r"(\b.*?\d+)[A-Za-z]$", r"\1", c_str)
+    if cleaned_attached != c_str and cleaned_attached:
+        return cleaned_attached.strip()
+    return c_str
+
+
 def format_merged_class_names(class_names: List[str]) -> str:
     """
-    Format merged class/section names cleanly.
-    Example:
-      ["ECE 2K22 A", "ECE 2K22 B"] -> "ECE 2K22 A, B"
-      ["B.Arch 2K24A", "B.Arch 2K24B"] -> "B.Arch 2K24 A, B"
-      ["ME 2K22 C"] -> "ME 2K22 C"
+    Format merged class names keeping strictly the main class name without section letters (A, B, C).
     """
     cleaned = []
     for c in class_names:
@@ -55,33 +77,41 @@ def format_merged_class_names(class_names: List[str]) -> str:
             continue
         c_str = str(c).strip()
         if c_str:
-            cleaned.append(c_str)
+            base = strip_section_suffix(c_str)
+            cleaned.append(base)
 
     if not cleaned:
         return ""
-    if len(cleaned) == 1:
-        return cleaned[0]
-
-    all_sections = set()
-    all_bases = set()
-
-    for item in cleaned:
-        match_multi = re.match(r"^(.*?)(?:\s+|-)?([A-Za-z](?:\s*,\s*[A-Za-z])*)$", item)
-        if match_multi:
-            base = match_multi.group(1).strip()
-            secs = [s.strip().upper() for s in match_multi.group(2).split(",") if s.strip()]
-            all_bases.add(base)
-            all_sections.update(secs)
-        else:
-            all_bases.add(item)
-
-    if len(all_bases) == 1 and all_sections:
-        base = next(iter(all_bases))
-        sorted_secs = sorted(list(all_sections))
-        return f"{base} {', '.join(sorted_secs)}"
 
     distinct = list(dict.fromkeys(cleaned))
     return ", ".join(distinct)
+
+
+def get_semester_for_assignment(session, subject_code: str, class_name: str = "") -> Optional[int]:
+    """Resolve semester count from Subject or Class or subject code."""
+    if subject_code:
+        subj = Subject.objects.filter(session=session, subject_code__iexact=subject_code.strip()).first()
+        if subj and subj.semester:
+            return subj.semester
+
+        elec = ElectiveSubject.objects.filter(group__session=session, subject_code__iexact=subject_code.strip()).first()
+        if elec and hasattr(elec, "semester") and elec.semester:
+            return elec.semester
+
+        # Infer semester from common subject code formats like "22ECT801" -> 8, "23ARS403" -> 4
+        m = re.search(r"[A-Za-z]+([1-8])\d{2}", str(subject_code))
+        if m:
+            try:
+                return int(m.group(1))
+            except ValueError:
+                pass
+
+    if class_name:
+        cls_obj = Class.objects.filter(department__session=session, class_name__iexact=class_name.strip()).first()
+        if cls_obj and cls_obj.semester:
+            return cls_obj.semester
+
+    return None
 
 
 class BlueprintServiceError(Exception):
@@ -97,6 +127,9 @@ class BlueprintValidationError(BlueprintServiceError):
 
 
 class BlueprintService:
+
+    strip_section_suffix = staticmethod(strip_section_suffix)
+    get_semester_for_assignment = staticmethod(get_semester_for_assignment)
 
     @classmethod
     def get_slot_exams(cls, session: AllocationSession, exam_date: Any, shift: str) -> List[Exam]:
@@ -612,16 +645,20 @@ class BlueprintService:
                     or elective_map.get(sa.subject_code)
                     or ""
                 )
+                main_cls = strip_section_suffix(sa.class_name)
+                sem = get_semester_for_assignment(session, sa.subject_code, sa.class_name)
                 assign_data = {
                     "assignment_id": sa.assignment_id,
                     "stream_name": sa.stream_name,
                     "department_code": sa.department_code,
                     "class_name": sa.class_name,
+                    "main_class_name": main_cls,
                     "subject_code": sa.subject_code,
                     "subject_name": subj_name,
                     "subject_category": sa.subject_category,
                     "student_count": sa.student_count,
                     "student_rolls": sa.student_rolls or [],
+                    "semester": sem or "",
                     "order": sa.order,
                 }
                 assignments_by_stream[sa.stream_name].append(assign_data)
@@ -1302,6 +1339,220 @@ class BlueprintService:
                 })
 
         return sorted(unallocated, key=lambda x: (x["department"], x["class_name"], x["roll_number"]))
+
+    @classmethod
+    def allocate_unallocated_group(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        target_room_id: int,
+        target_stream: str,
+        department_code: str,
+        subject_code: str,
+        student_rolls: Optional[List[str]] = None,
+        allow_capacity_increase: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Allocate unallocated students of a department/subject into a specified room and stream.
+        If target stream already contains this department and subject, merges with existing assignment.
+        Otherwise, creates a new assignment in that stream.
+        """
+        if target_stream not in ("A", "B", "C"):
+            raise BlueprintServiceError(f"Invalid target stream: {target_stream}")
+
+        with transaction.atomic():
+            unallocated = cls.get_unallocated_students(slot_blueprint)
+            candidates = [
+                s for s in unallocated
+                if s["department"].upper() == department_code.strip().upper()
+                and s["subject_code"].strip().upper() == subject_code.strip().upper()
+            ]
+
+            if student_rolls:
+                rolls_set = {str(r).strip().upper() for r in student_rolls}
+                candidates = [s for s in candidates if s["roll_number"].upper() in rolls_set]
+
+            if not candidates:
+                raise BlueprintServiceError("No eligible unallocated students found for this department and subject.")
+
+            rolls_to_add = [s["roll_number"] for s in candidates]
+            add_count = len(rolls_to_add)
+
+            target_room = Room.objects.get(room_id=target_room_id, session=slot_blueprint.session)
+            target_room_bp, _ = RoomBlueprint.objects.get_or_create(
+                slot_blueprint=slot_blueprint,
+                room=target_room,
+                defaults={
+                    "capacity": target_room.capacity,
+                    "room_order": slot_blueprint.room_blueprints.count() + 1,
+                },
+            )
+
+            # Capacity check
+            stream_assignments = target_room_bp.stream_assignments.filter(stream_name=target_stream)
+            current_stream_count = sum(sa.student_count for sa in stream_assignments)
+            stream_cap = math.ceil(target_room_bp.capacity / 3) if target_room_bp.capacity else (target_room_bp.room.benches or 15)
+
+            if current_stream_count + add_count > stream_cap:
+                if allow_capacity_increase:
+                    new_cap = (current_stream_count + add_count) * 3
+                    if new_cap > target_room_bp.capacity:
+                        target_room_bp.capacity = new_cap
+                        target_room_bp.save()
+                else:
+                    raise BlueprintServiceError(
+                        f"Adding {add_count} students exceeds Stream {target_stream} capacity ({current_stream_count + add_count} > {stream_cap}). Enable capacity expansion to override."
+                    )
+
+            if target_room_bp.total_students + add_count > target_room_bp.capacity:
+                if allow_capacity_increase:
+                    target_room_bp.capacity = target_room_bp.total_students + add_count
+                    target_room_bp.save()
+                else:
+                    raise BlueprintServiceError(
+                        f"Adding {add_count} students exceeds Room {target_room.room_number} capacity ({target_room_bp.total_students + add_count} > {target_room_bp.capacity}). Enable capacity expansion to override."
+                    )
+
+            # Check if matching assignment already exists in this stream
+            matching = target_room_bp.stream_assignments.filter(
+                stream_name=target_stream,
+                department_code__iexact=department_code.strip(),
+                subject_code__iexact=subject_code.strip(),
+            ).first()
+
+            all_classes = [s.get("class_name", "") for s in candidates if s.get("class_name")]
+
+            if matching:
+                seen = set(matching.student_rolls or [])
+                merged_rolls = list(matching.student_rolls or [])
+                for r in rolls_to_add:
+                    if r not in seen:
+                        seen.add(r)
+                        merged_rolls.append(r)
+                matching.student_rolls = merged_rolls
+                matching.student_count = len(merged_rolls)
+                matching.class_name = format_merged_class_names([matching.class_name] + all_classes)
+                matching.save()
+            else:
+                max_order = (
+                    target_room_bp.stream_assignments
+                    .filter(stream_name=target_stream)
+                    .aggregate(models.Max("order"))["order__max"] or 0
+                )
+                sample = candidates[0]
+                StreamBlueprintAssignment.objects.create(
+                    room_blueprint=target_room_bp,
+                    stream_name=target_stream,
+                    department_code=sample["department"],
+                    class_name=format_merged_class_names(all_classes),
+                    subject_code=sample["subject_code"],
+                    subject_name=sample["subject_name"],
+                    subject_category=sample.get("subject_category", "NORMAL"),
+                    student_count=len(rolls_to_add),
+                    student_rolls=rolls_to_add,
+                    order=max_order + 1,
+                )
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            cls._recalculate_room_blueprint(target_room_bp)
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
+    def auto_allocate_unallocated(
+        cls, slot_blueprint: SlotBlueprint
+    ) -> Dict[str, Any]:
+        """
+        Automatically allocate unallocated students into rooms and streams
+        with remaining capacity following standard separation rules.
+        """
+        with transaction.atomic():
+            unallocated = cls.get_unallocated_students(slot_blueprint)
+            if not unallocated:
+                return {
+                    "success": True,
+                    "allocated_count": 0,
+                    "message": "No unallocated students.",
+                    "rooms": cls.serialize_slot_rooms(slot_blueprint),
+                }
+
+            groups = defaultdict(list)
+            for s in unallocated:
+                groups[(s["department"], s["subject_code"])].append(s)
+
+            allocated_total = 0
+            room_blueprints = list(slot_blueprint.room_blueprints.all().order_by("room_order"))
+
+            for (dept, subj), stus in groups.items():
+                rem_stus = list(stus)
+                while rem_stus:
+                    placed = False
+                    for rb in room_blueprints:
+                        stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else 15
+                        for s_name in ["A", "B", "C"]:
+                            used = sum(
+                                sa.student_count for sa in rb.stream_assignments.filter(stream_name=s_name)
+                            )
+                            avail = stream_cap - used
+                            if avail <= 0:
+                                continue
+
+                            adj_streams = {"A": ["B"], "B": ["A", "C"], "C": ["B"]}[s_name]
+                            has_adj_dept = rb.stream_assignments.filter(
+                                stream_name__in=adj_streams, department_code=dept
+                            ).exists()
+                            if has_adj_dept:
+                                continue
+
+                            take = rem_stus[:avail]
+                            rem_stus = rem_stus[avail:]
+                            cls.allocate_unallocated_group(
+                                slot_blueprint=slot_blueprint,
+                                target_room_id=rb.room.room_id,
+                                target_stream=s_name,
+                                department_code=dept,
+                                subject_code=subj,
+                                student_rolls=[s["roll_number"] for s in take],
+                                allow_capacity_increase=False,
+                            )
+                            allocated_total += len(take)
+                            placed = True
+                            break
+                        if placed:
+                            break
+                    if not placed:
+                        break
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "allocated_count": allocated_total,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
 
     @classmethod
     def _recalculate_room_blueprint(cls, room_bp: RoomBlueprint):

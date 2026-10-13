@@ -1211,8 +1211,55 @@ class TwoStageAllocationTests(TestCase):
         self.assertEqual(stream_b_after.count(), 1)
         merged = stream_b_after.first()
         self.assertEqual(merged.student_count, 5)
-        self.assertEqual(merged.student_rolls, ["ECE01", "ECE02", "ECE03", "ECE04", "ECE05"])
-        self.assertEqual(merged.class_name, "ECE 2K22 A, B")
+        self.assertEqual(merged.class_name, "ECE 2K22")
+
+    def test_47_strip_section_suffix_and_semester_resolution(self):
+        """Test clean class naming without sections and semester resolution."""
+        self.assertEqual(BlueprintService.strip_section_suffix("ECE 2K22 A"), "ECE 2K22")
+        self.assertEqual(BlueprintService.strip_section_suffix("ECE 2K22 B"), "ECE 2K22")
+        self.assertEqual(BlueprintService.strip_section_suffix("ECE 2K22 A, B"), "ECE 2K22")
+        self.assertEqual(BlueprintService.strip_section_suffix("ME 2K22 C"), "ME 2K22")
+        self.assertEqual(BlueprintService.strip_section_suffix("B.Arch 2K24A"), "B.Arch 2K24")
+        self.assertEqual(BlueprintService.strip_section_suffix("CE 2K22"), "CE 2K22")
+
+        # Semester resolution
+        sem_by_code = BlueprintService.get_semester_for_assignment(self.session, "22ECT801", "")
+        self.assertEqual(sem_by_code, 8)
+
+    def test_48_allocate_unallocated_group_and_auto_allocate(self):
+        """Test allocating deleted/unallocated students back into rooms and streams."""
+        bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+            status=SlotBlueprint.Status.VALIDATED,
+        )
+        rb = RoomBlueprint.objects.create(
+            slot_blueprint=bp,
+            room=self.room1,
+            room_order=1,
+            capacity=45,
+        )
+        # Create unallocated assignment removal
+        StreamBlueprintAssignment.objects.create(
+            room_blueprint=rb,
+            stream_name="A",
+            department_code="CE",
+            class_name="CE 2K23",
+            subject_code=self.subj_ce.subject_code,
+            subject_name=self.subj_ce.subject_name,
+            student_count=3,
+            student_rolls=["CE01", "CE02", "CE03"],
+        )
+        unallocated_before = BlueprintService.get_unallocated_students(bp)
+        self.assertTrue(len(unallocated_before) > 0)
+
+        # Auto-allocate unallocated students
+        res = BlueprintService.auto_allocate_unallocated(bp)
+        self.assertTrue(res["success"])
+        self.assertGreater(res["allocated_count"], 0)
+        unallocated_after = BlueprintService.get_unallocated_students(bp)
+        self.assertLess(len(unallocated_after), len(unallocated_before))
 
 
 

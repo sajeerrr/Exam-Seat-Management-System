@@ -490,6 +490,16 @@
         font-weight: 700;
         white-space: nowrap;
     }
+    .group-sem-badge {
+        background: #e0e7ff;
+        border: 1px solid #c7d2fe;
+        color: #3730a3;
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
     .group-subject {
         font-size: 12px;
         color: #475569;
@@ -808,6 +818,9 @@
                     🗑️ Reset and Reallocate
                 </button>
                 {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                <button class="action-btn btn-secondary-action" onclick="openUnallocatedModal()" title="View and allocate unallocated or deleted students">
+                    📋 Allocate Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
+                </button>
                 <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
                     ➕ Add Classroom
                 </button>
@@ -890,11 +903,11 @@
             <div class="stat-val" style="color: #34d399;">{{ blueprint.total_allocated_students }}</div>
             <div class="stat-lbl">Allocated Students</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-val" style="color: {% if blueprint.unallocated_count %}#f87171{% else %}#94a3b8{% endif %};">
+        <div class="stat-card" style="cursor: pointer;" onclick="openUnallocatedModal()" title="Click to view and allocate unallocated students">
+            <div class="stat-val" id="statUnallocatedCount" style="color: {% if blueprint.unallocated_count %}#f87171{% else %}#94a3b8{% endif %};">
                 {{ blueprint.unallocated_count }}
             </div>
-            <div class="stat-lbl">Unallocated</div>
+            <div class="stat-lbl">Unallocated 📋</div>
         </div>
         <div class="stat-card">
             <div class="stat-val">{{ blueprint.rooms_used }}</div>
@@ -977,10 +990,13 @@
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
-                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
                                 </span>
-                                <span class="group-badge-count">{{ a.student_count }} st</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
                                 <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
@@ -1039,10 +1055,13 @@
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
-                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
                                 </span>
-                                <span class="group-badge-count">{{ a.student_count }} st</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
                                 <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
@@ -1101,10 +1120,13 @@
                              {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}draggable="true"{% else %}draggable="false"{% endif %}>
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
-                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}
+                                <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
+                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
                                 </span>
-                                <span class="group-badge-count">{{ a.student_count }} st</span>
+                                <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
+                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
                                 <strong>{{ a.subject_code }}</strong>{% if a.subject_name %} · {{ a.subject_name }}{% endif %}
@@ -1321,6 +1343,74 @@
     </div>
 </div>
 
+<!-- ALLOCATE UNALLOCATED STUDENTS MODAL -->
+<div class="modal-overlay" id="unallocatedModal">
+    <div class="modal-card" style="max-width: 680px; width: 100%;">
+        <div class="modal-header">
+            <div class="modal-title">📋 Allocate Deleted / Unallocated Students</div>
+            <button type="button" class="close-btn" onclick="closeUnallocatedModal()">&times;</button>
+        </div>
+        <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+            <div style="font-size: 13px; color: var(--text-secondary);">
+                Select unallocated students/department below to place into a classroom and stream, or auto-allocate all remaining students.
+            </div>
+            <button type="button" class="action-btn btn-primary-action" onclick="autoAllocateAllUnallocated()" style="padding: 6px 14px; font-size: 12px;">
+                ⚡ Auto-Allocate All
+            </button>
+        </div>
+
+        <div id="unallocatedLoadingState" style="text-align: center; padding: 24px; color: var(--text-muted); display: none;">
+            Loading unallocated students...
+        </div>
+
+        <div id="unallocatedEmptyState" style="text-align: center; padding: 28px; color: var(--text-muted); display: none;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">All students are allocated!</div>
+            <div style="font-size: 12px;">There are no deleted or unallocated students remaining for this exam slot.</div>
+        </div>
+
+        <div id="unallocatedContent">
+            <div style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;" id="unallocatedGroupsContainer">
+                <!-- Group radio items will be injected here -->
+            </div>
+
+            <form id="allocateUnallocatedForm" onsubmit="submitAllocateUnallocatedGroup(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="allocTargetRoomSelect" style="font-size: 12px;">Target Classroom</label>
+                        <select id="allocTargetRoomSelect" class="form-control" required>
+                            <option value="">-- Choose Classroom --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="allocTargetStreamSelect" style="font-size: 12px;">Target Stream</label>
+                        <select id="allocTargetStreamSelect" class="form-control" required>
+                            <option value="A">Stream A</option>
+                            <option value="B">Stream B</option>
+                            <option value="C">Stream C</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                        <input type="checkbox" id="allocAllowCapIncrease" value="1">
+                        <span>Allow increasing room capacity automatically if needed</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
+                    <button type="button" class="action-btn btn-secondary-action" onclick="closeUnallocatedModal()">Close</button>
+                    <button type="submit" class="action-btn btn-primary-action" id="btnSubmitAllocateGroup">
+                        Allocate Selected Group
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 const SESSION_ID = '{{ session.session_id }}';
@@ -1332,6 +1422,43 @@ const IS_LOCKED = {% if blueprint.status == "FINALIZED" or blueprint.status == "
 let draggedAssignmentId = null;
 let draggedSourceRoomId = null;
 let draggedSourceStream = null;
+
+let autoScrollInterval = null;
+let autoScrollSpeed = 0;
+
+function handleDragAutoScroll(e) {
+    if (!draggedAssignmentId) return;
+    const threshold = 130;
+    const maxSpeed = 26;
+    const clientY = e.clientY;
+    const vh = window.innerHeight;
+
+    if (clientY < threshold && clientY >= 0) {
+        const intensity = (threshold - clientY) / threshold;
+        autoScrollSpeed = -Math.max(4, Math.round(intensity * maxSpeed));
+    } else if (clientY > vh - threshold && clientY <= vh) {
+        const intensity = (clientY - (vh - threshold)) / threshold;
+        autoScrollSpeed = Math.max(4, Math.round(intensity * maxSpeed));
+    } else {
+        autoScrollSpeed = 0;
+    }
+
+    if (autoScrollSpeed !== 0 && !autoScrollInterval) {
+        autoScrollInterval = setInterval(() => {
+            window.scrollBy({ top: autoScrollSpeed, behavior: 'auto' });
+        }, 16);
+    } else if (autoScrollSpeed === 0 && autoScrollInterval) {
+        stopAutoScroll();
+    }
+}
+
+function stopAutoScroll() {
+    if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        autoScrollInterval = null;
+    }
+    autoScrollSpeed = 0;
+}
 
 // TOAST NOTIFICATIONS
 function showToast(message, type = 'info', duration = 4000) {
@@ -1383,12 +1510,16 @@ function handleDragStart(e) {
     this.classList.add('is-dragging');
     e.dataTransfer.setData('text/plain', draggedAssignmentId);
     e.dataTransfer.effectAllowed = 'move';
+
+    document.addEventListener('dragover', handleDragAutoScroll);
 }
 
 function handleDragEnd(e) {
     this.classList.remove('is-dragging');
     document.querySelectorAll('.stream-column').forEach(c => c.classList.remove('drop-target-active'));
     document.querySelectorAll('.group-card').forEach(c => c.classList.remove('drag-over-swap'));
+    document.removeEventListener('dragover', handleDragAutoScroll);
+    stopAutoScroll();
 }
 
 function handleColumnDragOver(e) {
@@ -1409,6 +1540,8 @@ function handleColumnDrop(e) {
 
     const targetRoomId = this.dataset.roomId;
     const targetStream = this.dataset.stream;
+
+    stopAutoScroll();
 
     if (!draggedAssignmentId) return;
 
@@ -1438,6 +1571,7 @@ function handleCardDrop(e) {
     e.preventDefault();
     e.stopPropagation();
     this.classList.remove('drag-over-swap');
+    stopAutoScroll();
 
     const targetAssignmentId = this.dataset.assignmentId;
     if (!targetAssignmentId || targetAssignmentId === draggedAssignmentId) return;
@@ -1527,11 +1661,16 @@ function updateBoardFromData(data) {
             statCards[0].textContent = stats.total_eligible_students || 0;
             statCards[1].textContent = stats.total_allocated_students || 0;
             statCards[2].textContent = stats.unallocated_count || 0;
+            statCards[2].style.color = (stats.unallocated_count > 0) ? '#f87171' : '#94a3b8';
             statCards[3].textContent = stats.rooms_used || 0;
             statCards[4].textContent = stats.total_room_capacity || 0;
             statCards[5].textContent = stats.remaining_capacity || 0;
             statCards[6].textContent = (stats.room_utilization || 0) + '%';
             statCards[7].textContent = stats.department_scattering || 0;
+        }
+        const unallocBtn = document.getElementById('unallocatedBtnCount');
+        if (unallocBtn) {
+            unallocBtn.textContent = stats.unallocated_count || 0;
         }
     }
 
@@ -1701,7 +1840,9 @@ function buildRoomCardHTML(r) {
 
 function buildGroupCardHTML(a, r, stream) {
     const isDraggable = !IS_LOCKED ? 'true' : 'false';
-    const deptClass = a.class_name ? `${a.department_code} · ${a.class_name}` : a.department_code;
+    const displayClass = a.main_class_name || a.class_name || '';
+    const deptClass = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const semBadge = a.semester ? `<span class="group-sem-badge">S${a.semester}</span>` : '';
     const catPill = (a.subject_category && a.subject_category !== 'NORMAL') 
         ? `<span class="group-category-pill">${a.subject_category}</span>` 
         : `<span></span>`;
@@ -1714,7 +1855,7 @@ function buildGroupCardHTML(a, r, stream) {
              data-room-id="${r.room_id}"
              data-stream="${stream}"
              data-dept="${a.department_code || ''}"
-             data-class="${a.class_name || ''}"
+             data-class="${escapeHtml(displayClass)}"
              data-subj-code="${a.subject_code || ''}"
              data-subj-name="${a.subject_name || ''}"
              data-count="${a.student_count}"
@@ -1723,7 +1864,10 @@ function buildGroupCardHTML(a, r, stream) {
             <div class="group-card-top">
                 <span class="group-handle">⠿</span>
                 <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
-                <span class="group-badge-count">${a.student_count} st</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    ${semBadge}
+                    <span class="group-badge-count">${a.student_count} st</span>
+                </div>
             </div>
             <div class="group-subject" title="${a.subject_code} — ${a.subject_name}">
                 <strong>${a.subject_code}</strong>${a.subject_name ? ' · ' + escapeHtml(a.subject_name) : ''}
@@ -2213,6 +2357,209 @@ function generateSeats() {
         }
     })
     .catch(err => alert("Request error: " + err));
+}
+
+// UNALLOCATED STUDENTS MODAL HANDLING
+let currentUnallocatedStudents = [];
+
+function openUnallocatedModal() {
+    if (!BLUEPRINT_ID) return;
+    const modal = document.getElementById('unallocatedModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const loading = document.getElementById('unallocatedLoadingState');
+    const emptyState = document.getElementById('unallocatedEmptyState');
+    const content = document.getElementById('unallocatedContent');
+
+    loading.style.display = 'block';
+    emptyState.style.display = 'none';
+    content.style.display = 'none';
+
+    // Populate Target Room Select from existing rooms on page
+    const roomSelect = document.getElementById('allocTargetRoomSelect');
+    if (roomSelect) {
+        roomSelect.innerHTML = '<option value="">-- Choose Classroom --</option>';
+        document.querySelectorAll('.room-card').forEach(card => {
+            const rId = card.dataset.roomId || (card.id ? card.id.replace('roomCard-', '') : null);
+            const rNumElem = card.querySelector('.room-title');
+            const rNum = rNumElem ? rNumElem.textContent.replace('🏛️', '').trim() : `Room ${rId}`;
+            const rCapElem = card.querySelector('.room-occupancy span');
+            const rCap = rCapElem ? rCapElem.textContent.trim() : '';
+            if (rId) {
+                const opt = document.createElement('option');
+                opt.value = rId;
+                opt.textContent = `${rNum} (Cap: ${rCap})`;
+                roomSelect.appendChild(opt);
+            }
+        });
+    }
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/unallocated-students/?blueprint_id=${BLUEPRINT_ID}`)
+        .then(r => r.json())
+        .then(data => {
+            loading.style.display = 'none';
+            if (data.success && data.students && data.students.length > 0) {
+                currentUnallocatedStudents = data.students;
+                renderUnallocatedModalData(data.students);
+                content.style.display = 'block';
+            } else {
+                currentUnallocatedStudents = [];
+                emptyState.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            loading.style.display = 'none';
+            showToast('Failed to load unallocated students: ' + err, 'error');
+        });
+}
+
+function closeUnallocatedModal() {
+    const modal = document.getElementById('unallocatedModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function renderUnallocatedModalData(students) {
+    const container = document.getElementById('unallocatedGroupsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const groups = {};
+    students.forEach(s => {
+        const key = `${s.department}__${s.subject_code}`;
+        if (!groups[key]) {
+            groups[key] = {
+                department: s.department,
+                class_name: s.class_name,
+                subject_code: s.subject_code,
+                subject_name: s.subject_name,
+                rolls: []
+            };
+        }
+        groups[key].rolls.push(s.roll_number);
+    });
+
+    let first = true;
+    for (const key in groups) {
+        const g = groups[key];
+        const row = document.createElement('label');
+        row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; margin: 0;';
+        row.onmouseover = () => row.style.background = 'rgba(99,102,241,0.06)';
+        row.onmouseout = () => row.style.background = 'transparent';
+
+        row.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="radio" name="unallocatedGroupSelect" value="${key}" data-dept="${escapeHtml(g.department)}" data-subj="${escapeHtml(g.subject_code)}" data-rolls="${g.rolls.join(',')}" ${first ? 'checked' : ''} style="accent-color: var(--accent);">
+                <div>
+                    <div style="font-weight: 700; font-size: 13px; color: var(--text-primary);">
+                        ${escapeHtml(g.department)} · ${g.rolls.length} students
+                    </div>
+                    <div style="font-size: 11.5px; color: var(--text-secondary);">
+                        <strong>${escapeHtml(g.subject_code)}</strong> · ${escapeHtml(g.subject_name || '')}
+                    </div>
+                </div>
+            </div>
+            <span style="font-size: 11px; background: rgba(244,63,94,0.1); color: #f43f5e; border: 1px solid rgba(244,63,94,0.25); padding: 2px 8px; border-radius: 10px; font-weight: 700;">
+                ${g.rolls.length} unallocated
+            </span>
+        `;
+        container.appendChild(row);
+        first = false;
+    }
+}
+
+function submitAllocateUnallocatedGroup(e) {
+    e.preventDefault();
+    const selectedRadio = document.querySelector('input[name="unallocatedGroupSelect"]:checked');
+    if (!selectedRadio) {
+        alert('Please select an unallocated department group to allocate.');
+        return;
+    }
+
+    const roomId = document.getElementById('allocTargetRoomSelect').value;
+    const stream = document.getElementById('allocTargetStreamSelect').value;
+    const allowIncrease = document.getElementById('allocAllowCapIncrease').checked;
+
+    if (!roomId || !stream) {
+        alert('Please choose both a target classroom and a stream.');
+        return;
+    }
+
+    const dept = selectedRadio.dataset.dept;
+    const subj = selectedRadio.dataset.subj;
+    const rolls = selectedRadio.dataset.rolls ? selectedRadio.dataset.rolls.split(',') : [];
+
+    const submitBtn = document.getElementById('btnSubmitAllocateGroup');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Allocating...';
+    }
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            mode: 'manual',
+            target_room_id: roomId,
+            target_stream: stream,
+            department_code: dept,
+            subject_code: subj,
+            student_rolls: rolls,
+            allow_capacity_increase: allowIncrease
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Allocate Selected Group';
+        }
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`Allocated ${data.allocated_count || rolls.length} students into Room stream ${stream}`, 'success');
+            closeUnallocatedModal();
+        } else {
+            showToast('Allocation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Allocate Selected Group';
+        }
+        showToast('Request error: ' + err, 'error');
+    });
+}
+
+function autoAllocateAllUnallocated() {
+    if (!confirm('Automatically allocate all remaining unallocated students across rooms with available capacity?')) return;
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            mode: 'auto'
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`Auto-allocated ${data.allocated_count || 0} students!`, 'success');
+            closeUnallocatedModal();
+        } else {
+            showToast('Auto-allocation failed: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => showToast('Request error: ' + err, 'error'));
 }
 
 // INITIALIZE ON LOAD

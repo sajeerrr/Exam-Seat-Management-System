@@ -742,6 +742,8 @@ def blueprint_review(request, session_id):
                 for sa in all_stream_assignments:
                     if not sa.subject_name:
                         sa.subject_name = subject_map.get(sa.subject_code) or elective_map.get(sa.subject_code) or ""
+                    sa.main_class_name = BlueprintService.strip_section_suffix(sa.class_name)
+                    sa.semester = BlueprintService.get_semester_for_assignment(session, sa.subject_code, sa.class_name)
                     assignments_by_stream[sa.stream_name].append(sa)
                     stream_totals[sa.stream_name] += sa.student_count
 
@@ -1326,6 +1328,63 @@ def api_blueprint_unallocated_students(request, session_id):
         return JsonResponse({"success": False, "error": str(exc)}, status=400)
     except Exception as exc:
         return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_allocate_unallocated(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    if not blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id is required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+    mode = data.get("mode", "manual")
+
+    try:
+        if mode == "auto":
+            res = BlueprintService.auto_allocate_unallocated(slot_blueprint=blueprint)
+            return JsonResponse(res)
+        else:
+            target_room_id = data.get("target_room_id")
+            target_stream = data.get("target_stream")
+            department_code = data.get("department_code")
+            subject_code = data.get("subject_code")
+            student_rolls = data.get("student_rolls")
+            allow_capacity_increase = data.get("allow_capacity_increase", False)
+            if isinstance(allow_capacity_increase, str):
+                allow_capacity_increase = allow_capacity_increase.lower() in ("true", "1", "yes")
+
+            if not target_room_id or not target_stream or not department_code or not subject_code:
+                return JsonResponse({
+                    "success": False,
+                    "error": "target_room_id, target_stream, department_code, and subject_code are required."
+                }, status=400)
+
+            res = BlueprintService.allocate_unallocated_group(
+                slot_blueprint=blueprint,
+                target_room_id=int(target_room_id),
+                target_stream=str(target_stream).upper(),
+                department_code=str(department_code).strip(),
+                subject_code=str(subject_code).strip(),
+                student_rolls=student_rolls if isinstance(student_rolls, list) else None,
+                allow_capacity_increase=allow_capacity_increase,
+            )
+            return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
 
 
 
