@@ -412,6 +412,7 @@ def session_allocation_result(request, session_id):
             ex = a.exam
             dept_code = st.student_class.department.department_code if (st.student_class and st.student_class.department) else "GEN"
             class_name = st.student_class.class_name if st.student_class else ""
+            clean_class_name = BlueprintService.strip_section_suffix(class_name)
             subj_code = ex.subject.subject_code
             subj_name = ex.subject.subject_name
             cat = "NORMAL"
@@ -445,6 +446,7 @@ def session_allocation_result(request, session_id):
                 'student_name': st.student_name,
                 'department': dept_code,
                 'class_name': class_name,
+                'clean_class_name': clean_class_name,
                 'subject_code': subj_code,
                 'subject_name': subj_name,
                 'category': cat,
@@ -568,6 +570,9 @@ def session_allocation_result(request, session_id):
             "session": session,
             "slots": slots,
             "selected_slot": selected_slot,
+            "date_filter": date_filter,
+            "shift_filter": shift_filter,
+            "is_slot_focused": bool(date_filter and shift_filter),
             "rooms": sorted_rooms,
             "all_classes": all_slot_classes if selected_slot else [],
             "total_slot_students": len(all_slot_students) if selected_slot else 0,

@@ -348,60 +348,196 @@
         border-color: var(--accent);
     }
 
-    /* Minimal Front Board */
-    .classroom-board-simple {
-        max-width: 520px;
-        margin: 0 auto 18px;
-        background: rgba(255,255,255,0.02);
+    /* ════════════════ FOCUSED EXAM SLOT CARD & DRAWER ════════════════ */
+    .slot-focus-card {
+        background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 6px 12px;
-        text-align: center;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        color: var(--text-muted);
+        border-radius: 12px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.03);
     }
-
-    /* 3-Column Layout */
-    .classroom-3col-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 18px;
-        align-items: start;
-    }
-    @media (max-width: 1200px) {
-        .classroom-3col-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .column-wrap {
+    .slot-focus-left {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 5px;
     }
-    .column-header {
-        font-size: 11.5px;
+    .slot-focus-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         color: var(--text-muted);
-        padding: 4px 6px;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 2px;
+    }
+    .slot-pill-shift {
+        background: var(--accent);
+        color: white;
+        padding: 1px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .slot-focus-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+    }
+    .slot-focus-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+    }
+    .slot-focus-meta strong {
+        color: var(--text-primary);
+    }
+    .meta-dot {
+        color: var(--text-muted);
+        font-weight: bold;
+    }
+
+    .slot-focus-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .btn-focus-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.15s ease;
+        border: 1px solid var(--border);
+    }
+    .btn-print-primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+        box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .btn-print-primary:hover {
+        opacity: 0.92;
+        transform: translateY(-1px);
+    }
+    .btn-print-secondary {
+        background: rgba(255,255,255,0.05);
+        color: var(--text-primary);
+    }
+    .btn-print-secondary:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: var(--accent);
+    }
+    .btn-blueprint {
+        background: rgba(99,102,241,0.1);
+        color: var(--accent-light);
+        border-color: rgba(99,102,241,0.3);
+    }
+    .btn-blueprint:hover {
+        background: rgba(99,102,241,0.18);
+    }
+    .btn-toggle-drawer {
+        background: var(--bg-primary);
+        color: var(--text-secondary);
+    }
+    .btn-toggle-drawer:hover {
+        color: var(--text-primary);
+        border-color: var(--accent);
+    }
+
+    /* Collapsible Drawer */
+    .slot-drawer {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: -12px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .slot-drawer-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .slot-drawer-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .slot-drawer-pills {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    /* Classroom Front Board (Chalkboard) */
+    .classroom-board-simple {
+        max-width: 640px;
+        margin: 0 auto 20px;
+        background: linear-gradient(180deg, #1b382b 0%, #11281e 100%);
+        border: 2px solid #2e5944;
+        border-radius: 8px;
+        padding: 8px 16px;
+        text-align: center;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 3px 10px rgba(0,0,0,0.15);
+    }
+    .chalkboard-frame {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+    .chalkboard-main {
+        font-size: 11.5px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #d1fae5;
+    }
+    .chalkboard-sub {
+        font-size: 9.5px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #6ee7b7;
+        opacity: 0.85;
+    }
+
+    .print-room-sheet-header {
+        display: none;
     }
 
     /* Bench Box */
     .bench-box {
         background: rgba(255,255,255,0.015);
         border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 7px 8px;
+        border-radius: 8px;
+        padding: 8px 9px;
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 6px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
     .bench-box-title {
         display: flex;
@@ -411,91 +547,154 @@
         font-weight: 700;
         color: var(--text-secondary);
         padding: 0 2px;
+        letter-spacing: 0.02em;
     }
     .bench-seats-grid {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
-        gap: 5px;
+        gap: 6px;
     }
 
-    /* Compact Seat Cell */
+    /* ════════════════ MINIMALISTIC SEAT CELL ════════════════ */
     .seat-cell {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 5px;
-        padding: 6px 7px;
+        border-radius: 8px;
+        padding: 8px 9px;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 3px;
         min-width: 0;
-        transition: border-color 0.15s;
+        transition: all 0.15s ease;
+        position: relative;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .seat-cell:hover {
         border-color: var(--accent);
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
     }
     .seat-cell.highlight-class {
         border-color: var(--accent);
         background: rgba(99,102,241,0.08);
+        box-shadow: 0 0 0 1px var(--accent);
     }
+
+    .seat-cell-s1 { border-top: 3px solid #6366f1; }
+    .seat-cell-s2 { border-top: 3px solid #10b981; }
+    .seat-cell-s3 { border-top: 3px solid #f59e0b; }
+
     .seat-cell-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 9.5px;
-        color: var(--text-muted);
-        font-weight: 600;
-        margin-bottom: 1px;
+        gap: 4px;
+        margin-bottom: 2px;
     }
-    .seat-roll {
-        font-family: ui-monospace, SFMono-Regular, monospace;
-        font-size: 11.5px;
-        font-weight: 800;
-        color: var(--accent-light);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .seat-name {
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.25;
-    }
-    .seat-dept {
+    .seat-stream-tag {
         font-size: 10px;
+        font-weight: 700;
+        padding: 1px 6px;
+        border-radius: 4px;
+        letter-spacing: 0.02em;
+        line-height: 1.3;
+    }
+    .seat-stream-s1 {
+        background: rgba(99,102,241,0.12);
+        color: #818cf8;
+        border: 1px solid rgba(99,102,241,0.25);
+    }
+    .seat-stream-s2 {
+        background: rgba(16,185,129,0.12);
+        color: #34d399;
+        border: 1px solid rgba(16,185,129,0.25);
+    }
+    .seat-stream-s3 {
+        background: rgba(245,158,11,0.12);
+        color: #fbbf24;
+        border: 1px solid rgba(245,158,11,0.25);
+    }
+    .seat-dept-tag {
+        font-size: 10.5px;
+        font-weight: 700;
         color: var(--text-secondary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .seat-subject {
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--text-muted);
+
+    .seat-roll {
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: var(--text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        border-top: 1px solid rgba(255,255,255,0.06);
-        padding-top: 2px;
-        margin-top: 2px;
+        line-height: 1.25;
+        margin: 1px 0;
+    }
+    .seat-name {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.25;
     }
 
-    /* Empty Seat */
+    .seat-footer {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        flex-wrap: wrap;
+    }
+    .seat-sub-tag {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.06);
+        color: var(--text-primary);
+        font-family: monospace;
+        letter-spacing: 0.02em;
+    }
+    .seat-cat-pill {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 1px 4px;
+        border-radius: 3px;
+        background: rgba(245,158,11,0.15);
+        color: #fbbf24;
+        text-transform: uppercase;
+    }
+
+    /* Minimalist Empty Seat */
     .seat-empty {
-        background: transparent;
-        border: 1px dashed rgba(255,255,255,0.12);
-        border-radius: 5px;
+        background: rgba(255,255,255,0.015);
+        border: 1px dashed var(--border);
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10.5px;
-        color: var(--text-muted);
-        min-height: 70px;
+        min-height: 78px;
         text-align: center;
-        padding: 4px;
+        padding: 6px;
+        transition: all 0.15s;
+    }
+    .seat-empty:hover {
+        background: rgba(255,255,255,0.03);
+    }
+    .seat-empty-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-muted);
+        letter-spacing: 0.03em;
     }
 
     /* Responsive Sidebar */
@@ -667,14 +866,210 @@
     }
 
     @media print {
-        body { background: #fff; color: #000; }
-        .slot-bar, .top-nav, .view-switcher, .classroom-sidebar { display: none !important; }
-        .classroom-view-layout { display: block !important; }
-        .room-block { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; display: block !important; margin-bottom: 40px !important; }
-        .bench-box { border-color: #ddd !important; background: #fff !important; }
-        .seat-cell { border-color: #ccc !important; background: #fff !important; color: #000 !important; }
-        .seat-roll { color: #000 !important; }
-        .room-nav-btns { display: none !important; }
+        @page {
+            size: A4 portrait;
+            margin: 10mm 12mm;
+        }
+        body {
+            background: #ffffff !important;
+            color: #000000 !important;
+            font-size: 10pt !important;
+        }
+        /* Hide all non-printable elements */
+        .top-nav, .slot-bar, .slot-focus-card, .slot-drawer, .control-toolbar,
+        .classroom-sidebar, .room-nav-btns, .view-switcher, .search-bar-wrap,
+        .sidebar-filter-group, #allocationLoadingOverlay, #view-summary,
+        #view-all-students, .messages, .btn-secondary, button {
+            display: none !important;
+        }
+        .page-wrapper {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .classroom-view-layout {
+            display: block !important;
+        }
+        .classroom-main {
+            width: 100% !important;
+        }
+
+        /* Single Room vs All Rooms Print Modes */
+        body.print-single-room .room-block:not(.print-active-target) {
+            display: none !important;
+        }
+        body.print-single-room .room-block.print-active-target {
+            display: block !important;
+        }
+        body.print-all-rooms .room-block {
+            display: block !important;
+            page-break-after: always !important;
+            break-after: page !important;
+        }
+        body.print-all-rooms .room-block:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+        }
+
+        /* Professional Printable Room Header */
+        .print-room-sheet-header {
+            display: block !important;
+            border-bottom: 2px solid #000000 !important;
+            padding-bottom: 8px !important;
+            margin-bottom: 12px !important;
+            text-align: center !important;
+        }
+        .print-college-title {
+            font-size: 13pt !important;
+            font-weight: 800 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.04em !important;
+            color: #000000 !important;
+        }
+        .print-exam-title {
+            font-size: 11pt !important;
+            font-weight: 700 !important;
+            margin: 2px 0 6px !important;
+            color: #000000 !important;
+        }
+        .print-meta-grid {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 4px 10px !important;
+            font-size: 8.5pt !important;
+            text-align: left !important;
+            padding-top: 5px !important;
+            border-top: 1px solid #cccccc !important;
+        }
+
+        /* Screen room header hidden during print */
+        .room-header-simple {
+            display: none !important;
+        }
+
+        /* Printable Room Block */
+        .room-block {
+            background: #ffffff !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        /* Classroom Blackboard in Print */
+        .classroom-board-simple {
+            max-width: 100% !important;
+            background: #f1f5f9 !important;
+            border: 1px solid #94a3b8 !important;
+            color: #0f172a !important;
+            box-shadow: none !important;
+            padding: 4px 8px !important;
+            margin-bottom: 12px !important;
+        }
+        .chalkboard-main {
+            color: #0f172a !important;
+            font-size: 9pt !important;
+        }
+        .chalkboard-sub {
+            color: #475569 !important;
+            font-size: 8pt !important;
+        }
+
+        /* 3-Column Bench Layout */
+        .classroom-3col-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 8px !important;
+        }
+        .column-wrap {
+            gap: 6px !important;
+        }
+        .column-header {
+            color: #000000 !important;
+            border-bottom: 1px solid #000000 !important;
+            font-size: 8pt !important;
+            font-weight: 800 !important;
+            padding: 2px 4px !important;
+        }
+
+        /* Bench Boxes */
+        .bench-box {
+            border: 1px solid #999999 !important;
+            background: #ffffff !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            padding: 4px 5px !important;
+            box-shadow: none !important;
+        }
+        .bench-box-title {
+            color: #000000 !important;
+            font-size: 8pt !important;
+            font-weight: 800 !important;
+            border-bottom: 1px dotted #cccccc !important;
+            padding-bottom: 2px !important;
+        }
+        .bench-seats-grid {
+            gap: 4px !important;
+        }
+
+        /* Minimalist Seat Cells */
+        .seat-cell {
+            border: 1px solid #888888 !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+            padding: 4px 5px !important;
+            border-top-width: 2px !important;
+        }
+        .seat-stream-tag {
+            background: #f1f5f9 !important;
+            color: #000000 !important;
+            border: 1px solid #cbd5e1 !important;
+            font-size: 6.5pt !important;
+        }
+        .seat-dept-tag {
+            color: #1e293b !important;
+            font-size: 7pt !important;
+            font-weight: 800 !important;
+        }
+        .seat-roll {
+            color: #000000 !important;
+            font-size: 9.5pt !important;
+            font-weight: 800 !important;
+            margin: 1px 0 !important;
+        }
+        .seat-name {
+            color: #334155 !important;
+            font-size: 7pt !important;
+            font-weight: 600 !important;
+        }
+        .seat-footer {
+            border-top: 1px solid #e2e8f0 !important;
+            padding-top: 2px !important;
+            margin-top: 2px !important;
+        }
+        .seat-sub-tag {
+            background: #f8fafc !important;
+            color: #000000 !important;
+            border: 1px solid #cbd5e1 !important;
+            font-size: 6.5pt !important;
+            font-weight: 700 !important;
+        }
+        .seat-cat-pill {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            font-size: 6pt !important;
+        }
+        .seat-empty {
+            border: 1px dashed #cbd5e1 !important;
+            background: #ffffff !important;
+            min-height: 55px !important;
+            padding: 2px !important;
+        }
+        .seat-empty-label {
+            color: #94a3b8 !important;
+            font-size: 7pt !important;
+        }
     }
 </style>
 {% endblock %}
@@ -697,8 +1092,8 @@
                 📐 Department Blueprint
             </a>
             {% endif %}
-            <button onclick="window.print()" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
-                🖨️ Print Seating Plan
+            <button onclick="printSeatingPlan('current')" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
+                🖨️ Print Plan
             </button>
             <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; text-decoration:none; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
                 ← Session Overview
@@ -718,14 +1113,68 @@
     </div>
     {% endif %}
 
-    <!-- SLOT SELECTOR -->
+    <!-- FOCUSED EXAM SLOT BANNER (SHOWS ONLY SELECTED DATE & SHIFT) -->
+    {% if selected_slot %}
+    <div class="slot-focus-card">
+        <div class="slot-focus-left">
+            <div class="slot-focus-pill">
+                <span>EXAM SEATING PLAN</span>
+                <span class="slot-pill-shift">{{ selected_slot.shift }}</span>
+            </div>
+            <h1 class="slot-focus-title">
+                {{ selected_slot.date|date:"l, d F Y" }}
+            </h1>
+            <div class="slot-focus-meta">
+                <span><strong>{{ total_slot_students }}</strong> Candidates</span>
+                <span class="meta-dot">•</span>
+                <span><strong>{{ rooms|length }}</strong> Classrooms</span>
+                <span class="meta-dot">•</span>
+                <span>Session: <strong>{{ session.name }}</strong></span>
+            </div>
+        </div>
+        <div class="slot-focus-actions">
+            <button type="button" onclick="printSeatingPlan('current')" class="btn-focus-action btn-print-primary" title="Print currently active classroom">
+                🖨️ Print Active Classroom
+            </button>
+            <button type="button" onclick="printSeatingPlan('all')" class="btn-focus-action btn-print-secondary" title="Print all classrooms for this date (one room per page)">
+                📄 Print All Classrooms
+            </button>
+            <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-blueprint" title="Back to Blueprint editor">
+                📐 Edit Blueprint
+            </a>
+            {% if slots|length > 1 %}
+            <button type="button" onclick="toggleSlotDrawer()" id="btn-toggle-slot-drawer" class="btn-focus-action btn-toggle-drawer" title="Switch to another examination date">
+                📅 Switch Date ▾
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- COLLAPSIBLE SLOT DRAWER (SHOWN ONLY WHEN USER CLICKS SWITCH DATE) -->
+    {% if slots|length > 1 %}
+    <div id="slotDrawer" class="slot-drawer" style="display: none;">
+        <div class="slot-drawer-inner">
+            <div class="slot-drawer-title">Select Examination Date & Shift:</div>
+            <div class="slot-drawer-pills">
+                {% for s in slots %}
+                <a href="?date={{ s.date|date:'Y-m-d' }}&shift={{ s.shift }}" class="slot-pill {% if selected_slot.date|date:'Y-m-d' == s.date|date:'Y-m-d' and selected_slot.shift == s.shift %}active{% endif %}">
+                    {{ s.date|date:"d M Y" }} — {{ s.shift }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- NO SLOT SELECTED: SHOW STANDARD SELECTOR -->
     <div class="slot-bar">
         <div class="slot-lbl">
             <span>📅 Select Exam Slot:</span>
         </div>
         {% if slots %}
             {% for s in slots %}
-            <a href="?date={{ s.date|date:'Y-m-d' }}&shift={{ s.shift }}" class="slot-pill {% if selected_slot.date|date:'Y-m-d' == s.date|date:'Y-m-d' and selected_slot.shift == s.shift %}active{% endif %}">
+            <a href="?date={{ s.date|date:'Y-m-d' }}&shift={{ s.shift }}" class="slot-pill">
                 {{ s.date|date:"M d, Y" }} — {{ s.shift }}
             </a>
             {% endfor %}
@@ -733,6 +1182,7 @@
             <div style="font-size:13px; color:var(--text-muted);">No allocated exams found for this session. Did you run the allocation?</div>
         {% endif %}
     </div>
+    {% endif %}
 
     {% if selected_slot and rooms %}
     <!-- TOOLBAR & VIEW SWITCHER -->
@@ -911,6 +1361,20 @@
                 {% for r in rooms %}
                 <div class="room-block" id="room-block-{{ r.room_number }}" {% if not forloop.first %}style="display: none;"{% endif %}>
                     
+                    <!-- Printable Room Sheet Header (Visible Only in Print / PDF Mode) -->
+                    <div class="print-room-sheet-header">
+                        <div class="print-college-title">{{ session.name }}</div>
+                        <div class="print-exam-title">EXAMINATION SEATING PLAN — ROOM {{ r.room_number }}</div>
+                        <div class="print-meta-grid">
+                            <div><span>Date:</span> <strong>{{ selected_slot.date|date:"l, d F Y" }}</strong></div>
+                            <div><span>Session:</span> <strong>{{ selected_slot.shift }}</strong></div>
+                            <div><span>Total Candidates:</span> <strong>{{ r.total_students }}</strong></div>
+                            <div><span>Total Benches:</span> <strong>{{ r.total_benches }}</strong></div>
+                            <div style="grid-column: span 2;"><span>Departments:</span> <strong>{{ r.departments }}</strong></div>
+                            <div style="grid-column: span 2;"><span>Classes:</span> <strong>{{ r.classes }}</strong></div>
+                        </div>
+                    </div>
+
                     <!-- Minimal Room Header with Prev / Next Buttons -->
                     <div class="room-header-simple">
                         <div class="room-title-text">
@@ -928,7 +1392,10 @@
 
                     <!-- Front / Blackboard Bar -->
                     <div class="classroom-board-simple">
-                        ▲ FRONT / BOARD ▲
+                        <div class="chalkboard-frame">
+                            <span class="chalkboard-main">▲ FRONT OF CLASSROOM / BLACKBOARD ▲</span>
+                            <span class="chalkboard-sub">FACULTY &amp; INVIGILATOR DESK</span>
+                        </div>
                     </div>
 
                     <!-- Exactly 3 Bench Columns -->
@@ -945,58 +1412,70 @@
                                 </div>
                                 <div class="bench-seats-grid">
                                     
-                                    <!-- SEAT 1 -->
+                                    <!-- SEAT 1 (Stream A) -->
                                     {% if bench.seat_1 %}
-                                    <div class="seat-cell" data-class="{{ bench.seat_1.class_name }}">
+                                    <div class="seat-cell seat-cell-s1" data-class="{{ bench.seat_1.class_name }}">
                                         <div class="seat-cell-header">
-                                            <span>S1</span>
-                                            <span>{{ bench.seat_1.department }}</span>
+                                            <span class="seat-stream-tag seat-stream-s1">Seat 1 · A</span>
+                                            <span class="seat-dept-tag" title="{{ bench.seat_1.department }}{% if bench.seat_1.clean_class_name %} ({{ bench.seat_1.clean_class_name }}){% endif %}">{{ bench.seat_1.department }}</span>
                                         </div>
                                         <div class="seat-roll" title="{{ bench.seat_1.roll_number }}">{{ bench.seat_1.roll_number }}</div>
                                         <div class="seat-name" title="{{ bench.seat_1.student_name }}">{{ bench.seat_1.student_name }}</div>
-                                        <div class="seat-dept">{% if bench.seat_1.class_name %}{{ bench.seat_1.class_name }}{% else %}{{ bench.seat_1.department }}{% endif %}</div>
-                                        <div class="seat-subject" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">
-                                            {{ bench.seat_1.subject_code }}
+                                        <div class="seat-footer">
+                                            <span class="seat-sub-tag" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">{{ bench.seat_1.subject_code }}</span>
+                                            {% if bench.seat_1.category and bench.seat_1.category != 'NORMAL' %}
+                                            <span class="seat-cat-pill">{{ bench.seat_1.category }}</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">Empty</div>
+                                    <div class="seat-empty">
+                                        <span class="seat-empty-label">— Available —</span>
+                                    </div>
                                     {% endif %}
 
-                                    <!-- SEAT 2 -->
+                                    <!-- SEAT 2 (Stream B) -->
                                     {% if bench.seat_2 %}
-                                    <div class="seat-cell" data-class="{{ bench.seat_2.class_name }}">
+                                    <div class="seat-cell seat-cell-s2" data-class="{{ bench.seat_2.class_name }}">
                                         <div class="seat-cell-header">
-                                            <span>S2</span>
-                                            <span>{{ bench.seat_2.department }}</span>
+                                            <span class="seat-stream-tag seat-stream-s2">Seat 2 · B</span>
+                                            <span class="seat-dept-tag" title="{{ bench.seat_2.department }}{% if bench.seat_2.clean_class_name %} ({{ bench.seat_2.clean_class_name }}){% endif %}">{{ bench.seat_2.department }}</span>
                                         </div>
                                         <div class="seat-roll" title="{{ bench.seat_2.roll_number }}">{{ bench.seat_2.roll_number }}</div>
                                         <div class="seat-name" title="{{ bench.seat_2.student_name }}">{{ bench.seat_2.student_name }}</div>
-                                        <div class="seat-dept">{% if bench.seat_2.class_name %}{{ bench.seat_2.class_name }}{% else %}{{ bench.seat_2.department }}{% endif %}</div>
-                                        <div class="seat-subject" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">
-                                            {{ bench.seat_2.subject_code }}
+                                        <div class="seat-footer">
+                                            <span class="seat-sub-tag" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">{{ bench.seat_2.subject_code }}</span>
+                                            {% if bench.seat_2.category and bench.seat_2.category != 'NORMAL' %}
+                                            <span class="seat-cat-pill">{{ bench.seat_2.category }}</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">Empty</div>
+                                    <div class="seat-empty">
+                                        <span class="seat-empty-label">— Available —</span>
+                                    </div>
                                     {% endif %}
 
-                                    <!-- SEAT 3 -->
+                                    <!-- SEAT 3 (Stream C) -->
                                     {% if bench.seat_3 %}
-                                    <div class="seat-cell" data-class="{{ bench.seat_3.class_name }}">
+                                    <div class="seat-cell seat-cell-s3" data-class="{{ bench.seat_3.class_name }}">
                                         <div class="seat-cell-header">
-                                            <span>S3</span>
-                                            <span>{{ bench.seat_3.department }}</span>
+                                            <span class="seat-stream-tag seat-stream-s3">Seat 3 · C</span>
+                                            <span class="seat-dept-tag" title="{{ bench.seat_3.department }}{% if bench.seat_3.clean_class_name %} ({{ bench.seat_3.clean_class_name }}){% endif %}">{{ bench.seat_3.department }}</span>
                                         </div>
                                         <div class="seat-roll" title="{{ bench.seat_3.roll_number }}">{{ bench.seat_3.roll_number }}</div>
                                         <div class="seat-name" title="{{ bench.seat_3.student_name }}">{{ bench.seat_3.student_name }}</div>
-                                        <div class="seat-dept">{% if bench.seat_3.class_name %}{{ bench.seat_3.class_name }}{% else %}{{ bench.seat_3.department }}{% endif %}</div>
-                                        <div class="seat-subject" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">
-                                            {{ bench.seat_3.subject_code }}
+                                        <div class="seat-footer">
+                                            <span class="seat-sub-tag" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">{{ bench.seat_3.subject_code }}</span>
+                                            {% if bench.seat_3.category and bench.seat_3.category != 'NORMAL' %}
+                                            <span class="seat-cat-pill">{{ bench.seat_3.category }}</span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">Empty</div>
+                                    <div class="seat-empty">
+                                        <span class="seat-empty-label">— Available —</span>
+                                    </div>
                                     {% endif %}
 
                                 </div>
@@ -1277,5 +1756,57 @@ function filterAllStudentsTable() {
         counter.innerText = `Showing ${visibleCount} students`;
     }
 }
+
+// Toggle collapsible slot drawer for switching dates
+function toggleSlotDrawer() {
+    const drawer = document.getElementById('slotDrawer');
+    const btn = document.getElementById('btn-toggle-slot-drawer');
+    if (!drawer) return;
+    if (drawer.style.display === 'none' || !drawer.style.display) {
+        drawer.style.display = 'block';
+        if (btn) btn.innerHTML = '📅 Close Dates ▴';
+    } else {
+        drawer.style.display = 'none';
+        if (btn) btn.innerHTML = '📅 Switch Date ▾';
+    }
+}
+
+// Print Seating Plan for current active classroom or all classrooms
+function printSeatingPlan(mode) {
+    // Ensure we are in classroom view
+    switchView('room-cards');
+
+    const currentRoom = roomList[currentRoomIndex];
+
+    // Tag the active room block for print targeting
+    roomList.forEach(r => {
+        const block = document.getElementById('room-block-' + r);
+        if (block) {
+            if (r === currentRoom) {
+                block.classList.add('print-active-target');
+            } else {
+                block.classList.remove('print-active-target');
+            }
+        }
+    });
+
+    if (mode === 'all') {
+        document.body.classList.add('print-all-rooms');
+        document.body.classList.remove('print-single-room');
+    } else {
+        document.body.classList.add('print-single-room');
+        document.body.classList.remove('print-all-rooms');
+    }
+
+    window.print();
+}
+
+window.addEventListener('afterprint', () => {
+    document.body.classList.remove('print-all-rooms');
+    document.body.classList.remove('print-single-room');
+    if (roomList.length > 0 && currentRoomIndex < roomList.length) {
+        selectRoom(roomList[currentRoomIndex]);
+    }
+});
 </script>
 {% endblock %}
