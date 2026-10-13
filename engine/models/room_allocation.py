@@ -131,13 +131,12 @@ class RoomAllocation:
         norm_code = str(subject_code or "").strip().upper()
         adj_students = self.get_adjacent_students(stream_name, bench_no)
         for student in adj_students:
-            if getattr(student, "is_special_subject", False):
-                other_code = getattr(
-                    student, "normalized_subject_code",
-                    str(student.subject_code).strip().upper()
-                )
-                if other_code == norm_code:
-                    return False
+            other_code = getattr(
+                student, "normalized_subject_code",
+                str(getattr(student, "subject_code", "")).strip().upper()
+            )
+            if other_code == norm_code:
+                return False
         return True
 
     def can_seat_subject(

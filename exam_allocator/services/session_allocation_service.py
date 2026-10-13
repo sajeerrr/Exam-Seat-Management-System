@@ -302,23 +302,49 @@ def save_session_seat_plan(
                 f"Room capacity exceeded in Room {r_obj.room_number}: {cnt} allocated > capacity {r_obj.capacity}."
             )
 
-    # 5. Special subject rules: No same-subject students adjacent horizontally
-    bench_grid = defaultdict(dict)
+    # 5. Special subject rules: No same-subject students adjacent in Moore 8-neighborhood
+    room_seat_map = {}
     for seat in seat_plan.seats:
         s_num = stream_to_seat_number.get(seat.stream, 0)
-        bench_grid[(seat.classroom.room_no, seat.bench_no)][s_num] = seat.student
+        room_seat_map[(seat.classroom.room_no, seat.bench_no, s_num)] = seat.student
 
-    for (r_no, b_no), seats_map in bench_grid.items():
-        for s_idx in (1, 2):
-            if s_idx in seats_map and (s_idx + 1) in seats_map:
-                st1 = seats_map[s_idx]
-                st2 = seats_map[s_idx + 1]
-                if (st1.subject_category in ("ELECTIVE", "MINOR", "HONOURS") or
-                    st2.subject_category in ("ELECTIVE", "MINOR", "HONOURS")):
-                    if st1.subject_code.strip().upper() == st2.subject_code.strip().upper():
+    for (r_no, b_no, s_num), student in room_seat_map.items():
+        is_special = (
+            getattr(student, "is_special_subject", False)
+            or student.subject_category in ("ELECTIVE", "MINOR", "HONOURS")
+        )
+        if not is_special:
+            continue
+
+        s_code = getattr(student, "normalized_subject_code", str(student.subject_code).strip().upper())
+
+        # Check all 8 neighboring seats (Moore neighborhood) in the same classroom
+        for dc in (-1, 0, 1):
+            adj_c = s_num + dc
+            if adj_c < 1 or adj_c > 3:
+                continue
+            for db in (-1, 0, 1):
+                if dc == 0 and db == 0:
+                    continue
+                adj_b = b_no + db
+                if adj_b < 1:
+                    continue
+                # Canonical ordering to avoid duplicate violation reporting
+                if (adj_b, adj_c) <= (b_no, s_num):
+                    continue
+
+                adj_student = room_seat_map.get((r_no, adj_b, adj_c))
+                if adj_student is not None:
+                    adj_code = getattr(
+                        adj_student, "normalized_subject_code",
+                        str(adj_student.subject_code).strip().upper()
+                    )
+                    if adj_code == s_code:
+                        cat_label = student.subject_category or "Special"
                         raise SessionAllocationError(
-                            f"Special subject adjacency conflict in Room {r_no}, Bench {b_no}: "
-                            f"Seat {s_idx} and Seat {s_idx + 1} both have same subject {st1.subject_code}."
+                            f"Spatial adjacency conflict for {cat_label} subject {s_code} in Room {r_no}: "
+                            f"Bench {b_no} Seat {s_num} ({student.register_no}) is adjacent to "
+                            f"Bench {adj_b} Seat {adj_c} ({adj_student.register_no})."
                         )
 
     # Replace allocations ONLY for exams in this time slot.

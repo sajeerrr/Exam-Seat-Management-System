@@ -506,21 +506,28 @@ def session_allocation_result(request, session_id):
                     'seat_3': bench_map[b_num].get(3),
                 })
 
-            # Divide benches into exactly 3 columns (Col 1: B1-B5, Col 2: B6-B10, Col 3: B11-B15)
-            col1 = [b for b in benches if 1 <= b['bench_number'] <= 5]
-            col2 = [b for b in benches if 6 <= b['bench_number'] <= 10]
-            col3 = [b for b in benches if 11 <= b['bench_number'] <= 15]
-            extra = [b for b in benches if b['bench_number'] > 15]
-            if extra:
-                col3.extend(extra)
+            # Divide benches into exactly 3 columns (standard: Col 1: B1-B5, Col 2: B6-B10, Col 3: B11-B15)
+            per_col = max(5, math.ceil(max_bench / 3)) if max_bench > 0 else 5
+            c1_end = min(per_col, max_bench)
+            c2_start = c1_end + 1
+            c2_end = min(2 * per_col, max_bench)
+            c3_start = c2_end + 1
+            c3_end = max_bench
+
+            col1 = [b for b in benches if 1 <= b['bench_number'] <= c1_end]
+            col2 = [b for b in benches if c2_start <= b['bench_number'] <= c2_end]
+            col3 = [b for b in benches if c3_start <= b['bench_number'] <= c3_end]
 
             columns = []
             if col1:
-                columns.append({'title': 'Column 1 (Benches 1–5)', 'benches': col1})
+                title1 = f"Column 1 (Benches 1–{c1_end})" if c1_end > 1 else "Column 1 (Bench 1)"
+                columns.append({'title': title1, 'benches': col1})
             if col2:
-                columns.append({'title': 'Column 2 (Benches 6–10)', 'benches': col2})
+                title2 = f"Column 2 (Benches {c2_start}–{c2_end})" if c2_end > c2_start else f"Column 2 (Bench {c2_start})"
+                columns.append({'title': title2, 'benches': col2})
             if col3:
-                columns.append({'title': 'Column 3 (Benches 11–15)', 'benches': col3})
+                title3 = f"Column 3 (Benches {c3_start}–{c3_end})" if c3_end > c3_start else f"Column 3 (Bench {c3_start})"
+                columns.append({'title': title3, 'benches': col3})
 
             dept_codes = sorted(list(set(r['department'] for r in records if r['department'])))
             class_names = sorted(list(set(r['class_name'] for r in records if r['class_name'])))

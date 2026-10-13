@@ -154,8 +154,13 @@ class PatternEvaluator:
         before_fragments = self._department_fragmentation(context)
         before_abc = self.abc_count(context)
         self._swap(left_column, right_column)
+        depts_valid = (
+            len(left_room.departments) <= 4
+            and len(right_room.departments) <= 4
+        )
         valid = (
-            self._room_subjects_valid(left_room)
+            depts_valid
+            and self._room_subjects_valid(left_room)
             and self._room_subjects_valid(right_room)
             and self._department_fragmentation(context) <= before_fragments
             and self.abc_count(context) >= before_abc

@@ -19,6 +19,7 @@ class TestGlobalAbcOptimization(unittest.TestCase):
         students_me1 = [Student(register_no=f"ME1_{i}", name=f"ME1_{i}", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN") for i in range(15)]
         students_el = [Student(register_no=f"EL_{i}", name=f"EL_{i}", department="EL", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN") for i in range(15)]
         students_me2 = [Student(register_no=f"ME2_{i}", name=f"ME2_{i}", department="ME", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN") for i in range(15)]
+        students_me3 = [Student(register_no=f"ME3_{i}", name=f"ME3_{i}", department="ME", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN") for i in range(15)]
         students_cs = [Student(register_no=f"CS_{i}", name=f"CS_{i}", department="CS", semester=3, section="A", subject_code="SUB4", subject_name="S4", exam_date="12-03-2026", session="FN") for i in range(15)]
 
         room204.streams["A"].students.extend(students_me1)
@@ -26,14 +27,15 @@ class TestGlobalAbcOptimization(unittest.TestCase):
         room204.streams["C"].students.extend(students_me2)
 
         room205.streams["A"].students.extend(students_cs)
-        room205.streams["B"].students.extend(students_me2)
+        room205.streams["B"].students.extend(students_me3)
 
         g1 = Group(group_id="G1", department="ME", semester=3, section="A", subject_code="SUB1", subject_name="S1", exam_date="12-03-2026", session="FN", students=students_me1, allocated_count=15)
         g2 = Group(group_id="G2", department="EL", semester=3, section="A", subject_code="SUB2", subject_name="S2", exam_date="12-03-2026", session="FN", students=students_el, allocated_count=15)
         g3 = Group(group_id="G3", department="ME", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN", students=students_me2, allocated_count=15)
         g4 = Group(group_id="G4", department="CS", semester=3, section="A", subject_code="SUB4", subject_name="S4", exam_date="12-03-2026", session="FN", students=students_cs, allocated_count=15)
+        g5 = Group(group_id="G5", department="ME", semester=3, section="A", subject_code="SUB3", subject_name="S3", exam_date="12-03-2026", session="FN", students=students_me3, allocated_count=15)
 
-        groups = [g1, g2, g3, g4]
+        groups = [g1, g2, g3, g4, g5]
         context = AllocationContext(
             groups=groups,
             room_allocations=[room204, room205],
