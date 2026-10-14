@@ -1,6 +1,7 @@
 import math
 from collections import defaultdict
 from django.contrib import messages
+from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db import transaction
 from django.db.models import Prefetch
 from django.http import JsonResponse
@@ -1523,33 +1524,52 @@ def upload_file(request, session_id):
             status=405,
         )
 
-    file_kind = request.POST.get("file_kind", "").strip().upper()
+    try:
+        file_kind = request.POST.get("file_kind", "").strip().upper()
 
-    valid_kinds = {
-        UploadedFile.FileKind.STUDENT_LIST,
-        UploadedFile.FileKind.CLASSROOM_LIST,
-        UploadedFile.FileKind.TIMETABLE,
-        UploadedFile.FileKind.ELECTIVE_LIST,
-    }
+        valid_kinds = {
+            UploadedFile.FileKind.STUDENT_LIST,
+            UploadedFile.FileKind.CLASSROOM_LIST,
+            UploadedFile.FileKind.TIMETABLE,
+            UploadedFile.FileKind.ELECTIVE_LIST,
+        }
 
-    batches = []
-    if file_kind == "ALL":
-        kind_mapping = [
-            (UploadedFile.FileKind.STUDENT_LIST, "file_student"),
-            (UploadedFile.FileKind.TIMETABLE, "file_timetable"),
-            (UploadedFile.FileKind.CLASSROOM_LIST, "file_classroom"),
-            (UploadedFile.FileKind.ELECTIVE_LIST, "file_elective"),
-        ]
-        for kind, input_name in kind_mapping:
-            files_for_kind = request.FILES.getlist(input_name)
-            if files_for_kind:
-                batches.append((kind, files_for_kind))
-    elif file_kind in valid_kinds:
-        uploaded_files = request.FILES.getlist("file")
-        if uploaded_files:
-            batches.append((file_kind, uploaded_files))
-    else:
-        messages.error(request, "Invalid file type.")
+        batches = []
+        if file_kind == "ALL":
+            kind_mapping = [
+                (UploadedFile.FileKind.STUDENT_LIST, "file_student"),
+                (UploadedFile.FileKind.TIMETABLE, "file_timetable"),
+                (UploadedFile.FileKind.CLASSROOM_LIST, "file_classroom"),
+                (UploadedFile.FileKind.ELECTIVE_LIST, "file_elective"),
+            ]
+            for kind, input_name in kind_mapping:
+                files_for_kind = request.FILES.getlist(input_name)
+                if files_for_kind:
+                    batches.append((kind, files_for_kind))
+        elif file_kind in valid_kinds:
+            uploaded_files = request.FILES.getlist("file")
+            if uploaded_files:
+                batches.append((file_kind, uploaded_files))
+        else:
+            messages.error(request, "Invalid file type.")
+            return redirect(
+                "exam_allocator:import_data",
+                session_id=session.session_id,
+            )
+    except TooManyFilesSent:
+        messages.error(
+            request,
+            "Too many files were uploaded at once. Please upload in smaller batches.",
+        )
+        return redirect(
+            "exam_allocator:import_data",
+            session_id=session.session_id,
+        )
+    except RequestDataTooBig:
+        messages.error(
+            request,
+            "Total upload file size exceeds the allowed limit. Please upload in smaller batches.",
+        )
         return redirect(
             "exam_allocator:import_data",
             session_id=session.session_id,
