@@ -170,40 +170,30 @@
         color: var(--accent-light);
     }
 
-    /* ── UPLOAD SECTIONS (HORIZONTAL FLEXIBLE) ── */
+    /* ── UPLOAD SECTIONS ─────────────────────── */
     .upload-grid {
         display: flex;
         gap: 16px;
-        margin-bottom: 32px;
+        margin-bottom: 28px;
         align-items: stretch;
         width: 100%;
-        transition: all 0.35s ease;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .upload-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 22px 14px;
+        padding: 16px 14px;
         display: flex;
         flex-direction: column;
-        gap: 0;
-        backdrop-filter: blur(12px);
-        transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.25s ease,
-                    background 0.25s ease,
-                    box-shadow 0.25s ease;
-        animation: fadeUp 0.5s ease both;
-        box-sizing: border-box;
         flex: 1 1 0%;
         min-width: 0;
         overflow: hidden;
-    }
-
-    .upload-card.has-files-card {
-        border-color: rgba(16, 185, 129, 0.4);
-        background: rgba(16, 185, 129, 0.03);
-        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
+        backdrop-filter: blur(12px);
+        transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+        animation: fadeUp 0.5s ease both;
+        box-sizing: border-box;
     }
 
     .upload-card:nth-child(1) {
@@ -227,23 +217,29 @@
         background: var(--bg-card-hover);
     }
 
+    .upload-card.has-files-card {
+        border-color: rgba(16, 185, 129, 0.45);
+        background: rgba(16, 185, 129, 0.025);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
     .card-header {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
-        margin-bottom: 18px;
+        gap: 2px;
+        margin-bottom: 12px;
         text-align: center;
     }
 
     .card-icon {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 22px;
+        font-size: 19px;
         flex-shrink: 0;
     }
 
@@ -264,12 +260,12 @@
     }
 
     .card-title {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
-        margin-bottom: 4px;
+        margin-top: 6px;
+        margin-bottom: 0;
         color: var(--text-primary);
         align-self: center;
-        margin-top: 8px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -286,19 +282,19 @@
     .drop-zone {
         border: 2px dashed var(--border);
         border-radius: 10px;
-        padding: 22px 10px;
+        padding: 12px 10px;
         text-align: center;
         cursor: pointer;
         transition: all 0.25s ease;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
         position: relative;
-        min-height: 120px;
+        height: 165px;
+        box-sizing: border-box;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        flex-grow: 1;
+        gap: 6px;
         overflow: hidden;
     }
 
@@ -310,7 +306,24 @@
 
     .drop-zone.has-files {
         border-color: var(--success);
-        background: rgba(5, 150, 105, 0.05);
+        background: rgba(5, 150, 105, 0.04);
+        justify-content: flex-start;
+        padding: 8px 6px;
+        gap: 4px;
+    }
+
+    .drop-zone.has-files .drop-icon {
+        display: none;
+    }
+
+    .drop-zone.has-files .drop-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-weight: 500;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .drop-zone input[type="file"] {
@@ -323,17 +336,17 @@
     }
 
     .drop-icon {
-        font-size: 28px;
+        font-size: 24px;
         transition: transform 0.25s ease;
     }
 
     .drop-zone:hover .drop-icon,
     .drop-zone.drag-over .drop-icon {
-        transform: translateY(-4px);
+        transform: translateY(-3px);
     }
 
     .drop-label {
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 600;
         color: var(--text-primary);
         white-space: nowrap;
@@ -343,20 +356,41 @@
     }
 
     .drop-sublabel {
-        font-size: 11.5px;
+        font-size: 11px;
         color: var(--text-muted);
     }
 
     .file-list {
-        font-size: 12px;
-        color: var(--success);
+        font-size: 11.5px;
+        color: var(--text-primary);
         display: flex;
         flex-direction: column;
         gap: 4px;
         text-align: left;
         width: 100%;
-        padding: 0 4px;
-        margin-top: -2px;
+        padding: 2px;
+        flex: 1;
+        min-height: 0;
+        max-height: 140px;
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    .file-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .file-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .file-list::-webkit-scrollbar-thumb {
+        background: rgba(16, 185, 129, 0.35);
+        border-radius: 4px;
+    }
+
+    .file-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(16, 185, 129, 0.65);
     }
 
     .file-list-item {
@@ -364,34 +398,42 @@
         align-items: center;
         justify-content: space-between;
         gap: 6px;
-        background: var(--success-bg);
-        border: 1px solid var(--success-border);
-        border-radius: 6px;
-        padding: 5px 8px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 5px;
+        padding: 4px 7px;
+        transition: background 0.15s ease;
+        flex-shrink: 0;
+    }
+
+    .file-list-item:hover {
+        background: rgba(16, 185, 129, 0.15);
     }
 
     .file-item-name {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         min-width: 0;
         flex: 1;
+        color: var(--text-primary);
+        font-weight: 500;
     }
 
     .file-item-remove {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
         border-radius: 4px;
         border: none;
         background: transparent;
         color: var(--text-muted);
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         cursor: pointer;
         padding: 0;
@@ -409,20 +451,20 @@
     .btn-upload {
         width: 100%;
         margin-top: auto;
-        padding: 12px 6px;
+        padding: 9px 10px;
         background: rgba(99, 102, 241, 0.12);
         color: var(--accent-light);
         border: 1px solid rgba(99, 102, 241, 0.25);
-        border-radius: 9px;
-        font-size: 13px;
-        font-weight: 700;
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
         font-family: inherit;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 7px;
+        gap: 6px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -695,11 +737,10 @@
     }
 
     /* ── RESPONSIVE ──────────────────────────── */
-    @media (max-width: 900px) {
+    @media (max-width: 960px) {
         .upload-grid {
             flex-wrap: wrap;
         }
-
         .upload-card {
             flex: 1 1 calc(50% - 16px) !important;
             min-width: calc(50% - 16px);
@@ -713,7 +754,6 @@
 
         .upload-card {
             flex: 1 1 100% !important;
-            width: 100%;
             min-width: 100%;
         }
 
@@ -1037,25 +1077,24 @@
         const cards = document.querySelectorAll('.upload-card');
         if (!cards.length) return;
 
-        const activeCards = Array.from(cards).filter(c => c.querySelector('.drop-zone.has-files'));
-        const count = activeCards.length;
+        const cardStates = Array.from(cards).map(card => {
+            const hasFiles = card.querySelector('.drop-zone.has-files') !== null;
+            card.classList.toggle('has-files-card', hasFiles);
+            return hasFiles;
+        });
 
-        cards.forEach(c => {
-            const hasFiles = c.querySelector('.drop-zone.has-files') !== null;
-            c.classList.toggle('has-files-card', hasFiles);
+        const activeCount = cardStates.filter(Boolean).length;
 
-            if (count === 0 || count === 4) {
-                // All equal width (25% each - this size all equal)
-                c.style.flex = '1 1 0%';
-            } else if (count === 1) {
-                // 1 section selected -> it becomes large horizontally! (~55% width)
-                c.style.flex = hasFiles ? '3.5 1 0%' : '1 1 0%';
-            } else if (count === 2) {
-                // 2 sections selected -> that two need to be large and equal! (~40% each)
-                c.style.flex = hasFiles ? '3.5 1 0%' : '1 1 0%';
-            } else if (count === 3) {
-                // 3 sections selected -> those three are large and equal
-                c.style.flex = hasFiles ? '2.5 1 0%' : '1 1 0%';
+        cards.forEach((card, idx) => {
+            const hasFiles = cardStates[idx];
+            if (activeCount === 0 || activeCount === 4) {
+                card.style.flex = '1 1 0%';
+            } else if (activeCount === 1) {
+                card.style.flex = hasFiles ? '3.5 1 0%' : '1 1 0%';
+            } else if (activeCount === 2) {
+                card.style.flex = hasFiles ? '3.2 1 0%' : '1 1 0%';
+            } else if (activeCount === 3) {
+                card.style.flex = hasFiles ? '2.5 1 0%' : '1 1 0%';
             }
         });
     }
@@ -1096,7 +1135,6 @@
             item.appendChild(removeBtn);
             fl.appendChild(item);
         });
-
         syncHorizontalFlex();
     }
 
