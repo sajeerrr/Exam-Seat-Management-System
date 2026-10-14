@@ -338,11 +338,47 @@
     .file-list-item {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 6px;
         background: var(--success-bg);
         border: 1px solid var(--success-border);
         border-radius: 6px;
         padding: 5px 8px;
+    }
+
+    .file-item-name {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .file-item-remove {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+    }
+
+    .file-item-remove:hover {
+        background: rgba(239, 68, 68, 0.18);
+        color: #ef4444;
     }
 
     /* ── SUBMIT BUTTON ───────────────────────── */
@@ -883,13 +919,52 @@
 </div>
 
 <script>
-    // ── FILE INPUT LABELS ─────────────────────
+    // ── FILE INPUT LABELS & MANAGEMENT ─────────────────────
+    function setFilesToInput(fi, filesArray) {
+        fi._managedFiles = filesArray;
+        const dt = new DataTransfer();
+        filesArray.forEach(f => dt.items.add(f));
+        fi.files = dt.files;
+        if (filesArray.length === 0) {
+            fi.value = '';
+        }
+    }
+
+    function removeFileFromInput(fi, fl, dz, indexToRemove) {
+        const current = fi._managedFiles || Array.from(fi.files || []);
+        const filtered = current.filter((_, idx) => idx !== indexToRemove);
+        setFilesToInput(fi, filtered);
+        updateFileList(fi, fl, dz);
+    }
+
     function wireDropZone(dzId, fiId, flId) {
         const dz = document.getElementById(dzId);
         const fi = document.getElementById(fiId);
         const fl = document.getElementById(flId);
+        if (!dz || !fi || !fl) return;
 
-        fi.addEventListener('change', () => updateFileList(fi, fl, dz));
+        fi._managedFiles = [];
+
+        fi.addEventListener('change', () => {
+            if (fi.files && fi.files.length) {
+                const incoming = Array.from(fi.files);
+                if (fi.multiple) {
+                    const existing = fi._managedFiles || [];
+                    const merged = [...existing];
+                    incoming.forEach(newFile => {
+                        if (!merged.some(f => f.name === newFile.name && f.size === newFile.size)) {
+                            merged.push(newFile);
+                        }
+                    });
+                    setFilesToInput(fi, merged);
+                } else {
+                    setFilesToInput(fi, incoming);
+                }
+            } else {
+                setFilesToInput(fi, []);
+            }
+            updateFileList(fi, fl, dz);
+        });
 
         dz.addEventListener('dragover', e => {
             e.preventDefault();
@@ -903,10 +978,19 @@
             dz.classList.remove('drag-over');
             const dt = e.dataTransfer;
             if (dt.files && dt.files.length) {
-                // Assign dragged files to the input
-                const dataTransfer = new DataTransfer();
-                for (const f of dt.files) dataTransfer.items.add(f);
-                fi.files = dataTransfer.files;
+                const incoming = Array.from(dt.files);
+                if (fi.multiple) {
+                    const existing = fi._managedFiles || [];
+                    const merged = [...existing];
+                    incoming.forEach(newFile => {
+                        if (!merged.some(f => f.name === newFile.name && f.size === newFile.size)) {
+                            merged.push(newFile);
+                        }
+                    });
+                    setFilesToInput(fi, merged);
+                } else {
+                    setFilesToInput(fi, [incoming[0]]);
+                }
                 updateFileList(fi, fl, dz);
             }
         });
@@ -914,18 +998,39 @@
 
     function updateFileList(fi, fl, dz) {
         fl.innerHTML = '';
-        if (fi.files.length === 0) {
+        const files = fi._managedFiles && fi._managedFiles.length ? fi._managedFiles : Array.from(fi.files || []);
+        if (files.length === 0) {
             dz.classList.remove('has-files');
             return;
         }
         dz.classList.add('has-files');
-        // Hide the static labels when files selected
-        for (const f of fi.files) {
+
+        files.forEach((f, idx) => {
             const item = document.createElement('div');
             item.className = 'file-list-item';
-            item.textContent = '✓ ' + f.name;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'file-item-name';
+            nameSpan.title = f.name;
+            nameSpan.textContent = '✓ ' + f.name;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'file-item-remove';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = 'Remove ' + f.name;
+            removeBtn.setAttribute('aria-label', 'Remove ' + f.name);
+
+            removeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeFileFromInput(fi, fl, dz, idx);
+            });
+
+            item.appendChild(nameSpan);
+            item.appendChild(removeBtn);
             fl.appendChild(item);
-        }
+        });
     }
 
     wireDropZone('dz-student', 'fi-student', 'fl-student');
