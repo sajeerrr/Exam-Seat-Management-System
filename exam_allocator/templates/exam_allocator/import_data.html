@@ -35,7 +35,7 @@
     .page-wrapper {
         position: relative;
         z-index: 1;
-        max-width: 1100px;
+        max-width: 1320px;
         margin: 0 auto;
         padding: 40px 24px 80px;
     }
@@ -170,25 +170,40 @@
         color: var(--accent-light);
     }
 
-    /* ── UPLOAD SECTIONS ─────────────────────── */
+    /* ── UPLOAD SECTIONS (HORIZONTAL FLEXIBLE) ── */
     .upload-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 20px;
+        display: flex;
+        gap: 16px;
         margin-bottom: 32px;
+        align-items: stretch;
+        width: 100%;
+        transition: all 0.35s ease;
     }
 
     .upload-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 26px 20px;
+        padding: 22px 14px;
         display: flex;
         flex-direction: column;
         gap: 0;
         backdrop-filter: blur(12px);
-        transition: all 0.25s ease;
+        transition: flex 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.25s ease,
+                    background 0.25s ease,
+                    box-shadow 0.25s ease;
         animation: fadeUp 0.5s ease both;
+        box-sizing: border-box;
+        flex: 1 1 0%;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .upload-card.has-files-card {
+        border-color: rgba(16, 185, 129, 0.4);
+        background: rgba(16, 185, 129, 0.03);
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
     }
 
     .upload-card:nth-child(1) {
@@ -249,12 +264,16 @@
     }
 
     .card-title {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 700;
         margin-bottom: 4px;
         color: var(--text-primary);
         align-self: center;
-        margin-top: 10px;
+        margin-top: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
     .upload-card form {
@@ -267,7 +286,7 @@
     .drop-zone {
         border: 2px dashed var(--border);
         border-radius: 10px;
-        padding: 28px 16px;
+        padding: 22px 10px;
         text-align: center;
         cursor: pointer;
         transition: all 0.25s ease;
@@ -280,6 +299,7 @@
         justify-content: center;
         gap: 8px;
         flex-grow: 1;
+        overflow: hidden;
     }
 
     .drop-zone:hover,
@@ -313,9 +333,13 @@
     }
 
     .drop-label {
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 600;
         color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 
     .drop-sublabel {
@@ -384,7 +408,8 @@
     /* ── SUBMIT BUTTON ───────────────────────── */
     .btn-upload {
         width: 100%;
-        padding: 12px;
+        margin-top: auto;
+        padding: 12px 6px;
         background: rgba(99, 102, 241, 0.12);
         color: var(--accent-light);
         border: 1px solid rgba(99, 102, 241, 0.25);
@@ -398,6 +423,9 @@
         align-items: center;
         justify-content: center;
         gap: 7px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .btn-upload:hover {
@@ -667,23 +695,32 @@
     }
 
     /* ── RESPONSIVE ──────────────────────────── */
-    @media (max-width: 1080px) {
+    @media (max-width: 900px) {
         .upload-grid {
-            grid-template-columns: repeat(2, 1fr);
+            flex-wrap: wrap;
+        }
+
+        .upload-card {
+            flex: 1 1 calc(50% - 16px) !important;
+            min-width: calc(50% - 16px);
         }
     }
 
     @media (max-width: 600px) {
         .upload-grid {
-            grid-template-columns: 1fr;
+            flex-direction: column;
+        }
+
+        .upload-card {
+            flex: 1 1 100% !important;
+            width: 100%;
+            min-width: 100%;
         }
 
         .tips-grid {
             grid-template-columns: 1fr;
         }
-    }
 
-    @media (max-width: 600px) {
         .page-hero {
             flex-direction: column;
             align-items: flex-start;
@@ -996,11 +1033,39 @@
         });
     }
 
+    function syncHorizontalFlex() {
+        const cards = document.querySelectorAll('.upload-card');
+        if (!cards.length) return;
+
+        const activeCards = Array.from(cards).filter(c => c.querySelector('.drop-zone.has-files'));
+        const count = activeCards.length;
+
+        cards.forEach(c => {
+            const hasFiles = c.querySelector('.drop-zone.has-files') !== null;
+            c.classList.toggle('has-files-card', hasFiles);
+
+            if (count === 0 || count === 4) {
+                // All equal width (25% each - this size all equal)
+                c.style.flex = '1 1 0%';
+            } else if (count === 1) {
+                // 1 section selected -> it becomes large horizontally! (~55% width)
+                c.style.flex = hasFiles ? '3.5 1 0%' : '1 1 0%';
+            } else if (count === 2) {
+                // 2 sections selected -> that two need to be large and equal! (~40% each)
+                c.style.flex = hasFiles ? '3.5 1 0%' : '1 1 0%';
+            } else if (count === 3) {
+                // 3 sections selected -> those three are large and equal
+                c.style.flex = hasFiles ? '2.5 1 0%' : '1 1 0%';
+            }
+        });
+    }
+
     function updateFileList(fi, fl, dz) {
         fl.innerHTML = '';
         const files = fi._managedFiles && fi._managedFiles.length ? fi._managedFiles : Array.from(fi.files || []);
         if (files.length === 0) {
             dz.classList.remove('has-files');
+            syncHorizontalFlex();
             return;
         }
         dz.classList.add('has-files');
@@ -1031,12 +1096,15 @@
             item.appendChild(removeBtn);
             fl.appendChild(item);
         });
+
+        syncHorizontalFlex();
     }
 
     wireDropZone('dz-student', 'fi-student', 'fl-student');
     wireDropZone('dz-timetable', 'fi-timetable', 'fl-timetable');
     wireDropZone('dz-classroom', 'fi-classroom', 'fl-classroom');
     wireDropZone('dz-elective', 'fi-elective', 'fl-elective');
+    syncHorizontalFlex();
 
     // ── UPLOAD BUTTON STATES ──────────────────
     ['student', 'timetable', 'classroom', 'elective'].forEach(kind => {
