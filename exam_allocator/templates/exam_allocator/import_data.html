@@ -517,6 +517,95 @@
         color: #6d28d9;
     }
 
+    /* ── UNIFIED ACTION BAR (SINGLE SAME LINE) ── */
+    .actions-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: -4px;
+        margin-bottom: 28px;
+        animation: fadeUp 0.5s ease both;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .actions-bar-left {
+        flex: 1;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .actions-bar-center {
+        flex: 1.5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .actions-bar-right {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .btn-common-upload {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 26px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        border: 1px solid var(--accent);
+        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        color: #ffffff;
+        box-shadow: 0 4px 18px var(--accent-glow);
+        white-space: nowrap;
+        box-sizing: border-box;
+        height: 42px;
+    }
+
+    .btn-common-upload:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45);
+        filter: brightness(1.08);
+    }
+
+    .btn-common-upload:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .btn-common-upload:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        box-shadow: none;
+        background: var(--bg-card);
+        color: var(--text-muted);
+        border-color: var(--border);
+    }
+
+    .btn-common-upload .upload-count-badge {
+        background: rgba(255, 255, 255, 0.22);
+        color: #ffffff;
+        font-size: 11.5px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 20px;
+        letter-spacing: 0.2px;
+    }
+
+    .btn-common-upload:disabled .upload-count-badge {
+        background: var(--border);
+        color: var(--text-muted);
+    }
+
     /* ── TIPS ────────────────────────────────── */
     .tips-card {
         background: var(--bg-card);
@@ -568,30 +657,25 @@
         margin-top: 1px;
     }
 
-    /* ── BOTTOM ACTION ───────────────────────── */
-    .bottom-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        flex-wrap: wrap;
-        animation: fadeUp 0.5s ease 0.25s both;
-    }
-
     .btn-secondary {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
-        padding: 13px 24px;
+        padding: 11px 22px;
         background: var(--bg-card);
         color: var(--text-secondary);
         border: 1px solid var(--border);
         border-radius: 10px;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         font-family: inherit;
         cursor: pointer;
         text-decoration: none;
         transition: all 0.2s ease;
+        white-space: nowrap;
+        box-sizing: border-box;
+        height: 42px;
     }
 
     .btn-secondary:hover {
@@ -603,19 +687,23 @@
     .btn-primary-lg {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 8px;
-        padding: 13px 28px;
+        padding: 11px 24px;
         background: linear-gradient(135deg, var(--accent), #8b5cf6);
         color: white;
         border: none;
         border-radius: 10px;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 700;
         font-family: inherit;
         cursor: pointer;
         text-decoration: none;
         transition: all 0.2s ease;
         box-shadow: 0 4px 20px var(--accent-glow);
+        white-space: nowrap;
+        box-sizing: border-box;
+        height: 42px;
     }
 
     .btn-primary-lg:hover {
@@ -747,6 +835,27 @@
         }
     }
 
+    @media (max-width: 768px) {
+        .actions-bar {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .actions-bar-left,
+        .actions-bar-center,
+        .actions-bar-right {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .actions-bar-left .btn-secondary,
+        .actions-bar-center .btn-common-upload,
+        .actions-bar-right .btn-primary-lg {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
     @media (max-width: 600px) {
         .upload-grid {
             flex-direction: column;
@@ -764,16 +873,6 @@
         .page-hero {
             flex-direction: column;
             align-items: flex-start;
-        }
-
-        .bottom-actions {
-            flex-direction: column;
-        }
-
-        .btn-primary-lg,
-        .btn-secondary {
-            width: 100%;
-            justify-content: center;
         }
     }
 </style>
@@ -934,6 +1033,28 @@
 
     </div>
 
+    <!-- UNIFIED ACTION BAR (SINGLE SAME LINE) -->
+    <div class="actions-bar">
+        <div class="actions-bar-left">
+            <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary"
+                id="btn-back-session">
+                ← Back to Session
+            </a>
+        </div>
+        <div class="actions-bar-center">
+            <button type="button" class="btn-common-upload" id="btn-upload-all" disabled>
+                <span class="btn-upload-text">Upload All Selected Files</span>
+                <span class="upload-count-badge" id="badge-upload-count" style="display: none;">0</span>
+            </button>
+        </div>
+        <div class="actions-bar-right">
+            <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-primary-lg"
+                id="btn-go-review">
+                Review Imported Data →
+            </a>
+        </div>
+    </div>
+
     {% if uploaded_files %}
     <!-- UPLOADED FILES LOG -->
     <div class="log-card">
@@ -980,18 +1101,6 @@
         </table>
     </div>
     {% endif %}
-
-    <!-- BOTTOM ACTIONS -->
-    <div class="bottom-actions">
-        <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary"
-            id="btn-back-session" style="margin-right: auto;">
-            ← Back to Session
-        </a>
-        <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-primary-lg"
-            id="btn-go-review">
-            Review Imported Data →
-        </a>
-    </div>
 
 </div>
 
@@ -1099,12 +1208,52 @@
         });
     }
 
+    function getTotalSelectedFiles() {
+        let total = 0;
+        ['student', 'timetable', 'classroom', 'elective'].forEach(kind => {
+            const fi = document.getElementById('fi-' + kind);
+            if (fi) {
+                const files = fi._managedFiles && fi._managedFiles.length ? fi._managedFiles : Array.from(fi.files || []);
+                total += files.length;
+            }
+        });
+        return total;
+    }
+
+    function syncCommonUploadButton() {
+        const btn = document.getElementById('btn-upload-all');
+        if (!btn) return;
+        const badge = document.getElementById('badge-upload-count');
+        const text = btn.querySelector('.btn-upload-text');
+
+        const total = getTotalSelectedFiles();
+        if (total > 0) {
+            btn.disabled = false;
+            if (badge) {
+                badge.style.display = 'inline-flex';
+                badge.textContent = total + (total === 1 ? ' file' : ' files');
+            }
+            if (text) {
+                text.textContent = 'Upload All Selected Files';
+            }
+        } else {
+            btn.disabled = true;
+            if (badge) {
+                badge.style.display = 'none';
+            }
+            if (text) {
+                text.textContent = 'Upload All Selected Files';
+            }
+        }
+    }
+
     function updateFileList(fi, fl, dz) {
         fl.innerHTML = '';
         const files = fi._managedFiles && fi._managedFiles.length ? fi._managedFiles : Array.from(fi.files || []);
         if (files.length === 0) {
             dz.classList.remove('has-files');
             syncHorizontalFlex();
+            syncCommonUploadButton();
             return;
         }
         dz.classList.add('has-files');
@@ -1136,6 +1285,7 @@
             fl.appendChild(item);
         });
         syncHorizontalFlex();
+        syncCommonUploadButton();
     }
 
     wireDropZone('dz-student', 'fi-student', 'fl-student');
@@ -1143,6 +1293,72 @@
     wireDropZone('dz-classroom', 'fi-classroom', 'fl-classroom');
     wireDropZone('dz-elective', 'fi-elective', 'fl-elective');
     syncHorizontalFlex();
+    syncCommonUploadButton();
+
+    // ── COMMON UPLOAD SUBMISSION ──────────────
+    const btnUploadAll = document.getElementById('btn-upload-all');
+    if (btnUploadAll) {
+        btnUploadAll.addEventListener('click', function () {
+            const total = getTotalSelectedFiles();
+            if (total === 0) return;
+
+            btnUploadAll.disabled = true;
+            const text = btnUploadAll.querySelector('.btn-upload-text');
+            if (text) text.textContent = 'Uploading files…';
+
+            ['student', 'timetable', 'classroom', 'elective'].forEach(kind => {
+                const b = document.getElementById('submit-' + kind);
+                if (b) {
+                    b.disabled = true;
+                    b.textContent = 'Uploading…';
+                }
+            });
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'exam_allocator:upload_file' session.session_id %}";
+            form.enctype = 'multipart/form-data';
+            form.style.display = 'none';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            const existingCsrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            csrfInput.value = existingCsrf ? existingCsrf.value : '';
+            form.appendChild(csrfInput);
+
+            const kindInput = document.createElement('input');
+            kindInput.type = 'hidden';
+            kindInput.name = 'file_kind';
+            kindInput.value = 'ALL';
+            form.appendChild(kindInput);
+
+            const categories = [
+                { kind: 'student', name: 'file_student' },
+                { kind: 'timetable', name: 'file_timetable' },
+                { kind: 'classroom', name: 'file_classroom' },
+                { kind: 'elective', name: 'file_elective' }
+            ];
+
+            categories.forEach(cat => {
+                const fi = document.getElementById('fi-' + cat.kind);
+                const files = fi && fi._managedFiles && fi._managedFiles.length ? fi._managedFiles : (fi ? Array.from(fi.files || []) : []);
+                if (files.length > 0) {
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.name = cat.name;
+                    fileInput.multiple = true;
+                    const dt = new DataTransfer();
+                    files.forEach(f => dt.items.add(f));
+                    fileInput.files = dt.files;
+                    form.appendChild(fileInput);
+                }
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
 
     // ── UPLOAD BUTTON STATES ──────────────────
     ['student', 'timetable', 'classroom', 'elective'].forEach(kind => {
@@ -1153,6 +1369,9 @@
             if (btn) {
                 btn.disabled = true;
                 btn.textContent = 'Uploading…';
+            }
+            if (btnUploadAll) {
+                btnUploadAll.disabled = true;
             }
         });
     });

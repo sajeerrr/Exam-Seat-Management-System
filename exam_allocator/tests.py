@@ -518,3 +518,11 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         response = client.get(url + "?date=2026-03-12&shift=AN")
         self.assertEqual(response.status_code, 200)
 
+    def test_upload_file_no_files_redirects_to_import_data(self):
+        client = Client()
+        url = reverse("exam_allocator:upload_file", args=[self.session.session_id])
+        response = client.post(url, {"file_kind": "ALL"})
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("exam_allocator:import_data", args=[self.session.session_id]), response.url)
+
+
