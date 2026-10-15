@@ -125,3 +125,8 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+# File upload settings (supports large batches of student, timetable, classroom, and elective files)
+DATA_UPLOAD_MAX_NUMBER_FILES = None  # Disable limit on number of uploaded files
+DATA_UPLOAD_MAX_MEMORY_SIZE = 250 * 1024 * 1024  # 250 MB maximum request body size
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50 MB in-memory threshold before streaming to disk

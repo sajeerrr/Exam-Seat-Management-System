@@ -1076,6 +1076,7 @@
         <div class="panel-toolbar">
             <div class="panel-toolbar-title">👥 Departments &amp; Classes ({{ departments.count }} depts)</div>
             <div class="panel-toolbar-actions">
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Students</a>
                 <button class="btn-sm-danger" onclick="clearAllStudents()">🗑️ Clear All Students</button>
             </div>
         </div>
@@ -1128,6 +1129,7 @@
         <div class="panel-toolbar">
             <div class="panel-toolbar-title">🗓️ Exam Timetable</div>
             <div class="panel-toolbar-actions">
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Timetable</a>
                 <button class="btn-sm-primary" onclick="openAddExamModal()">+ Add Exam</button>
                 {% if timetable_days %}
                 <button class="btn-sm-danger" onclick="clearFullTimetable()">🗑️ Clear Full Timetable</button>
@@ -1183,7 +1185,14 @@
             </div>
         </div>
         {% empty %}
-        <div class="no-rooms">No timetable data imported yet. Go to Import Data to upload timetable files.</div>
+        <div class="no-rooms"
+            style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <div>No timetable data imported yet for this session.</div>
+            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
+                style="display:inline-flex;width:fit-content;gap:8px;">
+                📥 Import Timetable Files
+            </a>
+        </div>
         {% endfor %}
     </div>
 
@@ -1192,6 +1201,7 @@
         <div class="rooms-toolbar">
             <div class="rooms-toolbar-title">🏫 Exam Rooms ({{ rooms|length }} total)</div>
             <div class="panel-toolbar-actions">
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Rooms</a>
                 <button class="btn-add-room" onclick="openRoomModal(null)" id="add-room-btn">+ Add Room</button>
                 {% if rooms %}
                 <button class="btn-sm-danger" onclick="clearAllRooms()">🗑️ Clear All Rooms</button>
@@ -1219,7 +1229,14 @@
             {% endfor %}
         </div>
         {% else %}
-        <div class="no-rooms" id="no-rooms-msg">No classrooms imported yet. Add one manually or go to Import Data.</div>
+        <div class="no-rooms" id="no-rooms-msg"
+            style="text-align:center;padding:48px;color:var(--text-muted);font-size:14px;display:flex;flex-direction:column;align-items:center;gap:16px;">
+            <div>No classrooms imported yet for this session.</div>
+            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
+                style="display:inline-flex;width:fit-content;gap:8px;">
+                📥 Import Classroom Files
+            </a>
+        </div>
         {% endif %}
     </div>
 
@@ -1229,6 +1246,7 @@
         <div class="panel-toolbar">
             <div class="panel-toolbar-title">📚 Elective Groups &amp; Subjects</div>
             <div class="panel-toolbar-actions">
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Electives</a>
                 <button class="btn-sm-danger" onclick="clearAllElectives()">🗑️ Clear All Electives</button>
             </div>
         </div>
