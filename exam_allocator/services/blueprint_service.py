@@ -312,6 +312,10 @@ class BlueprintService:
             context = allocator.execute(context, allow_unallocated=(overflow_attempt < max_overflow_attempts))
             unalloc_rem = sum(g.remaining_count for g in context.groups)
 
+        # Maximize pure ABC rooms by converting ABA pairs
+        from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+        context = ABAToABCOptimizer().optimize(context)
+
         # Persist Blueprint transactionally
         with transaction.atomic():
             slot_blueprint = cls.get_or_create_slot_blueprint(session, exam_date, shift)
@@ -646,6 +650,20 @@ class BlueprintService:
 
         is_valid = len(errors) == 0
         return is_valid, errors, warnings, stats
+
+    @classmethod
+    def maximize_blueprint_abc_rooms(cls, slot_blueprint: SlotBlueprint) -> SlotBlueprint:
+        """
+        Re-allocates and optimizes the slot blueprint using the ABA-to-ABC pair optimizer
+        to maximize pure ABC room configurations while strictly preserving all capacity,
+        adjacency, and student eligibility constraints.
+        """
+        return cls.allocate_departments_for_slot(
+            session=slot_blueprint.session,
+            exam_date=slot_blueprint.exam_date,
+            shift=slot_blueprint.shift,
+            force_reallocate=True,
+        )
 
     @classmethod
     def consolidate_slot_assignments(cls, slot_blueprint: SlotBlueprint) -> bool:

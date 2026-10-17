@@ -223,6 +223,17 @@ class ConstrainedBestFitAllocator:
             except Exception:
                 context.restore(snapshot_before_balance)
 
+            # Maximize pure ABC rooms and convert ABA pairs
+            from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+            snapshot_before_aba = context.snapshot()
+            try:
+                context = ABAToABCOptimizer().optimize(context)
+                aba_val = self.validator.validate(context)
+                if not aba_val.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
+                    context.restore(snapshot_before_aba)
+            except Exception:
+                context.restore(snapshot_before_aba)
+
         final_validation = self.validator.validate(context)
         if allow_unallocated:
             final_validation.errors = [

@@ -157,6 +157,8 @@ class ABCHybridAllocator:
 
         if unalloc_remaining == 0:
             context.remaining_pool = RemainingPool(context.groups)
+            from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+            context = ABAToABCOptimizer().optimize(context)
             return True
 
         rem_rooms = rooms[rooms_assigned:]
@@ -179,6 +181,8 @@ class ABCHybridAllocator:
                             room.assign_to_stream(s_name, group, val)
 
             context.remaining_pool = RemainingPool(context.groups)
+            from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+            context = ABAToABCOptimizer().optimize(context)
             return True
 
         return False
