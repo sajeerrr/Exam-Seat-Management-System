@@ -22,7 +22,8 @@ class HyperHeuristicAllocator:
         self.local_optimizer = LocalOptimizer()
         self.validator = AllocationValidator()
 
-    def execute(self, context):
+    def execute(self, context, allow_unallocated=False):
+        initial_snapshot = context.snapshot()
         # Phase 1: Sequential Room Packing (reliable constructive baseline)
         context = self.sequential_allocator.execute(context)
 
@@ -30,6 +31,7 @@ class HyperHeuristicAllocator:
         unallocated = sum(g.remaining_count for g in context.groups)
         if unallocated > 0:
             snapshot = context.snapshot()
+            context.restore(initial_snapshot)
             cp_context = self.cp_solver.solve(context.groups, context.room_allocations)
             if cp_context is not None:
                 cp_val = self.validator.validate(cp_context)
@@ -58,7 +60,11 @@ class HyperHeuristicAllocator:
 
         # Final Validation Check
         result = self.validator.validate(context)
-        if not result.success or sum(g.remaining_count for g in context.groups) > 0:
+        if allow_unallocated:
+            result.errors = [
+                e for e in result.errors if "unallocated student(s)" not in e
+            ]
+        if not result.success or (not allow_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             raise ValueError(f"ALLOCATION FAILED VALIDATION: {result.errors}")
 
         return context

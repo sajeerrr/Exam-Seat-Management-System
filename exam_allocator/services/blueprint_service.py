@@ -276,12 +276,15 @@ class BlueprintService:
         from engine.adaptive.invariant import AbcInvariant
         capacity = context.room_allocations[0].classroom.column_capacity if context.room_allocations else 15
         context.abc_invariant = AbcInvariant(context, stream_capacity=capacity)
-        context = allocator.execute(context)
+        context = allocator.execute(context, allow_unallocated=True)
 
         # If any students remain unallocated due to constraints, add overflow dummy rooms and allocate
         unalloc_rem = sum(g.remaining_count for g in context.groups)
-        if unalloc_rem > 0:
-            extra_dummies = (unalloc_rem + 44) // 45
+        max_overflow_attempts = 5
+        overflow_attempt = 0
+        while unalloc_rem > 0 and overflow_attempt < max_overflow_attempts:
+            overflow_attempt += 1
+            extra_dummies = max(1, (unalloc_rem + 44) // 45)
             curr_dummy_nums = [
                 int(r.room_number.replace("Dummy Room ", ""))
                 for r in rooms
@@ -305,7 +308,8 @@ class BlueprintService:
                 extra_ra = RoomAllocation(classroom=django_room_to_engine_classroom(extra_droom))
                 context.room_allocations.append(extra_ra)
 
-            context = allocator.execute(context)
+            context = allocator.execute(context, allow_unallocated=(overflow_attempt < max_overflow_attempts))
+            unalloc_rem = sum(g.remaining_count for g in context.groups)
 
         # Persist Blueprint transactionally
         with transaction.atomic():

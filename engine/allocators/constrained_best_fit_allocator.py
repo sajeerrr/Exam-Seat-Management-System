@@ -11,11 +11,12 @@ class ConstrainedBestFitAllocator:
         self.local_optimizer = LocalOptimizer()
         self.cp_solver = CPSolver()
 
-    def execute(self, context: AllocationContext) -> AllocationContext:
+    def execute(self, context: AllocationContext, allow_unallocated: bool = False) -> AllocationContext:
         total_students = sum(g.remaining_count for g in context.groups)
         if total_students == 0:
             return context
 
+        initial_snapshot = context.snapshot()
         room_allocations = context.room_allocations
         has_special_groups = any(g.is_special_subject for g in context.groups)
         prev_stream_depts = {"A": None, "B": None, "C": None}
@@ -195,10 +196,11 @@ class ConstrainedBestFitAllocator:
         total_capacity = sum(r.classroom.capacity for r in context.room_allocations)
         total_students = sum(g.strength for g in context.groups)
         unallocated_sum = sum(g.remaining_count for g in context.groups)
-        must_have_zero_unallocated = (total_capacity >= total_students)
+        must_have_zero_unallocated = (total_capacity >= total_students) and not allow_unallocated
 
         if unallocated_sum > 0 and not has_special_groups:
             snapshot = context.snapshot()
+            context.restore(initial_snapshot)
             cp_context = self.cp_solver.solve(context.groups, context.room_allocations)
             if cp_context is not None:
                 cp_val = self.validator.validate(cp_context)
@@ -208,6 +210,8 @@ class ConstrainedBestFitAllocator:
                     context = cp_context
                 else:
                     context.restore(snapshot)
+            else:
+                context.restore(snapshot)
 
         if not has_special_groups:
             snapshot_before_balance = context.snapshot()
@@ -220,10 +224,19 @@ class ConstrainedBestFitAllocator:
                 context.restore(snapshot_before_balance)
 
         final_validation = self.validator.validate(context)
+        if allow_unallocated:
+            final_validation.errors = [
+                e for e in final_validation.errors if "unallocated student(s)" not in e
+            ]
+
         if not final_validation.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             if not has_special_groups:
                 context.restore(snapshot_before_balance)
                 final_validation = self.validator.validate(context)
+                if allow_unallocated:
+                    final_validation.errors = [
+                        e for e in final_validation.errors if "unallocated student(s)" not in e
+                    ]
             if not final_validation.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
                 raise ValueError(f"ALLOCATION FAILED VALIDATION: {final_validation.errors}")
 

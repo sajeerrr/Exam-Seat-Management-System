@@ -241,3 +241,53 @@ class DummyRoomWorkflowTests(TestCase):
         dummy_rb.refresh_from_db()
         self.assertEqual(dummy_rb.room.room_number, "Auditorium Hall A")
         self.assertFalse(dummy_rb.room.is_dummy_room)
+
+    def test_tight_capacity_cp_fallback_and_overflow_dummy_handling(self):
+        """
+        Verify that when room capacity equals or is tight with cohort size,
+        and greedy constructive allocation leaves remainder students unallocated,
+        the CP solver fallback restores clean state, successfully solves all students,
+        and does not raise 'ALLOCATION FAILED VALIDATION: [...] has unallocated student(s)'.
+        """
+        # Session with 2 rooms = 90 capacity, and groups with fractional stream sizes
+        sess = AllocationSession.objects.create(name="Tight Capacity Session")
+        Room.objects.create(session=sess, room_number="R1", capacity=45, benches=15)
+        Room.objects.create(session=sess, room_number="R2", capacity=45, benches=15)
+
+        dept_cs = Department.objects.create(session=sess, department_code="CS", department_name="CS")
+        dept_ec = Department.objects.create(session=sess, department_code="EC", department_name="EC")
+        dept_ee = Department.objects.create(session=sess, department_code="EE", department_name="EE")
+
+        c_cs = Class.objects.create(department=dept_cs, class_name="CS 1", semester=6, academic_year="2026")
+        c_ec = Class.objects.create(department=dept_ec, class_name="EC 1", semester=6, academic_year="2026")
+        c_ee = Class.objects.create(department=dept_ee, class_name="EE 1", semester=6, academic_year="2026")
+
+        d = datetime.date(2026, 12, 1)
+        sh = "FN"
+
+        s_cs = Subject.objects.create(session=sess, subject_code="CST302", subject_name="OS", semester=6)
+        s_ec = Subject.objects.create(session=sess, subject_code="ECT302", subject_name="DSP", semester=6)
+        s_ee = Subject.objects.create(session=sess, subject_code="EET302", subject_name="Power", semester=6)
+
+        e_cs = Exam.objects.create(subject=s_cs, exam_date=d, session=sh, duration=180)
+        e_ec = Exam.objects.create(subject=s_ec, exam_date=d, session=sh, duration=180)
+        e_ee = Exam.objects.create(subject=s_ee, exam_date=d, session=sh, duration=180)
+
+        # 34 + 28 + 28 = 90 students exactly matching 90 capacity
+        for i in range(1, 35):
+            st = Student.objects.create(student_class=c_cs, roll_number=f"CS{i:02d}", student_name=f"CS {i}")
+            ExamRegistration.objects.create(exam=e_cs, student=st)
+        for i in range(1, 29):
+            st = Student.objects.create(student_class=c_ec, roll_number=f"EC{i:02d}", student_name=f"EC {i}")
+            ExamRegistration.objects.create(exam=e_ec, student=st)
+        for i in range(1, 29):
+            st = Student.objects.create(student_class=c_ee, roll_number=f"EE{i:02d}", student_name=f"EE {i}")
+            ExamRegistration.objects.create(exam=e_ee, student=st)
+
+        bp = BlueprintService.allocate_departments_for_slot(sess, d, sh)
+        self.assertIsNotNone(bp)
+        val = BlueprintService.validate_blueprint(bp)
+        summary = val[3] if len(val) > 3 else bp.summary
+        self.assertEqual(summary.get("total_allocated_students"), 90)
+        self.assertEqual(summary.get("unallocated_count"), 0)
+
