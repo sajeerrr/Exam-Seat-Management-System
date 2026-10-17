@@ -443,6 +443,9 @@ class BlueprintService:
             slot_blueprint.version = 1
             slot_blueprint.save()
 
+            # Clean up any orphaned dummy rooms in this session with no blueprint assignments
+            Room.objects.filter(session=session, is_dummy=True, slot_blueprints__isnull=True).delete()
+
         return slot_blueprint
 
     @classmethod

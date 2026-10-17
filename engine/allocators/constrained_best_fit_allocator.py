@@ -289,6 +289,9 @@ class ConstrainedBestFitAllocator:
             except Exception:
                 context.restore(snapshot_before_aba)
 
+        # Consolidate underfilled tail rooms to eliminate threshold violations
+        self._absorb_underfilled_tail_rooms(context)
+
         final_validation = self.validator.validate(context)
         if allow_unallocated:
             final_validation.errors = [
@@ -394,3 +397,105 @@ class ConstrainedBestFitAllocator:
                 best_group = valid_candidates[0]
                 allocated_student = best_group.allocate_students(1)[0]
                 stream.students.append(allocated_student)
+
+    def _absorb_underfilled_tail_rooms(self, context, min_threshold: int = 15) -> bool:
+        """
+        Consolidates underfilled tail rooms (< min_threshold students) by absorbing
+        their students into earlier rooms that have spare capacity in compatible streams,
+        eliminating wasteful single-digit or tiny fragment rooms.
+        """
+        active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
+        if len(active_rooms) < 2:
+            return False
+
+        total_students = sum(g.strength for g in context.groups)
+        min_rooms_needed = max(1, (total_students + 44) // 45)
+        dynamic_min = min(min_threshold, total_students // min_rooms_needed if min_rooms_needed > 0 else min_threshold)
+
+        underfilled = [r for r in active_rooms if 0 < r.used_capacity < dynamic_min]
+        if not underfilled:
+            return False
+
+        modified = False
+        for ur in underfilled:
+            ur_students = [
+                (s_name, stu)
+                for s_name in ["A", "B", "C"]
+                for stu in ur.get_stream(s_name).students
+            ]
+            if not ur_students:
+                continue
+
+            plan = []
+            possible = True
+
+            for orig_sname, stu in ur_students:
+                placed = False
+                # Search earlier active rooms in reverse order (closest rooms first)
+                for r in reversed(active_rooms):
+                    if r == ur or r in underfilled:
+                        continue
+                    extra_students_for_r = len([p for p in plan if p[1] == r])
+                    if r.used_capacity + extra_students_for_r >= r.classroom.capacity:
+                        continue
+                    if not r.can_add_department(stu.department, is_fallback_pass=True):
+                        continue
+
+                    for s_name in ["A", "B", "C"]:
+                        stream = r.get_stream(s_name)
+                        if not stream:
+                            continue
+                        extra_for_stream = len([p for p in plan if p[1] == r and p[2] == s_name])
+                        curr_count = len(stream.students) + extra_for_stream
+                        if curr_count >= stream.capacity:
+                            continue
+
+                        st_a_depts = set(r.get_stream("A").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "A"}
+                        st_b_depts = set(r.get_stream("B").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "B"}
+                        st_c_depts = set(r.get_stream("C").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "C"}
+
+                        if s_name == "A" and stu.department in st_b_depts:
+                            continue
+                        if s_name == "B" and (stu.department in st_a_depts or stu.department in st_c_depts):
+                            continue
+                        if s_name == "C" and stu.department in st_b_depts:
+                            continue
+
+                        # Check seat adjacency for special and normal subjects
+                        bench_no = curr_count + 1
+                        s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
+                        has_clash = False
+                        col_map = {"A": 0, "B": 1, "C": 2}
+                        inv_map = {0: "A", 1: "B", 2: "C"}
+                        c0 = col_map[s_name]
+                        for dc in (-1, 1):
+                            c = c0 + dc
+                            if c in inv_map:
+                                adj_st = r.get_stream(inv_map[c])
+                                if adj_st and bench_no <= len(adj_st.students):
+                                    adj_s = adj_st.students[bench_no - 1]
+                                    adj_code = getattr(adj_s, "normalized_subject_code", str(adj_s.subject_code).strip().upper())
+                                    if adj_code == s_code:
+                                        has_clash = True
+                                        break
+                        if has_clash:
+                            continue
+
+                        plan.append((stu, r, s_name))
+                        placed = True
+                        break
+                    if placed:
+                        break
+                if not placed:
+                    possible = False
+                    break
+
+            if possible and len(plan) == len(ur_students):
+                # Execute absorption
+                for stu, target_room, target_sname in plan:
+                    target_room.get_stream(target_sname).students.append(stu)
+                for s_name in ["A", "B", "C"]:
+                    ur.get_stream(s_name).students.clear()
+                modified = True
+
+        return modified
