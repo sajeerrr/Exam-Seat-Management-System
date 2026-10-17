@@ -35,6 +35,9 @@ class LocalOptimizer:
 
             context = self.pattern_optimizer.optimize(context)
 
+            # Consolidate or balance underfilled rooms (< dynamic_min students)
+            self._consolidate_underfilled_rooms(context)
+
             result = self.validator.validate(context)
             if not result.success:
                 context.restore(snapshot_start)
@@ -258,3 +261,83 @@ class LocalOptimizer:
             "mixed_count": mixed_count,
             "fragmentation": fragmentation,
         }
+
+    def _consolidate_underfilled_rooms(self, context):
+        """Attempts to consolidate or balance rooms having fewer than dynamic_min students (~25-30 students minimum)."""
+        total_students = sum(len(s.students) for r in context.room_allocations for s in r.streams.values())
+        if total_students == 0:
+            return False
+
+        min_rooms = max(1, (total_students + 44) // 45)
+        dynamic_min = min(AllocationLimits.MIN_ROOM_STUDENTS, total_students // min_rooms) if min_rooms > 0 else 0
+        if dynamic_min <= 0:
+            return False
+
+        changed = False
+
+        # Phase 1: Try to move streams from underfilled rooms into empty streams in existing rooms
+        for source_room in reversed(context.room_allocations):
+            if source_room.used_capacity == 0 or source_room.used_capacity >= dynamic_min:
+                continue
+
+            for s_name, source_stream in list(source_room.streams.items()):
+                if not source_stream.students:
+                    continue
+
+                stream_students = list(source_stream.students)
+                stu_count = len(stream_students)
+
+                for target_room in context.room_allocations:
+                    if target_room == source_room:
+                        continue
+
+                    for t_name, target_stream in target_room.streams.items():
+                        if len(target_stream.students) == 0 and target_stream.remaining_capacity >= stu_count:
+                            snapshot = context.snapshot()
+                            source_stream.students = []
+                            target_stream.students = list(stream_students)
+
+                            val = self.validator.validate(context)
+                            if val.success:
+                                changed = True
+                                break
+                            else:
+                                context.restore(snapshot)
+
+                    if not source_stream.students:
+                        break
+
+        # Phase 2: If an underfilled room still exists, try rebalancing from a 3-stream (45 students) room
+        for target_room in context.room_allocations:
+            if target_room.used_capacity == 0 or target_room.used_capacity >= dynamic_min:
+                continue
+
+            for donor_room in context.room_allocations:
+                if donor_room == target_room or donor_room.used_capacity < 45:
+                    continue
+
+                for d_stream_name in ["C", "A"]:
+                    d_stream = donor_room.get_stream(d_stream_name)
+                    if not d_stream or not d_stream.students:
+                        continue
+
+                    d_count = len(d_stream.students)
+                    for t_stream_name in ["C", "A", "B"]:
+                        t_stream = target_room.get_stream(t_stream_name)
+                        if t_stream and len(t_stream.students) == 0 and t_stream.remaining_capacity >= d_count:
+                            snapshot = context.snapshot()
+                            moved = list(d_stream.students)
+                            d_stream.students = []
+                            t_stream.students = moved
+
+                            val = self.validator.validate(context)
+                            if val.success and target_room.used_capacity >= dynamic_min and donor_room.used_capacity >= dynamic_min:
+                                changed = True
+                                break
+                            else:
+                                context.restore(snapshot)
+
+                    if target_room.used_capacity >= dynamic_min:
+                        break
+
+        return changed

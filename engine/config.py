@@ -45,6 +45,7 @@ class ScoringWeights:
     REPEATED_PATTERN_PENALTY: float = 70.0
     PARTIAL_PENALTY: float = 35.0
     FINAL_TAIL_PENALTY: float = 80.0
+    UNDERFILLED_ROOM_PENALTY: float = 120.0
 
 
 class AllocationLimits:
@@ -69,6 +70,11 @@ class AllocationLimits:
 
     # Fragment repair threshold
     TINY_FRAGMENT_THRESHOLD: int = 5
+
+    # Minimum students required per allocated room (dynamic threshold)
+    MIN_ROOM_STUDENTS: int = 25
+    TARGET_ROOM_STUDENTS_MIN: int = 25
+    TARGET_ROOM_STUDENTS_MAX: int = 30
 
 
 class AllocationThresholds:
@@ -99,6 +105,7 @@ class CPSolverConfig:
     ROOM_USAGE_PENALTY: int = 5     # Penalty per room used (to encourage consolidation)
     UTILIZATION_BONUS: int = 1      # Reward for total utilization (less important now)
     FRAGMENTATION_PENALTY: int = 20   # Penalty for fragmentation (extra rooms per dept)
+    UNDERFILLED_ROOM_PENALTY: int = 250  # Penalty for rooms with 0 < students < MIN_ROOM_STUDENTS
 
 
 class LNSConfig:

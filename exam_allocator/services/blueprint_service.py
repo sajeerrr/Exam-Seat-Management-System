@@ -524,6 +524,21 @@ class BlueprintService:
                 f"Low room utilization ({room_utilization}%). Consider consolidating into fewer classrooms."
             )
 
+        # Dynamic room occupancy check (target ~25 to 30 students per room)
+        min_rooms_needed = max(1, (len(expected_rolls) + 44) // 45) if expected_rolls else 1
+        avg_per_room = len(expected_rolls) // min_rooms_needed if min_rooms_needed > 0 else 0
+        dynamic_min = min(AllocationLimits.MIN_ROOM_STUDENTS, avg_per_room) if expected_rolls else 0
+
+        underfilled_rooms = [
+            rb for rb in room_blueprints
+            if rb.total_students > 0 and rb.total_students < dynamic_min
+        ]
+        if len(underfilled_rooms) > 1 or (len(underfilled_rooms) == 1 and rooms_used > min_rooms_needed):
+            for rb in underfilled_rooms:
+                warnings.append(
+                    f"Room {rb.room.room_number} has only {rb.total_students} students (dynamic target minimum is {dynamic_min}–30 students)."
+                )
+
         pattern_summary = ", ".join(f"{k}: {v}" for k, v in sorted(patterns_count.items()))
 
         stats = {

@@ -1,3 +1,4 @@
+from engine.config import AllocationLimits
 from engine.models.validation_result import ValidationResult
 
 
@@ -12,6 +13,7 @@ class AllocationValidator:
         self.validate_adjacent_conflicts(context, result)
         self.validate_special_subject_adjacency(context, result)
         self.validate_unallocated_groups(context, result)
+        self.validate_room_occupancy(context, result)
         return result
 
     def validate_duplicates(self, context, result):
@@ -154,3 +156,24 @@ class AllocationValidator:
                         f"{group.group_id} has {group.remaining_count} unallocated student(s) (insufficient room capacity: {total_capacity} seats for {total_students} students)"
                     )
         result.missing_students = missing
+
+    def validate_room_occupancy(self, context, result):
+        total_students = sum(g.strength for g in context.groups)
+        if total_students == 0:
+            return
+
+        min_rooms_needed = max(1, (total_students + 44) // 45)
+        avg_per_room = total_students // min_rooms_needed
+        dynamic_min = min(AllocationLimits.MIN_ROOM_STUDENTS, avg_per_room)
+
+        active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
+        if not active_rooms:
+            return
+
+        underfilled = [r for r in active_rooms if r.used_capacity < dynamic_min]
+        if underfilled:
+            result.underfilled_rooms = len(underfilled)
+            for r in underfilled:
+                result.add_warning(
+                    f"Room {r.classroom.room_no} has only {r.used_capacity} students (dynamic target minimum is ~{dynamic_min}-30)"
+                )
