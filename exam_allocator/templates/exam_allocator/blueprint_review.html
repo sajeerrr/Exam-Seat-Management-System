@@ -1999,9 +1999,18 @@ function updateBoardFromData(data) {
         card.innerHTML = buildRoomCardHTML(r);
     });
 
+    // Update Dummy Rooms Alert Banner
+    const dummyRemaining = (data.rooms || []).some(r => r.is_dummy || (r.room_number && r.room_number.startsWith('Dummy Room')));
+    const banner = document.getElementById('dummyRoomsAlertBanner');
+    if (banner) {
+        banner.style.display = dummyRemaining ? 'flex' : 'none';
+    }
+
     // Rebind Drag and Drop listeners
     initDragAndDrop();
 }
+
+const updateUIWithResult = updateBoardFromData;
 
 function buildRoomCardHTML(r) {
     const streamLimit = r.stream_limit || 15;

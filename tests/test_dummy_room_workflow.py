@@ -291,3 +291,123 @@ class DummyRoomWorkflowTests(TestCase):
         self.assertEqual(summary.get("total_allocated_students"), 90)
         self.assertEqual(summary.get("unallocated_count"), 0)
 
+    def test_drag_and_drop_move_allowed_with_dummy_room_without_renaming(self):
+        """Users can drag and drop class groups between streams and dummy rooms without assigning a real room name first."""
+        bp = BlueprintService.allocate_departments_for_slot(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+        )
+
+        dummy_rb = bp.room_blueprints.filter(room__is_dummy=True).first()
+        self.assertIsNotNone(dummy_rb)
+        self.assertTrue(dummy_rb.room.is_dummy_room)
+
+        # Validate that bp has unassigned dummy placeholder error
+        is_valid, errors, _, _ = BlueprintService.validate_blueprint(bp)
+        self.assertFalse(is_valid)
+        self.assertTrue(any("unassigned placeholder" in err.lower() for err in errors))
+
+        # Create an available classroom Room 102 (capacity 45) and add it to the blueprint
+        room102 = Room.objects.create(session=self.session, room_number="102", capacity=45, benches=15)
+        BlueprintService.add_room_to_blueprint(bp, room102.room_id)
+
+        # Pick an assignment in Dummy Room Stream A
+        sa_a = dummy_rb.stream_assignments.filter(stream_name="A").first()
+        self.assertIsNotNone(sa_a)
+
+        # Move sa_a from Dummy Room to Room 102 Stream A
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=sa_a.assignment_id,
+            target_room_id=room102.room_id,
+            target_stream="A",
+            reject_invalid=True,
+        )
+
+        self.assertTrue(res["success"], f"Move failed: {res}")
+        self.assertFalse(res.get("rejected", False))
+
+        # Assignment should now be in Room 102
+        sa_a.refresh_from_db()
+        self.assertEqual(sa_a.stream_name, "A")
+        self.assertEqual(sa_a.room_blueprint.room.room_number, "102")
+
+        # Now move it BACK to Dummy Room Stream A (bidirectional move into dummy room)
+        res_back = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=sa_a.assignment_id,
+            target_room_id=dummy_rb.room.room_id,
+            target_stream="A",
+            reject_invalid=True,
+        )
+        self.assertTrue(res_back["success"], f"Move back failed: {res_back}")
+        self.assertFalse(res_back.get("rejected", False))
+
+        sa_a.refresh_from_db()
+        self.assertEqual(sa_a.stream_name, "A")
+        self.assertEqual(sa_a.room_blueprint.room.room_id, dummy_rb.room.room_id)
+
+    def test_drag_and_drop_swap_allowed_with_dummy_room_without_renaming(self):
+        """Users can swap assignments between streams even when dummy rooms are unassigned."""
+        bp = BlueprintService.allocate_departments_for_slot(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+        )
+
+        dummy_rb = bp.room_blueprints.filter(room__is_dummy=True).first()
+        self.assertIsNotNone(dummy_rb)
+
+        sa1 = dummy_rb.stream_assignments.first()
+        real_rb = bp.room_blueprints.filter(room__is_dummy=False).first()
+        sa2 = real_rb.stream_assignments.first()
+
+        orig_stream1, orig_room1 = sa1.stream_name, sa1.room_blueprint_id
+        orig_stream2, orig_room2 = sa2.stream_name, sa2.room_blueprint_id
+
+        res = BlueprintService.swap_blueprint_assignments(
+            slot_blueprint=bp,
+            assignment_id_1=sa1.assignment_id,
+            assignment_id_2=sa2.assignment_id,
+            reject_invalid=False,
+        )
+
+        self.assertTrue(res["success"])
+        self.assertFalse(res.get("rejected", False))
+
+        sa1.refresh_from_db()
+        sa2.refresh_from_db()
+        self.assertEqual(sa1.stream_name, orig_stream2)
+        self.assertEqual(sa1.room_blueprint_id, orig_room2)
+        self.assertEqual(sa2.stream_name, orig_stream1)
+        self.assertEqual(sa2.room_blueprint_id, orig_room1)
+
+    def test_drag_and_drop_seating_violations_still_rejected_with_dummy_rooms(self):
+        """True seating constraint violations (e.g. stream bench capacity overflow) are still strictly rejected."""
+        bp = BlueprintService.allocate_departments_for_slot(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+        )
+
+        dummy_rb = bp.room_blueprints.filter(room__is_dummy=True).first()
+        real_rb = bp.room_blueprints.filter(room__is_dummy=False).first()
+
+        # real_rb Stream A already has 15 CE students (max bench capacity is 15)
+        # Attempting to move another 15 students from dummy_rb into real_rb Stream A would overflow (30 > 15)
+        dummy_sa = dummy_rb.stream_assignments.first()
+
+        res = BlueprintService.modify_blueprint_assignment(
+            slot_blueprint=bp,
+            assignment_id=dummy_sa.assignment_id,
+            target_room_id=real_rb.room.room_id,
+            target_stream="A",
+            reject_invalid=True,
+        )
+
+        self.assertFalse(res["success"])
+        self.assertTrue(res["rejected"])
+        self.assertTrue(any("exceeds bench capacity" in e.lower() for e in res["errors"]))
+
+

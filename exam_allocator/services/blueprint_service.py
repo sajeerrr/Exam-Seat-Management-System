@@ -930,12 +930,17 @@ class BlueprintService:
             # Run backend validation
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
 
-            if not is_valid and reject_invalid:
+            hard_errors = [
+                e for e in errors
+                if "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
+            ]
+
+            if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Proposed edit violated hard constraints and was rejected. Previous valid state preserved.",
                 }
@@ -948,7 +953,8 @@ class BlueprintService:
             transaction.savepoint_commit(sid)
 
             return {
-                "success": is_valid,
+                "success": True,
+                "is_valid": is_valid,
                 "rejected": False,
                 "errors": errors,
                 "warnings": warnings,
@@ -1011,12 +1017,17 @@ class BlueprintService:
 
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
 
-            if not is_valid and reject_invalid:
+            hard_errors = [
+                e for e in errors
+                if "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
+            ]
+
+            if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Proposed swap violated hard constraints and was rejected. Previous valid state preserved.",
                 }
@@ -1028,7 +1039,8 @@ class BlueprintService:
             transaction.savepoint_commit(sid)
 
             return {
-                "success": is_valid,
+                "success": True,
+                "is_valid": is_valid,
                 "rejected": False,
                 "errors": errors,
                 "warnings": warnings,
@@ -1422,14 +1434,15 @@ class BlueprintService:
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
             hard_errors = [
                 e for e in errors
-                if "exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower()
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower())
+                and "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
             ]
             if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Splitting this group violated seating constraints and was rejected.",
                 }
