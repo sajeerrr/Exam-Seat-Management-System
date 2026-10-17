@@ -44,10 +44,11 @@ class ABAToABCOptimizer:
             # Pass 2: Multi-stream swaps (Stream A, B, C) across all non-ABC rooms
             self._swap_multi_stream_candidates(active_rooms)
 
-            # Pass 3: Final validation check
+            # Pass 3: Final validation check (hard constraints: conflicts, room capacity, max depts)
             val = self.validator.validate(context)
-            if not val.success:
-                logger.warning(f"ABAToABCOptimizer validation failed: {val.errors}. Restoring snapshot.")
+            hard_errors = [e for e in val.errors if "unallocated student(s)" not in e]
+            if hard_errors:
+                logger.warning(f"ABAToABCOptimizer validation failed: {hard_errors}. Restoring snapshot.")
                 context.restore(snapshot_start)
                 return context
 

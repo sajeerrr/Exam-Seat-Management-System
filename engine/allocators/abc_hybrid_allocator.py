@@ -69,6 +69,7 @@ class ABCHybridAllocator:
                 val = self.validator.validate(context)
                 if allow_unallocated:
                     val.errors = [e for e in val.errors if "unallocated student(s)" not in e]
+                    val.success = (len(val.errors) == 0)
 
                 if val.success and (allow_unallocated or sum(g.remaining_count for g in context.groups) == 0):
                     return context
@@ -82,6 +83,7 @@ class ABCHybridAllocator:
             cp_val = self.validator.validate(cp_ctx)
             if allow_unallocated:
                 cp_val.errors = [e for e in cp_val.errors if "unallocated student(s)" not in e]
+                cp_val.success = (len(cp_val.errors) == 0)
             if cp_val.success and (allow_unallocated or sum(g.remaining_count for g in cp_ctx.groups) == 0):
                 return cp_ctx
 

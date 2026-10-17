@@ -64,6 +64,7 @@ class HyperHeuristicAllocator:
             result.errors = [
                 e for e in result.errors if "unallocated student(s)" not in e
             ]
+            result.success = (len(result.errors) == 0)
         if not result.success or (not allow_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             raise ValueError(f"ALLOCATION FAILED VALIDATION: {result.errors}")
 

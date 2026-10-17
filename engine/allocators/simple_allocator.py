@@ -111,6 +111,7 @@ class SimpleAllocator:
             final_validation.errors = [
                 e for e in final_validation.errors if "unallocated student(s)" not in e
             ]
+            final_validation.success = (len(final_validation.errors) == 0)
 
         if not final_validation.success or (not allow_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             context.restore(snapshot_before_balance)
@@ -119,6 +120,7 @@ class SimpleAllocator:
                 final_validation.errors = [
                     e for e in final_validation.errors if "unallocated student(s)" not in e
                 ]
+                final_validation.success = (len(final_validation.errors) == 0)
 
         if not final_validation.success or (not allow_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             raise ValueError(f"ALLOCATION FAILED VALIDATION: {final_validation.errors}")

@@ -73,6 +73,7 @@ class ConstrainedBestFitAllocator:
                     room_plan_depts["A"] = d_only
                     room_plan_depts["C"] = d_only
 
+
             room_active = True
             while room_active and room.used_capacity < room.classroom.capacity:
                 available_normal = [
@@ -86,6 +87,9 @@ class ConstrainedBestFitAllocator:
                     s_name for s_name in ["A", "B", "C"]
                     if room.get_stream(s_name) and room.get_stream(s_name).remaining_capacity > 0
                 ]
+                # If special groups remain, reserve Stream A for them so Streams B & C buffer them
+                if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
+                    target_streams = [s for s in target_streams if s != "A"]
                 if not target_streams:
                     break
 
@@ -218,6 +222,9 @@ class ConstrainedBestFitAllocator:
             try:
                 context = self.local_optimizer.optimize(context)
                 bal_result = self.validator.validate(context)
+                if allow_unallocated:
+                    bal_result.errors = [e for e in bal_result.errors if "unallocated student(s)" not in e]
+                    bal_result.success = (len(bal_result.errors) == 0)
                 if not bal_result.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
                     context.restore(snapshot_before_balance)
             except Exception:
@@ -229,6 +236,9 @@ class ConstrainedBestFitAllocator:
             try:
                 context = ABAToABCOptimizer().optimize(context)
                 aba_val = self.validator.validate(context)
+                if allow_unallocated:
+                    aba_val.errors = [e for e in aba_val.errors if "unallocated student(s)" not in e]
+                    aba_val.success = (len(aba_val.errors) == 0)
                 if not aba_val.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
                     context.restore(snapshot_before_aba)
             except Exception:
@@ -239,6 +249,7 @@ class ConstrainedBestFitAllocator:
             final_validation.errors = [
                 e for e in final_validation.errors if "unallocated student(s)" not in e
             ]
+            final_validation.success = (len(final_validation.errors) == 0)
 
         if not final_validation.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
             if not has_special_groups:
@@ -248,6 +259,7 @@ class ConstrainedBestFitAllocator:
                     final_validation.errors = [
                         e for e in final_validation.errors if "unallocated student(s)" not in e
                     ]
+                    final_validation.success = (len(final_validation.errors) == 0)
             if not final_validation.success or (must_have_zero_unallocated and sum(g.remaining_count for g in context.groups) > 0):
                 raise ValueError(f"ALLOCATION FAILED VALIDATION: {final_validation.errors}")
 
