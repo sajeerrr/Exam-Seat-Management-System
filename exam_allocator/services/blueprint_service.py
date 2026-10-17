@@ -220,7 +220,13 @@ class BlueprintService:
                 f"Could not build allocation groups for {exam_date} {shift}."
             )
 
-        rooms = list(Room.objects.filter(session=session).order_by("room_number"))
+        # Sort rooms so real physical classrooms come first, dummy rooms strictly last
+        raw_rooms = list(Room.objects.filter(session=session))
+        real_rooms = [r for r in raw_rooms if not r.is_dummy_room]
+        dummy_rooms = [r for r in raw_rooms if r.is_dummy_room]
+        real_rooms.sort(key=lambda r: r.room_number)
+        dummy_rooms.sort(key=lambda r: r.room_number)
+        rooms = real_rooms + dummy_rooms
 
         # Calculate if we need dummy rooms upfront
         total_student_count = len(engine_students)
@@ -241,10 +247,10 @@ class BlueprintService:
                         "is_dummy": True,
                     },
                 )
-                if d_room not in rooms:
-                    rooms.append(d_room)
+                if d_room not in dummy_rooms:
+                    dummy_rooms.append(d_room)
 
-        if not rooms:
+        if not real_rooms and not dummy_rooms:
             dummy_count_needed = max(1, (total_student_count + 44) // 45)
             for i in range(1, dummy_count_needed + 1):
                 d_name = f"Dummy Room {i}"
@@ -258,7 +264,10 @@ class BlueprintService:
                         "is_dummy": True,
                     },
                 )
-                rooms.append(d_room)
+                dummy_rooms.append(d_room)
+
+        dummy_rooms.sort(key=lambda r: r.room_number)
+        rooms = real_rooms + dummy_rooms
 
         room_allocations = [
             RoomAllocation(classroom=django_room_to_engine_classroom(r))
@@ -327,9 +336,19 @@ class BlueprintService:
             slot_blueprint.room_blueprints.all().delete()
 
             room_lookup = {r.room_number: r for r in rooms}
+            # Order real rooms first (order_idx = 1..N), then dummy rooms strictly last (N+1..end)
+            real_ra = [
+                ra for ra in context.room_allocations
+                if ra.classroom.room_no in room_lookup and not room_lookup[ra.classroom.room_no].is_dummy_room
+            ]
+            dummy_ra = [
+                ra for ra in context.room_allocations
+                if ra.classroom.room_no in room_lookup and room_lookup[ra.classroom.room_no].is_dummy_room
+            ]
+            ordered_ra = real_ra + dummy_ra
             order_idx = 1
 
-            for ra in context.room_allocations:
+            for ra in ordered_ra:
                 total_in_room = sum(len(ra.streams[s].students) for s in ["A", "B", "C"])
                 if total_in_room == 0:
                     continue

@@ -693,7 +693,9 @@ def blueprint_review(request, session_id):
     has_physical_seats = False
     eligible_students_count = 0
     diagnostic_message = ""
-    all_rooms = list(Room.objects.filter(session=session).order_by("room_number"))
+    all_rooms = list(
+        Room.objects.filter(session=session).order_by("is_dummy", "room_number")
+    )
 
     if selected_slot:
         blueprint = selected_slot.get("blueprint")
@@ -741,7 +743,7 @@ def blueprint_review(request, session_id):
                 blueprint.room_blueprints.all()
                 .select_related("room")
                 .prefetch_related("stream_assignments")
-                .order_by("room_order")
+                .order_by("room__is_dummy", "room_order", "room__room_number")
             )
             for rb in rbs:
                 assignments_by_stream = {"A": [], "B": [], "C": []}

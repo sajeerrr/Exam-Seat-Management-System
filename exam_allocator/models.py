@@ -448,7 +448,7 @@ class RoomBlueprint(models.Model):
     department_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ["room_order", "room__room_number"]
+        ordering = ["room__is_dummy", "room_order", "room__room_number"]
         constraints = [
             models.UniqueConstraint(
                 fields=["slot_blueprint", "room"],
