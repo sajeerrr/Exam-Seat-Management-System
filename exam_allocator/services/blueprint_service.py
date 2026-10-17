@@ -272,6 +272,7 @@ class BlueprintService:
         )
 
         # Execute ConstrainedBestFitAllocator (Stage A ONLY - no SeatGenerator)
+        from engine.allocators.constrained_best_fit_allocator import ConstrainedBestFitAllocator
         allocator = ConstrainedBestFitAllocator()
         from engine.adaptive.invariant import AbcInvariant
         capacity = context.room_allocations[0].classroom.column_capacity if context.room_allocations else 15

@@ -190,17 +190,47 @@ class CPModelBuilder:
             model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_c_occupied)
             model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_c_occupied.Not())
 
-            # ABC reward: high weight for rooms with potential to be ABC (all 3 streams occupied)
+        # Department room consolidation penalty (strongly penalize spreading each department across rooms)
+        for dept in all_departments:
+            for r_idx in range(num_rooms):
+                objective_terms.append(dept_room_vars[(r_idx, dept)] * (-CPSolverConfig.CONSOLIDATION_PENALTY))
+
+        # Stream purity: reward streams that contain at most 1 department
+        for r_idx in range(num_rooms):
+            for s_idx in range(3):
+                d_in_s_vars = []
+                for dept in all_departments:
+                    d_s = model.NewBoolVar(f"dept_{dept}_r{r_idx}_s{s_idx}")
+                    dept_group_indices = [g_idx for g_idx, g in enumerate(groups) if g.department == dept]
+                    dept_stu = sum(assign[(g_idx, r_idx, s_idx)] for g_idx in dept_group_indices)
+                    model.Add(dept_stu > 0).OnlyEnforceIf(d_s)
+                    model.Add(dept_stu == 0).OnlyEnforceIf(d_s.Not())
+                    d_in_s_vars.append(d_s)
+
+                is_pure_stream = model.NewBoolVar(f"room_{r_idx}_stream_{s_idx}_pure")
+                model.Add(sum(d_in_s_vars) <= 1).OnlyEnforceIf(is_pure_stream)
+                model.Add(sum(d_in_s_vars) > 1).OnlyEnforceIf(is_pure_stream.Not())
+                objective_terms.append(is_pure_stream * CPSolverConfig.STREAM_PURITY_BONUS)
+
+            # True ABC reward: room has exactly 3 distinct departments AND all 3 streams occupied
+            has_3_depts = model.NewBoolVar(f"room_{r_idx}_has_3_depts")
+            model.Add(sum(dept_room_vars[(r_idx, dept)] for dept in all_departments) == 3).OnlyEnforceIf(has_3_depts)
+            model.Add(sum(dept_room_vars[(r_idx, dept)] for dept in all_departments) != 3).OnlyEnforceIf(has_3_depts.Not())
+
+            is_true_abc = model.NewBoolVar(f"room_{r_idx}_is_true_abc")
+            model.Add(is_true_abc == 1).OnlyEnforceIf([has_3_depts, stream_a_occupied, stream_b_occupied, stream_c_occupied])
+            model.Add(is_true_abc == 0).OnlyEnforceIf(is_true_abc.Not())
+            objective_terms.append(is_true_abc * CPSolverConfig.TRUE_ABC_BONUS)
+
+            # Potential ABC & ABA fallback rewards
             potential_abc = model.NewBoolVar(f"room_{r_idx}_potential_abc")
             model.Add(potential_abc == 1).OnlyEnforceIf([stream_a_occupied, stream_b_occupied, stream_c_occupied])
             model.Add(potential_abc == 0).OnlyEnforceIf(potential_abc.Not())
 
-            # ABA reward: rooms where A and C are occupied (potential for ABA)
             potential_aba = model.NewBoolVar(f"room_{r_idx}_potential_aba")
             model.Add(potential_aba == 1).OnlyEnforceIf([stream_a_occupied, stream_c_occupied])
             model.Add(potential_aba == 0).OnlyEnforceIf(potential_aba.Not())
 
-            # Add to objective terms with proper weighting
             objective_terms.append(potential_abc * CPSolverConfig.ABC_BONUS)
             objective_terms.append(potential_aba * CPSolverConfig.ABA_BONUS)
             objective_terms.append(stream_occupancy * CPSolverConfig.STREAM_OCCUPANCY_BONUS)

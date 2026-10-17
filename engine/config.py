@@ -100,11 +100,14 @@ class CPSolverConfig:
     NUM_WORKERS: int = 4
     # Weights for the CP-SAT objective
     ABC_BONUS: int = 200      # Reward for ABC room (3 distinct depts, one per stream)
+    TRUE_ABC_BONUS: int = 400 # Strong reward for true ABC room with single-dept streams
     ABA_BONUS: int = 100      # Reward for ABA room (A==C != B, one dept per stream)
     STREAM_OCCUPANCY_BONUS: int = 10  # Reward per occupied stream
+    STREAM_PURITY_BONUS: int = 80     # Reward for stream containing exactly one department
     ROOM_USAGE_PENALTY: int = 5     # Penalty per room used (to encourage consolidation)
     UTILIZATION_BONUS: int = 1      # Reward for total utilization (less important now)
     FRAGMENTATION_PENALTY: int = 20   # Penalty for fragmentation (extra rooms per dept)
+    CONSOLIDATION_PENALTY: int = 150  # Strong penalty for spreading department across rooms
     UNDERFILLED_ROOM_PENALTY: int = 250  # Penalty for rooms with 0 < students < MIN_ROOM_STUDENTS
 
 
