@@ -292,6 +292,9 @@ class ConstrainedBestFitAllocator:
         # Consolidate underfilled tail rooms to eliminate threshold violations
         self._absorb_underfilled_tail_rooms(context)
 
+        # Balance streams within rooms (Option A: Cohorts-Intact)
+        self._balance_room_streams(context)
+
         final_validation = self.validator.validate(context)
         if allow_unallocated:
             final_validation.errors = [
@@ -499,3 +502,14 @@ class ConstrainedBestFitAllocator:
                 modified = True
 
         return modified
+
+    def _balance_room_streams(self, context) -> bool:
+        """
+        Balances student counts across streams (A, B, C) within rooms (Option A: Cohorts-Intact).
+        Reduces large discrepancies (e.g. 14 vs 2) between streams by moving entire intact
+        department/subject cohorts to underfilled streams without splitting any cohort,
+        ensuring zero capacity, department limit, or horizontal adjacency violations.
+        """
+        from engine.adaptive.stream_balancer import RoomStreamBalancer
+        return RoomStreamBalancer().balance(context)
+

@@ -326,6 +326,9 @@ class BlueprintService:
             from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
             context = ABAToABCOptimizer().optimize(context)
 
+        # Balance stream occupancy within rooms (e.g. tail rooms and underfilled rooms)
+        allocator._balance_room_streams(context)
+
         # Persist Blueprint transactionally
         with transaction.atomic():
             slot_blueprint = cls.get_or_create_slot_blueprint(session, exam_date, shift)

@@ -38,6 +38,9 @@ class LocalOptimizer:
             # Consolidate or balance underfilled rooms (< dynamic_min students)
             self._consolidate_underfilled_rooms(context)
 
+            from engine.adaptive.stream_balancer import RoomStreamBalancer
+            RoomStreamBalancer().balance(context)
+
             result = self.validator.validate(context)
             if not result.success:
                 context.restore(snapshot_start)
