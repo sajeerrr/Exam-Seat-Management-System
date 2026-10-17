@@ -761,6 +761,7 @@ def blueprint_review(request, session_id):
                     "room_blueprint_id": rb.room_blueprint_id,
                     "room": rb.room,
                     "room_number": rb.room.room_number,
+                    "is_dummy": rb.room.is_dummy_room,
                     "room_order": rb.room_order,
                     "pattern": rb.pattern,
                     "capacity": rb.capacity,
@@ -784,6 +785,8 @@ def blueprint_review(request, session_id):
             assigned_room_ids = set(rb.room_id for rb in blueprint.room_blueprints.all())
             unassigned_rooms = [r for r in all_rooms if r.room_id not in assigned_room_ids]
 
+    has_dummy_rooms = any(r.get("is_dummy") for r in rooms_data)
+
     return render(
         request,
         "exam_allocator/blueprint_review.html",
@@ -794,6 +797,7 @@ def blueprint_review(request, session_id):
             "blueprint": blueprint,
             "rooms_data": rooms_data,
             "has_physical_seats": has_physical_seats,
+            "has_dummy_rooms": has_dummy_rooms,
             "available_rooms": all_rooms,
             "unassigned_rooms": unassigned_rooms,
             "unallocated_students": unallocated_students,
@@ -1325,6 +1329,43 @@ def api_blueprint_room_add(request, session_id):
         res = BlueprintService.add_room_to_blueprint(
             slot_blueprint=blueprint,
             room_id=int(room_id),
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_assign_room_name(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    room_blueprint_id = data.get("room_blueprint_id")
+    new_room_number = data.get("new_room_number")
+    target_room_id = data.get("target_room_id")
+
+    if not blueprint_id or not room_blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and room_blueprint_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=blueprint,
+            room_blueprint_id=int(room_blueprint_id),
+            new_room_number=str(new_room_number).strip() if new_room_number else None,
+            target_room_id=int(target_room_id) if target_room_id else None,
         )
         return JsonResponse(res)
     except BlueprintServiceError as exc:

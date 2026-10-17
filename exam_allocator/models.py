@@ -164,6 +164,7 @@ class Room(models.Model):
     capacity = models.PositiveIntegerField()
     benches = models.PositiveIntegerField()
     building = models.CharField(max_length=100)
+    is_dummy = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -172,6 +173,10 @@ class Room(models.Model):
                 name="unique_room_per_session",
             )
         ]
+
+    @property
+    def is_dummy_room(self) -> bool:
+        return bool(self.is_dummy or str(self.room_number).strip().startswith("Dummy Room"))
 
     def __str__(self):
         return self.room_number

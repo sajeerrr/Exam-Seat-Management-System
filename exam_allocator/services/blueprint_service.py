@@ -221,10 +221,44 @@ class BlueprintService:
             )
 
         rooms = list(Room.objects.filter(session=session).order_by("room_number"))
+
+        # Calculate if we need dummy rooms upfront
+        total_student_count = len(engine_students)
+        existing_capacity = sum(r.capacity for r in rooms) if rooms else 0
+        deficit = max(0, total_student_count - existing_capacity)
+
+        if deficit > 0:
+            dummy_count_needed = (deficit + 44) // 45
+            for i in range(1, dummy_count_needed + 1):
+                d_name = f"Dummy Room {i}"
+                d_room, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=d_name,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                if d_room not in rooms:
+                    rooms.append(d_room)
+
         if not rooms:
-            raise BlueprintServiceError(
-                f"No classrooms available in session {session.name}."
-            )
+            dummy_count_needed = max(1, (total_student_count + 44) // 45)
+            for i in range(1, dummy_count_needed + 1):
+                d_name = f"Dummy Room {i}"
+                d_room, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=d_name,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                rooms.append(d_room)
 
         room_allocations = [
             RoomAllocation(classroom=django_room_to_engine_classroom(r))
@@ -243,6 +277,35 @@ class BlueprintService:
         capacity = context.room_allocations[0].classroom.column_capacity if context.room_allocations else 15
         context.abc_invariant = AbcInvariant(context, stream_capacity=capacity)
         context = allocator.execute(context)
+
+        # If any students remain unallocated due to constraints, add overflow dummy rooms and allocate
+        unalloc_rem = sum(g.remaining_count for g in context.groups)
+        if unalloc_rem > 0:
+            extra_dummies = (unalloc_rem + 44) // 45
+            curr_dummy_nums = [
+                int(r.room_number.replace("Dummy Room ", ""))
+                for r in rooms
+                if r.room_number.startswith("Dummy Room ") and r.room_number.replace("Dummy Room ", "").isdigit()
+            ]
+            curr_max = max(curr_dummy_nums) if curr_dummy_nums else 0
+            for idx in range(1, extra_dummies + 1):
+                extra_dname = f"Dummy Room {curr_max + idx}"
+                extra_droom, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=extra_dname,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                if extra_droom not in rooms:
+                    rooms.append(extra_droom)
+                extra_ra = RoomAllocation(classroom=django_room_to_engine_classroom(extra_droom))
+                context.room_allocations.append(extra_ra)
+
+            context = allocator.execute(context)
 
         # Persist Blueprint transactionally
         with transaction.atomic():
@@ -509,6 +572,12 @@ class BlueprintService:
                     f"Room {rb.room.room_number} is configured as ABA despite having 3+ departments available."
                 )
 
+            # Check if this room is an unassigned dummy placeholder room
+            if rb.room.is_dummy_room:
+                errors.append(
+                    f"Room '{rb.room.room_number}' is an unassigned placeholder. Please assign a real classroom name before finalizing or generating seats."
+                )
+
         # Department scattering metric: sum of (rooms_count - 1) for depts spanning multiple rooms
         dept_scattering = sum(max(0, len(rms) - 1) for rms in dept_room_map.values())
         if dept_scattering > 8:
@@ -683,6 +752,7 @@ class BlueprintService:
                 "room_blueprint_id": rb.room_blueprint_id,
                 "room_id": rb.room.room_id,
                 "room_number": rb.room.room_number,
+                "is_dummy": rb.room.is_dummy_room,
                 "room_order": rb.room_order,
                 "pattern": rb.pattern,
                 "capacity": rb.capacity,
@@ -1430,6 +1500,96 @@ class BlueprintService:
             }
 
     @classmethod
+    def assign_real_room_name(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        room_blueprint_id: int,
+        new_room_number: Optional[str] = None,
+        target_room_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Assigns a real classroom to a dummy room blueprint:
+        - If target_room_id is provided: swaps room_blueprint.room to that existing Room.
+        - If new_room_number is provided: renames the dummy room to new_room_number and clears is_dummy.
+        """
+        with transaction.atomic():
+            rb = RoomBlueprint.objects.select_related("room").get(
+                room_blueprint_id=room_blueprint_id,
+                slot_blueprint=slot_blueprint,
+            )
+            old_room = rb.room
+
+            if target_room_id:
+                target_room = Room.objects.get(
+                    room_id=target_room_id,
+                    session=slot_blueprint.session,
+                )
+                if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=target_room).exclude(room_blueprint_id=room_blueprint_id).exists():
+                    raise BlueprintServiceError(
+                        f"Room '{target_room.room_number}' is already assigned in this blueprint."
+                    )
+                rb.room = target_room
+                rb.capacity = target_room.capacity
+                rb.unused_capacity = max(0, target_room.capacity - rb.total_students)
+                rb.save()
+
+                if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exists():
+                    old_room.delete()
+
+            elif new_room_number:
+                clean_name = str(new_room_number).strip()
+                if not clean_name:
+                    raise BlueprintServiceError("Room name cannot be empty.")
+
+                if clean_name.lower().startswith("dummy room"):
+                    raise BlueprintServiceError("Please provide a real classroom name, not a dummy placeholder.")
+
+                # Check if a room with this name already exists in this session
+                existing = Room.objects.filter(session=slot_blueprint.session, room_number__iexact=clean_name).first()
+                if existing:
+                    if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=existing).exclude(room_blueprint_id=room_blueprint_id).exists():
+                        raise BlueprintServiceError(
+                            f"Room '{clean_name}' is already assigned to another room card in this blueprint."
+                        )
+                    rb.room = existing
+                    rb.capacity = existing.capacity
+                    rb.unused_capacity = max(0, existing.capacity - rb.total_students)
+                    rb.save()
+                    if old_room.is_dummy_room and old_room != existing and not RoomBlueprint.objects.filter(room=old_room).exists():
+                        old_room.delete()
+                else:
+                    # Rename the current room object
+                    old_room.room_number = clean_name
+                    old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
+                    old_room.is_dummy = False
+                    old_room.save()
+
+            else:
+                raise BlueprintServiceError("Either new_room_number or target_room_id is required.")
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
     def remove_room_from_blueprint(
         cls,
         slot_blueprint: SlotBlueprint,
@@ -1810,6 +1970,14 @@ class BlueprintService:
         ):
             raise BlueprintServiceError(
                 f"Cannot generate seats: Blueprint must be FINALIZED first (current status: {slot_blueprint.status})."
+            )
+
+        # Pre-seating guard: all rooms must have real physical room names
+        dummy_rbs = [rb for rb in slot_blueprint.room_blueprints.all() if rb.room.is_dummy_room]
+        if dummy_rbs:
+            names = ", ".join(f"'{rb.room.room_number}'" for rb in dummy_rbs)
+            raise BlueprintServiceError(
+                f"Cannot generate physical seats: {len(dummy_rbs)} room(s) ({names}) are unassigned dummy placeholders. Please assign real classroom names before generating physical seats."
             )
 
 

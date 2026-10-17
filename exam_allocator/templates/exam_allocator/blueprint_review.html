@@ -1025,6 +1025,20 @@
     </div>
     {% endif %}
 
+    {% if has_dummy_rooms %}
+    <div id="dummyRoomsAlertBanner" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">⚠️</span>
+            <div>
+                <strong style="color: #92400e; font-size: 14px;">Placeholder Dummy Rooms Allocated</strong>
+                <div style="color: #b45309; font-size: 12px; margin-top: 2px;">
+                    Available classrooms were insufficient for all students. Dummy rooms were automatically created so all students could be allocated. <strong>Please assign real room names to all dummy rooms before physical seats can be generated.</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- MINIMALISTIC ROOM ALLOCATION BOARD -->
     {% if rooms_data %}
     <div class="room-board" id="roomBoardContainer">
@@ -1033,6 +1047,12 @@
             <div class="room-card-header">
                 <div class="room-meta-left">
                     <span class="room-title">🏛️ Room {{ r.room_number }}</span>
+                    {% if r.is_dummy %}
+                    <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+                    <button type="button" class="btn btn-sm" onclick="openAssignRoomNameModal({{ r.room_blueprint_id }}, '{{ r.room_number }}')" style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 6px; border: 1px solid #d97706; background: #fffbeb; color: #b45309; cursor: pointer;">
+                        ✏️ Assign Real Room Name
+                    </button>
+                    {% endif %}
                     <span class="room-pattern-badge pattern-{{ r.pattern }}" id="patternBadge-{{ r.room_blueprint_id }}">
                         {{ r.pattern }}
                     </span>
@@ -1347,6 +1367,47 @@
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button type="button" class="action-btn btn-secondary-action" onclick="closeAddRoomModal()">Cancel</button>
                 <button type="submit" class="action-btn btn-primary-action">Add Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ASSIGN REAL ROOM NAME MODAL -->
+<div class="modal-overlay" id="assignRoomNameModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="assignRoomModalTitle">Assign Real Room Name</div>
+            <button type="button" class="close-btn" onclick="closeAssignRoomNameModal()">&times;</button>
+        </div>
+        <form id="assignRoomNameForm" onsubmit="submitAssignRoomName(event)">
+            <input type="hidden" id="assignRoomBpId">
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+                This room is currently an unassigned dummy placeholder. To enable physical seat generation, please assign a real physical classroom name.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 1: Type New / Custom Room Name</label>
+                <input type="text" id="assignNewRoomInput" class="form-control" placeholder="e.g. Drawing Hall 1, Seminar Hall, Room 305" autocomplete="off">
+                <small style="color: #64748b; font-size: 11px;">Enter the real hall or classroom name.</small>
+            </div>
+
+            <div style="text-align: center; margin: 12px 0; color: #94a3b8; font-weight: 600; font-size: 12px;">── OR ──</div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="assignExistingRoomSelect" style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 2: Select Unassigned Classroom from Session</label>
+                <select id="assignExistingRoomSelect" class="form-control">
+                    <option value="">-- Choose Unassigned Room --</option>
+                    {% for rm in unassigned_rooms %}
+                    {% if not rm.is_dummy_room %}
+                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAssignRoomNameModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action" id="assignRoomSubmitBtn">Save Real Room Name</button>
             </div>
         </form>
     </div>
@@ -1948,11 +2009,19 @@ function buildRoomCardHTML(r) {
     const isFullB = r.stream_b_count >= streamLimit ? 'is-full' : '';
     const isFullC = r.stream_c_count >= streamLimit ? 'is-full' : '';
     const hasUnused = r.unused_capacity > 0 ? 'has-unused' : '';
+    const isDummy = r.is_dummy || (r.room_number && r.room_number.startsWith("Dummy Room"));
+    const dummyBadge = isDummy ? `
+        <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+        <button type="button" class="btn btn-sm" onclick="openAssignRoomNameModal(${r.room_blueprint_id}, '${r.room_number}')" style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 6px; border: 1px solid #d97706; background: #fffbeb; color: #b45309; cursor: pointer;">
+            ✏️ Assign Real Room Name
+        </button>
+    ` : '';
 
     return `
         <div class="room-card-header">
             <div class="room-meta-left">
                 <span class="room-title">🏛️ Room ${r.room_number}</span>
+                ${dummyBadge}
                 <span class="room-pattern-badge pattern-${r.pattern}" id="patternBadge-${r.room_blueprint_id}">
                     ${r.pattern}
                 </span>
@@ -2597,6 +2666,11 @@ function validateBlueprint() {
 
 function finalizeBlueprint() {
     if (!BLUEPRINT_ID) return;
+    const dummyBadges = document.querySelectorAll('.badge-dummy-room');
+    if (dummyBadges.length > 0) {
+        alert("Cannot finalize blueprint: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.");
+        return;
+    }
     if (!confirm("Finalizing the blueprint will freeze department-stream assignments and enable physical seat generation. Proceed?")) return;
 
     fetch(`/api/session/${SESSION_ID}/blueprint/finalize/`, {
@@ -2643,6 +2717,12 @@ function unfinalizeBlueprint() {
 
 function generateSeats() {
     if (!BLUEPRINT_ID) return;
+    const dummyBadges = document.querySelectorAll('.badge-dummy-room');
+    if (dummyBadges.length > 0) {
+        alert("Cannot generate physical seats: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.");
+        return;
+    }
+
     const overlay = document.getElementById('allocationLoadingOverlay');
     const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
     const subtext = document.getElementById('allocationLoadingSubtext');
@@ -2664,12 +2744,76 @@ function generateSeats() {
             window.location.reload();
         } else {
             if (overlay) overlay.style.display = 'none';
-            alert("Seat generation failed: " + (data.error || "Unknown constraint error"));
+            alert("Seat generation failed: \n" + (data.error || "Unknown error"));
         }
     })
     .catch(err => {
         if (overlay) overlay.style.display = 'none';
         alert("Request error: " + err);
+    });
+}
+
+function openAssignRoomNameModal(roomBpId, currentName) {
+    document.getElementById('assignRoomBpId').value = roomBpId;
+    document.getElementById('assignRoomModalTitle').textContent = `Assign Real Room Name for ${currentName}`;
+    document.getElementById('assignNewRoomInput').value = '';
+    document.getElementById('assignExistingRoomSelect').value = '';
+    document.getElementById('assignRoomNameModal').classList.add('active');
+}
+
+function closeAssignRoomNameModal() {
+    document.getElementById('assignRoomNameModal').classList.remove('active');
+}
+
+function submitAssignRoomName(event) {
+    event.preventDefault();
+    const roomBpId = document.getElementById('assignRoomBpId').value;
+    const newName = document.getElementById('assignNewRoomInput').value.trim();
+    const targetRoomId = document.getElementById('assignExistingRoomSelect').value;
+
+    if (!newName && !targetRoomId) {
+        showToast('Please type a room name or select an existing classroom.', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('assignRoomSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/assign-room-name/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_blueprint_id: roomBpId,
+            new_room_number: newName || null,
+            target_room_id: targetRoomId || null,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Real Room Name';
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast('Real classroom name assigned successfully!', 'success');
+            closeAssignRoomNameModal();
+            const dummyRemaining = (data.rooms || []).some(r => r.is_dummy || (r.room_number && r.room_number.startsWith('Dummy Room')));
+            const banner = document.getElementById('dummyRoomsAlertBanner');
+            if (banner) {
+                banner.style.display = dummyRemaining ? 'flex' : 'none';
+            }
+        } else {
+            showToast('Failed to assign room: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Real Room Name';
+        showToast('Request error: ' + err, 'error');
     });
 }
 
