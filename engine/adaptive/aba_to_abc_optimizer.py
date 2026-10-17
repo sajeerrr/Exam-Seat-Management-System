@@ -127,6 +127,8 @@ class ABAToABCOptimizer:
                     s2 = r2.get_stream("C")
                     if not s1 or not s2 or not s1.students or not s2.students:
                         continue
+                    if any(getattr(stu, "is_special_subject", False) for stu in s1.students) or any(getattr(stu, "is_special_subject", False) for stu in s2.students):
+                        continue
                     if len(s1.students) != len(s2.students):
                         continue
 
@@ -176,6 +178,8 @@ class ABAToABCOptimizer:
                         s1 = r1.get_stream(stream_name)
                         s2 = r2.get_stream(stream_name)
                         if not s1 or not s2 or not s1.students or not s2.students:
+                            continue
+                        if any(getattr(stu, "is_special_subject", False) for stu in s1.students) or any(getattr(stu, "is_special_subject", False) for stu in s2.students):
                             continue
                         if len(s1.students) != len(s2.students):
                             continue

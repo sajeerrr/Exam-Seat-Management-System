@@ -20,6 +20,7 @@ class ConstrainedBestFitAllocator:
         room_allocations = context.room_allocations
         has_special_groups = any(g.is_special_subject for g in context.groups)
         prev_stream_depts = {"A": None, "B": None, "C": None}
+        prev_special_code = None
 
         for room_idx, room in enumerate(room_allocations):
             if all(g.remaining_count == 0 for g in context.groups):
@@ -85,7 +86,9 @@ class ConstrainedBestFitAllocator:
 
                 target_streams = [
                     s_name for s_name in ["A", "B", "C"]
-                    if room.get_stream(s_name) and room.get_stream(s_name).remaining_capacity > 0
+                    if room.get_stream(s_name)
+                    and room.get_stream(s_name).remaining_capacity > 0
+                    and len(room.get_stream(s_name).students) == 0
                 ]
                 # If special groups remain, reserve Stream A for them so Streams B & C buffer them
                 if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
@@ -118,8 +121,11 @@ class ConstrainedBestFitAllocator:
                         # Adjacent stream department checks
                         if stream_name == "A" and group.department in st_b_depts:
                             continue
-                        if stream_name == "B" and (group.department in st_a_depts or group.department in st_c_depts):
-                            continue
+                        if stream_name == "B":
+                            if group.department in st_a_depts or group.department in st_c_depts:
+                                continue
+                            if any(sg.department == group.department for sg in context.groups if sg.is_special_subject and sg.remaining_count > 0):
+                                continue
                         if stream_name == "C" and group.department in st_b_depts:
                             continue
 
@@ -186,6 +192,45 @@ class ConstrainedBestFitAllocator:
                     prev_stream_depts[b_stream_name] = b_group.department
                 else:
                     room_active = False
+
+            # If special groups remain, try to allocate Stream A as a dedicated pure elective stream
+            # ONLY when buffered horizontally by an occupied Stream B
+            stream_a = room.get_stream("A")
+            stream_b = room.get_stream("B")
+            if stream_a and len(stream_a.students) == 0 and stream_b and len(stream_b.students) > 0:
+                avail_special = [
+                    g for g in context.groups
+                    if g.is_special_subject and g.remaining_count > 0
+                ]
+                st_b_subjs = room.get_stream("B").subject_codes
+                st_b_norm_subjs = {
+                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                    for s in room.get_stream("B").students
+                }
+
+                valid_spec = []
+                for g in avail_special:
+                    if not room.can_add_department(g.department, is_fallback_pass=True):
+                        continue
+                    if (
+                        g.subject_code in st_b_subjs
+                        or g.normalized_subject_code in st_b_subjs
+                        or g.normalized_subject_code in st_b_norm_subjs
+                    ):
+                        continue
+
+                    cont_bonus = 2 if g.subject_code == prev_special_code else 0
+                    dept_bonus = 1 if prev_stream_depts.get("A") == g.department else 0
+                    key = (-cont_bonus, -dept_bonus, -g.remaining_count, g.subject_code)
+                    valid_spec.append((key, g))
+
+                if valid_spec:
+                    valid_spec.sort(key=lambda x: x[0])
+                    best_spec = valid_spec[0][1]
+                    take = min(stream_a.capacity, best_spec.remaining_count)
+                    room.assign_to_stream("A", best_spec, take)
+                    prev_stream_depts["A"] = best_spec.department
+                    prev_special_code = best_spec.subject_code
 
             if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
                 self._allocate_special_in_room(room, context)
@@ -269,6 +314,7 @@ class ConstrainedBestFitAllocator:
         col_map = {"A": 0, "B": 1, "C": 2}
         benches = getattr(room.classroom, "column_capacity", 15) or 15
 
+        has_normal = any(not g.is_special_subject for g in context.groups)
         for bench in range(1, benches + 1):
             if all(g.remaining_count == 0 for g in context.groups if g.is_special_subject):
                 break
@@ -276,6 +322,10 @@ class ConstrainedBestFitAllocator:
             for s_name in ["A", "B", "C"]:
                 stream = room.get_stream(s_name)
                 if not stream or len(stream.students) >= stream.capacity:
+                    continue
+
+                # Never mix special students into a stream that contains normal students
+                if any(not getattr(s, "is_special_subject", False) for s in stream.students):
                     continue
 
                 b_no = len(stream.students) + 1

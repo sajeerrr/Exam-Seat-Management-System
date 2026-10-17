@@ -321,9 +321,10 @@ class BlueprintService:
             context = allocator.execute(context, allow_unallocated=(overflow_attempt < max_overflow_attempts))
             unalloc_rem = sum(g.remaining_count for g in context.groups)
 
-        # Maximize pure ABC rooms by converting ABA pairs
-        from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
-        context = ABAToABCOptimizer().optimize(context)
+        # Maximize pure ABC rooms by converting ABA pairs (normal sessions only)
+        if not any(g.is_special_subject for g in context.groups):
+            from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+            context = ABAToABCOptimizer().optimize(context)
 
         # Persist Blueprint transactionally
         with transaction.atomic():

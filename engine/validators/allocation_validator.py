@@ -109,6 +109,35 @@ class AllocationValidator:
                         if not adj_stream:
                             continue
 
+                        # Column seating (vertical adjacency dc == 0) within a stream is valid
+                        # when horizontally buffered by an adjacent stream with different department/subject
+                        if dc == 0:
+                            is_buffered = False
+                            if s_name in ("A", "C"):
+                                st_b = room.get_stream("B")
+                                if st_b and len(st_b.students) > 0:
+                                    if not any(
+                                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                                        for s in st_b.students
+                                    ):
+                                        is_buffered = True
+                            elif s_name == "B":
+                                st_a = room.get_stream("A")
+                                st_c = room.get_stream("C")
+                                buff_a = st_a and len(st_a.students) > 0 and not any(
+                                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                                    for s in st_a.students
+                                )
+                                buff_c = st_c and len(st_c.students) > 0 and not any(
+                                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                                    for s in st_c.students
+                                )
+                                if buff_a or buff_c:
+                                    is_buffered = True
+
+                            if is_buffered:
+                                continue
+
                         for db in (-1, 0, 1):
                             if dc == 0 and db == 0:
                                 continue
