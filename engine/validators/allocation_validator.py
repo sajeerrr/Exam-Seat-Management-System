@@ -1,5 +1,6 @@
 from engine.config import AllocationLimits
 from engine.models.validation_result import ValidationResult
+from engine.models.room_allocation import subject_conflict_key
 
 
 class AllocationValidator:
@@ -79,7 +80,11 @@ class AllocationValidator:
             normal_subjs_by_stream = {}
             for name, stream in room.streams.items():
                 normal_subjs = {
-                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                    subject_conflict_key(
+                        getattr(s, "subject_code", ""),
+                        getattr(s, "department", ""),
+                        getattr(s, "subject_name", ""),
+                    )
                     for s in stream.students
                     if not getattr(s, "is_special_subject", False)
                 }

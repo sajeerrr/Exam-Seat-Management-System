@@ -1,5 +1,6 @@
 from engine.context.allocation_context import AllocationContext
 from engine.models.remaining_pool import RemainingPool
+from engine.models.room_allocation import subject_conflict_key
 from engine.validators.allocation_validator import AllocationValidator
 from engine.adaptive.local_optimizer import LocalOptimizer
 from engine.cp.cp_solver import CPSolver
@@ -162,24 +163,34 @@ class ConstrainedBestFitAllocator:
                             if not room.can_add_department(group.department, is_fallback_pass=False):
                                 if not room.can_add_department(group.department, is_fallback_pass=True):
                                     continue
-                            if not room.can_add_subject(group.subject_code, stream_name=stream_name, is_fallback_pass=False):
+                            if not room.can_add_subject(
+                                group.subject_code,
+                                stream_name=stream_name,
+                                department=group.department,
+                                subject_name=group.subject_name,
+                                is_fallback_pass=False,
+                            ):
                                 continue
 
                             if fill_mode == "same_dept_partial" and group.department not in stream.departments:
                                 continue
 
-                            g_norm = group.normalized_subject_code
+                            g_conflict_key = subject_conflict_key(group.subject_code, group.department, group.subject_name)
 
                             # Cross-stream subject disjointness check (never seat same subject in multiple streams of the same room)
                             other_stream_subjs = set()
                             for other_s_name, other_st in room.streams.items():
                                 if other_s_name != stream_name:
                                     other_stream_subjs.update(
-                                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                                        subject_conflict_key(
+                                            getattr(s, "subject_code", ""),
+                                            getattr(s, "department", ""),
+                                            getattr(s, "subject_name", ""),
+                                        )
                                         for s in other_st.students
                                     )
-                                    other_stream_subjs.update(s.strip().upper() for s in other_st.subject_codes)
-                            if g_norm in other_stream_subjs or group.subject_code.strip().upper() in other_stream_subjs:
+                                    other_stream_subjs.update(other_st.subject_codes)
+                            if g_conflict_key in other_stream_subjs:
                                 continue
 
                             # Subject clash checks
@@ -197,6 +208,8 @@ class ConstrainedBestFitAllocator:
                                     stream_name,
                                     len(stream.students) + 1,
                                     group.subject_code,
+                                    department=group.department,
+                                    subject_name=group.subject_name,
                                 ):
                                     continue
 
@@ -318,20 +331,24 @@ class ConstrainedBestFitAllocator:
                     for g in [grp for grp in context.groups if grp.remaining_count > 0]:
                         if not room.can_add_department(g.department, is_fallback_pass=True):
                             continue
-                        if not room.can_add_subject(g.subject_code, stream_name=s_name, is_fallback_pass=True):
+                        if not room.can_add_subject(g.subject_code, stream_name=s_name, department=g.department, subject_name=g.subject_name, is_fallback_pass=True):
                             continue
-                        g_norm = g.normalized_subject_code
+                        g_conflict_key = subject_conflict_key(g.subject_code, g.department, g.subject_name)
 
                         # Cross-stream subject disjointness
                         other_stream_subjs = set()
                         for other_s_name, other_st in room.streams.items():
                             if other_s_name != s_name:
                                 other_stream_subjs.update(
-                                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                                    subject_conflict_key(
+                                        getattr(s, "subject_code", ""),
+                                        getattr(s, "department", ""),
+                                        getattr(s, "subject_name", ""),
+                                    )
                                     for s in other_st.students
                                 )
-                                other_stream_subjs.update(s.strip().upper() for s in other_st.subject_codes)
-                        if g_norm in other_stream_subjs or g.subject_code.strip().upper() in other_stream_subjs:
+                                other_stream_subjs.update(other_st.subject_codes)
+                        if g_conflict_key in other_stream_subjs:
                             continue
 
                         # Strict adjacent stream department checks
@@ -365,20 +382,24 @@ class ConstrainedBestFitAllocator:
                     for g in [grp for grp in context.groups if grp.remaining_count > 0]:
                         if not room.can_add_department(g.department, is_fallback_pass=True, is_extreme=allow_extreme):
                             continue
-                        if not room.can_add_subject(g.subject_code, stream_name=s_name, is_fallback_pass=True, is_extreme=allow_extreme):
+                        if not room.can_add_subject(g.subject_code, stream_name=s_name, department=g.department, subject_name=g.subject_name, is_fallback_pass=True, is_extreme=allow_extreme):
                             continue
-                        g_norm = g.normalized_subject_code
+                        g_conflict_key = subject_conflict_key(g.subject_code, g.department, g.subject_name)
 
                         # Cross-stream subject disjointness
                         other_stream_subjs = set()
                         for other_s_name, other_st in room.streams.items():
                             if other_s_name != s_name:
                                 other_stream_subjs.update(
-                                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                                    subject_conflict_key(
+                                        getattr(s, "subject_code", ""),
+                                        getattr(s, "department", ""),
+                                        getattr(s, "subject_name", ""),
+                                    )
                                     for s in other_st.students
                                 )
-                                other_stream_subjs.update(s.strip().upper() for s in other_st.subject_codes)
-                        if g_norm in other_stream_subjs or g.subject_code.strip().upper() in other_stream_subjs:
+                                other_stream_subjs.update(other_st.subject_codes)
+                        if g_conflict_key in other_stream_subjs:
                             continue
 
                         # Strict adjacent stream department checks
@@ -473,15 +494,41 @@ class ConstrainedBestFitAllocator:
                     if not stream or len(stream.students) >= stream.capacity:
                         continue
                     st_depts = set(stream.departments)
-                    st_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream.students}
+                    st_subjs = {
+                        subject_conflict_key(
+                            getattr(s, "subject_code", ""),
+                            getattr(s, "department", ""),
+                            getattr(s, "subject_name", ""),
+                        )
+                        for s in stream.students
+                    }
                     for g in context.groups:
                         if g.remaining_count == 0:
                             continue
-                        g_norm = g.normalized_subject_code
-                        if st_subjs and g_norm not in st_subjs:
+                        g_conflict_key = subject_conflict_key(g.subject_code, g.department, g.subject_name)
+                        if st_subjs and g_conflict_key not in st_subjs:
                             continue
                         if st_depts and g.department not in st_depts:
                             continue
+                        if not st_subjs:
+                            if not room.can_add_department(g.department, is_fallback_pass=True, is_extreme=True):
+                                continue
+                            if not room.can_add_subject(g.subject_code, stream_name=s_name, department=g.department, subject_name=g.subject_name, is_fallback_pass=True, is_extreme=True):
+                                continue
+                            other_stream_subjs = set()
+                            for other_s_name, other_st in room.streams.items():
+                                if other_s_name != s_name:
+                                    other_stream_subjs.update(
+                                        subject_conflict_key(
+                                            getattr(s, "subject_code", ""),
+                                            getattr(s, "department", ""),
+                                            getattr(s, "subject_name", ""),
+                                        )
+                                        for s in other_st.students
+                                    )
+                                    other_stream_subjs.update(other_st.subject_codes)
+                            if g_conflict_key in other_stream_subjs:
+                                continue
                         # Strict adjacent stream department checks
                         if s_name in ("A", "C") and g.department in room.get_stream("B").departments:
                             continue
@@ -616,7 +663,7 @@ class ConstrainedBestFitAllocator:
                     cand_dept = g.students[nxt].department if nxt < len(g.students) else g.department
                     if not room.can_add_department(cand_dept, is_fallback_pass=True, is_extreme=is_extreme):
                         continue
-                    if not room.can_add_subject(g.subject_code, is_fallback_pass=True, is_extreme=is_extreme):
+                    if not room.can_add_subject(g.subject_code, department=cand_dept, subject_name=g.subject_name, is_fallback_pass=True, is_extreme=is_extreme):
                         continue
 
                     # Strict adjacent stream department checks (only when room or candidate pool has multiple departments)
@@ -627,13 +674,14 @@ class ConstrainedBestFitAllocator:
                         if s_name == "B" and (cand_dept in room.get_stream("A").departments or cand_dept in room.get_stream("C").departments):
                             continue
 
-                    if not room.can_seat_special_subject(s_name, b_no, g.subject_code):
+                    if not room.can_seat_special_subject(s_name, b_no, g.subject_code, department=cand_dept, subject_name=g.subject_name):
                         continue
 
                     adj_students = room.get_adjacent_students(s_name, b_no)
+                    g_key = subject_conflict_key(g.subject_code, cand_dept, g.subject_name)
                     has_normal_clash = any(
                         not getattr(a, "is_special_subject", False) and
-                        getattr(a, "normalized_subject_code", str(a.subject_code).strip().upper()) == g.normalized_subject_code
+                        subject_conflict_key(getattr(a, "subject_code", ""), getattr(a, "department", ""), getattr(a, "subject_name", "")) == g_key
                         for a in adj_students
                     )
                     if has_normal_clash:
@@ -865,7 +913,7 @@ class ConstrainedBestFitAllocator:
                     continue
                 if not receiver.can_add_department(dept, is_fallback_pass=True, is_extreme=True):
                     continue
-                if not receiver.can_add_subject(s_code, is_fallback_pass=True, is_extreme=True):
+                if not receiver.can_add_subject(s_code, department=dept, is_fallback_pass=True, is_extreme=True):
                     continue
 
                 for s_to in ["A", "B", "C"]:

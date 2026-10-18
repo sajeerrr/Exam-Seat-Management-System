@@ -14,7 +14,7 @@ from engine.config import AllocationLimits
 from engine.context.allocation_context import AllocationContext
 from engine.models.classroom import Classroom as EngineClassroom
 from engine.models.remaining_pool import RemainingPool
-from engine.models.room_allocation import RoomAllocation
+from engine.models.room_allocation import RoomAllocation, subject_conflict_key
 
 from exam_allocator.models import (
     Allocation,
@@ -559,7 +559,8 @@ class BlueprintService:
                     room_depts.add(sa.department_code)
                     dept_room_map[sa.department_code].add(rb.room.room_number)
                 if sa.subject_code:
-                    stream_subjects[sa.stream_name].add(sa.subject_code.strip().upper())
+                    key = subject_conflict_key(sa.subject_code, sa.department_code)
+                    stream_subjects[sa.stream_name].add(key)
 
             # Stream capacity check
             stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else (rb.room.benches or 15)
@@ -625,7 +626,7 @@ class BlueprintService:
                     f"{', '.join(sorted(overlap_bc))}."
                 )
             special_subjs_in_room = {
-                sa.subject_code.strip().upper()
+                subject_conflict_key(sa.subject_code, sa.department_code)
                 for sa in rb.stream_assignments.all()
                 if (sa.subject_category or "").upper() in ("ELECTIVE", "MINOR", "HONOURS")
             }

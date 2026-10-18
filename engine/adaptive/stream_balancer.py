@@ -10,7 +10,7 @@ any cohort, strictly ensuring zero capacity, department limit, or horizontal adj
 import logging
 from typing import List, Dict, Tuple, Optional, Any
 from engine.context.allocation_context import AllocationContext
-from engine.models.room_allocation import RoomAllocation
+from engine.models.room_allocation import RoomAllocation, subject_conflict_key
 from engine.validators.allocation_validator import AllocationValidator
 
 logger = logging.getLogger(__name__)
@@ -122,10 +122,19 @@ class RoomStreamBalancer:
                             st_to.students = orig_to
                             continue
 
-                        # Check that no two streams share any subject code
-                        st_a_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("A").students}
-                        st_b_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("B").students}
-                        st_c_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("C").students}
+                        # Check that no two streams share any subject conflict key
+                        st_a_subjs = {
+                            subject_conflict_key(getattr(s, "subject_code", ""), getattr(s, "department", ""), getattr(s, "subject_name", ""))
+                            for s in room.get_stream("A").students
+                        }
+                        st_b_subjs = {
+                            subject_conflict_key(getattr(s, "subject_code", ""), getattr(s, "department", ""), getattr(s, "subject_name", ""))
+                            for s in room.get_stream("B").students
+                        }
+                        st_c_subjs = {
+                            subject_conflict_key(getattr(s, "subject_code", ""), getattr(s, "department", ""), getattr(s, "subject_name", ""))
+                            for s in room.get_stream("C").students
+                        }
                         if not st_a_subjs.isdisjoint(st_b_subjs) or not st_b_subjs.isdisjoint(st_c_subjs) or not st_a_subjs.isdisjoint(st_c_subjs):
                             st_from.students = orig_from
                             st_to.students = orig_to
