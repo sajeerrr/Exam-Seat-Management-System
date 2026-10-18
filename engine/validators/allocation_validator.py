@@ -47,9 +47,13 @@ class AllocationValidator:
             depts_count = len(room.departments)
             if depts_count > max_depts:
                 max_depts = depts_count
-            if depts_count > 4:
+            if depts_count > 5:
                 result.add_error(
-                    f"Room {room.classroom.room_no} exceeds max 4 departments: {depts_count}"
+                    f"Room {room.classroom.room_no} exceeds max 5 departments: {depts_count}"
+                )
+            elif depts_count == 5:
+                result.add_warning(
+                    f"Room {room.classroom.room_no} has 5 departments (extreme situation fallback)"
                 )
         result.max_departments_per_room = max_depts
 
@@ -78,6 +82,21 @@ class AllocationValidator:
                     result.normal_subject_violations += len(overlap)
                     result.add_error(
                         f"Room {room.classroom.room_no}: Adjacent streams B and C share normal subject {overlap}"
+                    )
+
+            if len(room.departments) > 1:
+                st_a_depts = room.get_stream("A").departments if room.get_stream("A") else set()
+                st_b_depts = room.get_stream("B").departments if room.get_stream("B") else set()
+                st_c_depts = room.get_stream("C").departments if room.get_stream("C") else set()
+                overlap_ab_d = st_a_depts.intersection(st_b_depts)
+                if overlap_ab_d:
+                    result.add_error(
+                        f"Room {room.classroom.room_no}: Adjacent streams A and B share department {overlap_ab_d}"
+                    )
+                overlap_bc_d = st_b_depts.intersection(st_c_depts)
+                if overlap_bc_d:
+                    result.add_error(
+                        f"Room {room.classroom.room_no}: Adjacent streams B and C share department {overlap_bc_d}"
                     )
 
     def validate_special_subject_adjacency(self, context, result):

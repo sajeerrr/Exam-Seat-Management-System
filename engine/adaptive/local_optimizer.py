@@ -162,6 +162,7 @@ class LocalOptimizer:
         target_stream.students.extend(fragment["students"])
 
     def _creates_subject_conflict(self, room, stream_name, fragment):
+        dept = fragment["key"][0]
         subject_key = fragment["key"][1]
         adjacent = []
 
@@ -173,7 +174,12 @@ class LocalOptimizer:
             adjacent = ["B"]
 
         for adjacent_name in adjacent:
-            if subject_key in room.get_stream(adjacent_name).subject_codes:
+            adj_stream = room.get_stream(adjacent_name)
+            if not adj_stream:
+                continue
+            if dept in adj_stream.departments:
+                return True
+            if subject_key in adj_stream.subject_codes:
                 return True
 
         return False

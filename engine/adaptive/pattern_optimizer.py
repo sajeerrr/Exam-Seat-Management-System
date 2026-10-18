@@ -203,6 +203,17 @@ class PatternEvaluator:
             return False
         if subjects["B"].intersection(subjects["C"]):
             return False
+
+        if len(room.departments) > 1:
+            depts = {
+                stream_name: room.get_stream(stream_name).departments
+                for stream_name in STREAMS
+            }
+            if depts["A"].intersection(depts["B"]):
+                return False
+            if depts["B"].intersection(depts["C"]):
+                return False
+
         return True
 
     def _department_fragmentation(self, context):

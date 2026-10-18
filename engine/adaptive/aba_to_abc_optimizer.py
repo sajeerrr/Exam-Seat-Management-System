@@ -95,7 +95,7 @@ class ABAToABCOptimizer:
         return bool(depts_a.intersection(depts_c))
 
     def _is_valid_room(self, room: RoomAllocation) -> bool:
-        """Checks subject conflict key adjacency and department limit."""
+        """Checks subject conflict key adjacency, adjacent department isolation, and department limit."""
         s_a = room.get_stream("A")
         s_b = room.get_stream("B")
         s_c = room.get_stream("C")
@@ -107,7 +107,14 @@ class ABAToABCOptimizer:
             if s_b.subject_codes.intersection(s_c.subject_codes):
                 return False
 
-        max_depts = getattr(AllocationLimits, "MAX_DEPARTMENTS_NORMAL", 3)
+        if len(room.departments) > 1:
+            depts_a = s_a.departments if s_a else set()
+            depts_b = s_b.departments if s_b else set()
+            depts_c = s_c.departments if s_c else set()
+            if depts_a.intersection(depts_b) or depts_b.intersection(depts_c):
+                return False
+
+        max_depts = getattr(AllocationLimits, "MAX_DEPARTMENTS_NORMAL", 4)
         if len(room.departments) > max_depts:
             return False
 

@@ -189,19 +189,16 @@ class ConstrainedBestFitAllocator:
                                 if stream_name == "C" and (group.subject_code in room.get_stream("B").subject_codes or g_norm in st_b_norm):
                                     continue
 
-                            # Adjacent stream department checks
-                            avail_other_depts = any(g.department != group.department for g in available_candidates)
+                            # Adjacent stream department checks (strict horizontal isolation: A!=B and B!=C)
                             if stream_name == "A" and group.department in st_b_depts:
-                                if avail_other_depts or not use_block_allocation:
-                                    continue
+                                continue
                             if stream_name == "B":
-                                if (group.department in st_a_depts or group.department in st_c_depts) and (avail_other_depts or not use_block_allocation):
+                                if group.department in st_a_depts or group.department in st_c_depts:
                                     continue
                                 if not use_block_allocation and any(sg.department == group.department for sg in context.groups if sg.is_special_subject and sg.remaining_count > 0):
                                     continue
                             if stream_name == "C" and group.department in st_b_depts:
-                                if avail_other_depts or not use_block_allocation:
-                                    continue
+                                continue
 
                             # Calculate take count
                             if use_block_allocation:
@@ -314,6 +311,11 @@ class ConstrainedBestFitAllocator:
                         if not room.can_add_department(g.department, is_fallback_pass=True):
                             continue
                         g_norm = g.normalized_subject_code
+                        # Strict adjacent stream department checks
+                        if s_name in ("A", "C") and g.department in room.get_stream("B").departments:
+                            continue
+                        if s_name == "B" and (g.department in room.get_stream("A").departments or g.department in room.get_stream("C").departments):
+                            continue
                         if s_name in ("A", "C") and (g.subject_code in st_b_subjs or g_norm in st_b_norm):
                             continue
                         if s_name == "B":
@@ -350,6 +352,8 @@ class ConstrainedBestFitAllocator:
                     valid_spec = []
                     for g in avail_special:
                         if not room.can_add_department(g.department, is_fallback_pass=True):
+                            continue
+                        if g.department in stream_b.departments:
                             continue
                         if (
                             g.subject_code in st_b_subjs
@@ -400,6 +404,11 @@ class ConstrainedBestFitAllocator:
                         if st_subjs and g_norm not in st_subjs:
                             continue
                         if st_depts and g.department not in st_depts:
+                            continue
+                        # Strict adjacent stream department checks
+                        if s_name in ("A", "C") and g.department in room.get_stream("B").departments:
+                            continue
+                        if s_name == "B" and (g.department in room.get_stream("A").departments or g.department in room.get_stream("C").departments):
                             continue
                         take = min(stream.capacity - len(stream.students), g.remaining_count)
                         if take <= 0:
@@ -531,6 +540,14 @@ class ConstrainedBestFitAllocator:
                     if not room.can_add_department(cand_dept, is_fallback_pass=True):
                         continue
 
+                    # Strict adjacent stream department checks (only when room or candidate pool has multiple departments)
+                    has_other_depts = (len(room.departments) > 1 or any(sg.department != cand_dept for sg in special_groups if sg.remaining_count > 0))
+                    if has_other_depts:
+                        if s_name in ("A", "C") and cand_dept in room.get_stream("B").departments:
+                            continue
+                        if s_name == "B" and (cand_dept in room.get_stream("A").departments or cand_dept in room.get_stream("C").departments):
+                            continue
+
                     if not room.can_seat_special_subject(s_name, b_no, g.subject_code):
                         continue
 
@@ -581,11 +598,12 @@ class ConstrainedBestFitAllocator:
                 allocated_student = best_group.allocate_students(1)[0]
                 stream.students.append(allocated_student)
 
-    def _absorb_underfilled_tail_rooms(self, context, min_threshold: int = 15) -> bool:
+    def _absorb_underfilled_tail_rooms(self, context, min_threshold: int = 25) -> bool:
         """
         Consolidates underfilled tail rooms (< min_threshold students) by absorbing
         their students into earlier rooms that have spare capacity in compatible streams,
         eliminating wasteful single-digit or tiny fragment rooms.
+        Allows up to MAX_DEPARTMENTS_EXTREME (5) departments in extreme consolidation.
         """
         active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
         if len(active_rooms) < 2:
@@ -624,7 +642,7 @@ class ConstrainedBestFitAllocator:
                     extra_for_r = sum(len(p[0]) for p in plan if p[1] == r)
                     if r.used_capacity + extra_for_r + k > r.classroom.capacity:
                         continue
-                    if not r.can_add_department(dept, is_fallback_pass=True):
+                    if not r.can_add_department(dept, is_fallback_pass=True, is_extreme=True):
                         continue
 
                     for s_name in ["A", "B", "C"]:
@@ -635,11 +653,6 @@ class ConstrainedBestFitAllocator:
                         curr_count = len(stream.students) + extra_for_st
                         if curr_count + k > stream.capacity:
                             continue
-
-                        stream_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream.students}
-                        if stream_subjs and s_code not in stream_subjs:
-                            if r.used_capacity >= 25:
-                                continue
 
                         st_a_depts = set(r.get_stream("A").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "A"}
                         st_b_depts = set(r.get_stream("B").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "B"}
@@ -757,7 +770,7 @@ class ConstrainedBestFitAllocator:
                 # Keep donor reasonable
                 if donor.used_capacity - k < 20:
                     continue
-                if not receiver.can_add_department(dept, is_fallback_pass=True):
+                if not receiver.can_add_department(dept, is_fallback_pass=True, is_extreme=True):
                     continue
 
                 for s_to in ["A", "B", "C"]:
@@ -765,9 +778,19 @@ class ConstrainedBestFitAllocator:
                     if not stream_to or len(stream_to.students) + k > stream_to.capacity:
                         continue
 
+                    # Strict adjacent stream department checks on receiver
+                    st_a_depts = receiver.get_stream("A").departments
+                    st_b_depts = receiver.get_stream("B").departments
+                    st_c_depts = receiver.get_stream("C").departments
+                    if s_to in ("A", "C") and dept in st_b_depts:
+                        continue
+                    if s_to == "B" and (dept in st_a_depts or dept in st_c_depts):
+                        continue
+
                     to_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream_to.students}
                     if to_subjs and s_code not in to_subjs:
-                        continue
+                        if receiver.used_capacity >= 25:
+                            continue
 
                     # Test move with validation
                     snapshot = context.snapshot()

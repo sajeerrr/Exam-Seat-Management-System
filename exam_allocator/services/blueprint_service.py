@@ -578,11 +578,17 @@ class BlueprintService:
                     f"{total_room_students} > {rb.capacity}."
                 )
 
-            # Department limit check (<= 4 departments per room)
-            if len(room_depts) > AllocationLimits.MAX_DEPARTMENTS_PER_ROOM:
+            # Department limit check (<= 4 departments per room normally, up to 5 in extreme situations)
+            max_ext = getattr(AllocationLimits, "MAX_DEPARTMENTS_EXTREME", 5)
+            max_norm = getattr(AllocationLimits, "MAX_DEPARTMENTS_PER_ROOM", 4)
+            if len(room_depts) > max_ext:
                 errors.append(
                     f"Room {rb.room.room_number} contains {len(room_depts)} departments "
-                    f"(limit is {AllocationLimits.MAX_DEPARTMENTS_PER_ROOM}): {', '.join(sorted(room_depts))}."
+                    f"(limit is {max_ext}): {', '.join(sorted(room_depts))}."
+                )
+            elif len(room_depts) > max_norm:
+                warnings.append(
+                    f"Room {rb.room.room_number} has {len(room_depts)} departments (extreme situation consolidation): {', '.join(sorted(room_depts))}."
                 )
 
             # ── 3. Special Subject Feasibility ──────────────────────────────

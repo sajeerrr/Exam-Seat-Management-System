@@ -83,13 +83,14 @@ class RoomAllocation:
         return depts
 
     def can_add_department(
-        self, department: str, is_fallback_pass: bool = False
+        self, department: str, is_fallback_pass: bool = False, is_extreme: bool = False
     ) -> bool:
-        limit = (
-            getattr(AllocationLimits, "MAX_DEPARTMENTS_FALLBACK", 4)
-            if is_fallback_pass
-            else getattr(AllocationLimits, "MAX_DEPARTMENTS_NORMAL", 3)
-        )
+        if is_extreme:
+            limit = getattr(AllocationLimits, "MAX_DEPARTMENTS_EXTREME", 5)
+        elif is_fallback_pass:
+            limit = getattr(AllocationLimits, "MAX_DEPARTMENTS_FALLBACK", 4)
+        else:
+            limit = getattr(AllocationLimits, "MAX_DEPARTMENTS_NORMAL", 4)
 
         current_depts = self.departments
         if department in current_depts:
