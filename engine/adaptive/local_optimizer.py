@@ -181,7 +181,19 @@ class LocalOptimizer:
     def _creates_department_mix(self, stream, fragment):
         departments = set(stream.departments)
         department = fragment["key"][0]
-        return bool(departments and departments != {department})
+        if bool(departments and departments != {department}):
+            return True
+        # Also prevent mixing different subjects within the same stream
+        if stream.students:
+            stream_subjects = {
+                getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                for s in stream.students
+            }
+            first_stu = fragment["students"][0]
+            frag_subject = getattr(first_stu, "normalized_subject_code", str(first_stu.subject_code).strip().upper())
+            if stream_subjects != {frag_subject}:
+                return True
+        return False
 
     def _student_key(self, student):
         """Generate a key tuple for grouping students.

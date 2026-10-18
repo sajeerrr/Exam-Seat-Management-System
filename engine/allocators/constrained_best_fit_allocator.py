@@ -69,19 +69,15 @@ class ConstrainedBestFitAllocator:
 
                 if len(distinct_depts) >= 3:
                     # ABC Room: 3 distinct departments for Streams A, B, C
-                    d_a = prev_stream_depts.get("A") if prev_stream_depts.get("A") in dept_totals else None
-                    if not d_a:
-                        d_a = distinct_depts[0]
-
-                    rem_b = [d for d in distinct_depts if d != d_a]
-                    d_b = prev_stream_depts.get("B") if prev_stream_depts.get("B") in rem_b else None
-                    if not d_b:
-                        d_b = rem_b[0]
-
-                    rem_c = [d for d in distinct_depts if d != d_a and d != d_b]
-                    d_c = prev_stream_depts.get("C") if prev_stream_depts.get("C") in rem_c else None
-                    if not d_c:
-                        d_c = rem_c[0]
+                    # Always draw from the top 3 departments with largest remaining counts
+                    # to prevent department starvation and ensure Stream B is always occupied
+                    d1, d2, d3 = distinct_depts[0], distinct_depts[1], distinct_depts[2]
+                    top3 = {d1, d2, d3}
+                    d_a = prev_stream_depts.get("A") if prev_stream_depts.get("A") in top3 else d1
+                    rem_b = [d for d in (d1, d2, d3) if d != d_a]
+                    d_b = prev_stream_depts.get("B") if prev_stream_depts.get("B") in rem_b else rem_b[0]
+                    rem_c = [d for d in rem_b if d != d_b]
+                    d_c = rem_c[0]
 
                     room_plan_depts["A"] = d_a
                     room_plan_depts["B"] = d_b
@@ -214,18 +210,25 @@ class ConstrainedBestFitAllocator:
                             # Calculate take count
                             if use_block_allocation:
                                 if len(stream.students) == 0:
-                                    if group.remaining_count % 15 == 0 or group.remaining_count == 15:
-                                        take = 15
-                                    elif (group.remaining_count - 14) in (1, 2) and group.remaining_count <= 15:
+                                    if group.remaining_count <= rem_in_stream:
                                         take = group.remaining_count
-                                    elif group.remaining_count >= 14:
-                                        take = 14
+                                    elif (group.remaining_count - rem_in_stream) in (1, 2):
+                                        take = group.remaining_count - 3
+                                        if take < 3:
+                                            continue
                                     else:
-                                        take = group.remaining_count
+                                        take = rem_in_stream
                                 else:
                                     take = min(rem_in_stream, group.remaining_count)
                                     if take <= 2 and group.remaining_count > take:
                                         continue  # Guard: Never peel 1 or 2 students from a larger group
+                                    leftover = group.remaining_count - take
+                                    if leftover in (1, 2):
+                                        needed = 3 - leftover
+                                        if take - needed >= 3:
+                                            take -= needed
+                                        else:
+                                            continue  # Guard: Don't split group if it leaves 1 or 2 students
                             else:
                                 take = min(rem_in_stream, group.remaining_count)
 
@@ -373,10 +376,10 @@ class ConstrainedBestFitAllocator:
                         prev_stream_depts["A"] = best_spec.department
                         prev_special_code = best_spec.subject_code
 
-            if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
+            if not use_block_allocation and any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
                 self._allocate_special_in_room(room, context)
 
-        if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
+        if not use_block_allocation and any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
             for room in room_allocations:
                 if room.used_capacity < room.classroom.capacity:
                     self._allocate_special_in_room(room, context)
@@ -561,53 +564,57 @@ class ConstrainedBestFitAllocator:
             return False
 
         modified = False
-        for ur in underfilled:
-            ur_students = [
-                (s_name, stu)
-                for s_name in ["A", "B", "C"]
-                for stu in ur.get_stream(s_name).students
-            ]
-            if not ur_students:
+        for ur in reversed(underfilled):
+            cohort_map = {}
+            for s_name in ["A", "B", "C"]:
+                for stu in ur.get_stream(s_name).students:
+                    s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
+                    key = (stu.department, s_code)
+                    cohort_map.setdefault(key, []).append(stu)
+
+            if not cohort_map:
                 continue
 
             plan = []
             possible = True
 
-            for orig_sname, stu in ur_students:
+            ur_idx = active_rooms.index(ur)
+            candidate_rooms = [r for r in active_rooms if active_rooms.index(r) < ur_idx]
+
+            for (dept, s_code), cohort in cohort_map.items():
+                k = len(cohort)
                 placed = False
-                # Search earlier active rooms in reverse order (closest rooms first)
-                for r in reversed(active_rooms):
-                    if r == ur or r in underfilled:
+                for r in reversed(candidate_rooms):
+                    extra_for_r = sum(len(p[0]) for p in plan if p[1] == r)
+                    if r.used_capacity + extra_for_r + k > r.classroom.capacity:
                         continue
-                    extra_students_for_r = len([p for p in plan if p[1] == r])
-                    if r.used_capacity + extra_students_for_r >= r.classroom.capacity:
-                        continue
-                    if not r.can_add_department(stu.department, is_fallback_pass=True):
+                    if not r.can_add_department(dept, is_fallback_pass=True):
                         continue
 
                     for s_name in ["A", "B", "C"]:
                         stream = r.get_stream(s_name)
                         if not stream:
                             continue
-                        extra_for_stream = len([p for p in plan if p[1] == r and p[2] == s_name])
-                        curr_count = len(stream.students) + extra_for_stream
-                        if curr_count >= stream.capacity:
+                        extra_for_st = sum(len(p[0]) for p in plan if p[1] == r and p[2] == s_name)
+                        curr_count = len(stream.students) + extra_for_st
+                        if curr_count + k > stream.capacity:
                             continue
 
-                        st_a_depts = set(r.get_stream("A").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "A"}
-                        st_b_depts = set(r.get_stream("B").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "B"}
-                        st_c_depts = set(r.get_stream("C").departments) | {p[0].department for p in plan if p[1] == r and p[2] == "C"}
-
-                        if s_name == "A" and stu.department in st_b_depts:
-                            continue
-                        if s_name == "B" and (stu.department in st_a_depts or stu.department in st_c_depts):
-                            continue
-                        if s_name == "C" and stu.department in st_b_depts:
+                        stream_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream.students}
+                        if stream_subjs and s_code not in stream_subjs:
                             continue
 
-                        # Check seat adjacency for special and normal subjects
-                        bench_no = curr_count + 1
-                        s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
+                        st_a_depts = set(r.get_stream("A").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "A"}
+                        st_b_depts = set(r.get_stream("B").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "B"}
+                        st_c_depts = set(r.get_stream("C").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "C"}
+
+                        if s_name == "A" and dept in st_b_depts:
+                            continue
+                        if s_name == "B" and (dept in st_a_depts or dept in st_c_depts):
+                            continue
+                        if s_name == "C" and dept in st_b_depts:
+                            continue
+
                         has_clash = False
                         col_map = {"A": 0, "B": 1, "C": 2}
                         inv_map = {0: "A", 1: "B", 2: "C"}
@@ -616,16 +623,18 @@ class ConstrainedBestFitAllocator:
                             c = c0 + dc
                             if c in inv_map:
                                 adj_st = r.get_stream(inv_map[c])
-                                if adj_st and bench_no <= len(adj_st.students):
-                                    adj_s = adj_st.students[bench_no - 1]
-                                    adj_code = getattr(adj_s, "normalized_subject_code", str(adj_s.subject_code).strip().upper())
-                                    if adj_code == s_code:
+                                if adj_st:
+                                    adj_subjs = {
+                                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                                        for s in adj_st.students
+                                    }
+                                    if s_code in adj_subjs:
                                         has_clash = True
                                         break
                         if has_clash:
                             continue
 
-                        plan.append((stu, r, s_name))
+                        plan.append((cohort, r, s_name))
                         placed = True
                         break
                     if placed:
@@ -634,13 +643,28 @@ class ConstrainedBestFitAllocator:
                     possible = False
                     break
 
-            if possible and len(plan) == len(ur_students):
-                # Execute absorption
-                for stu, target_room, target_sname in plan:
-                    target_room.get_stream(target_sname).students.append(stu)
+            if possible and len(plan) == len(cohort_map):
+                # Save snapshot of modified rooms
+                affected_rooms = {target_room for _, target_room, _ in plan} | {ur}
+                snapshot = {
+                    r_obj: {s: list(r_obj.get_stream(s).students) for s in ["A", "B", "C"]}
+                    for r_obj in affected_rooms
+                }
+
+                for cohort, target_room, target_sname in plan:
+                    target_room.get_stream(target_sname).students.extend(cohort)
                 for s_name in ["A", "B", "C"]:
                     ur.get_stream(s_name).students.clear()
-                modified = True
+
+                from engine.validators.allocation_validator import AllocationValidator
+                val_errs, _ = AllocationValidator().validate(context, active_rooms)
+                if val_errs:
+                    # Rollback changes if validation fails
+                    for r_obj, s_dict in snapshot.items():
+                        for s_name, stus in s_dict.items():
+                            r_obj.get_stream(s_name).students = list(stus)
+                else:
+                    modified = True
 
         return modified
 
