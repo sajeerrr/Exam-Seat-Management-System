@@ -96,6 +96,10 @@ class RoomStreamBalancer:
                         new_counts[from_s] -= chunk_len
                         new_counts[to_s] += chunk_len
 
+                        # Never empty an active stream down to 0 in a populated room
+                        if new_counts[from_s] == 0 and sum(new_counts.values()) >= 15:
+                            continue
+
                         new_var = sum((c - mean_cnt) ** 2 for c in new_counts.values())
                         if new_var >= cur_var - 1e-5:
                             continue

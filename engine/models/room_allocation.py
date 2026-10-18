@@ -275,7 +275,9 @@ class RoomAllocation:
 
 def is_generic_elective(subject_code: str, subject_name: str = "") -> bool:
     code = str(subject_code or "").strip().upper()
-    if not code or code in {"N/A", "NA", "NAN", "NONE", "-"}:
+    name = str(subject_name or "").strip().upper()
+    text = f"{code} {name}".strip()
+    if not text or text in {"N/A", "NA", "NAN", "NONE", "-"}:
         return False
     generic_tokens = (
         "ELECTIVE",
@@ -286,8 +288,12 @@ def is_generic_elective(subject_code: str, subject_name: str = "") -> bool:
         "PROGRAMME ELECTIVE",
         "DEPT ELECTIVE",
         "DEPARTMENT ELECTIVE",
+        "MINOR",
+        "HONS",
+        "HONOURS",
+        "HONORS",
     )
-    return any(t in code for t in generic_tokens)
+    return any(t in text for t in generic_tokens)
 
 
 def subject_conflict_key(

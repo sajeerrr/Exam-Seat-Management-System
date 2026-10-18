@@ -511,9 +511,9 @@ class ConstrainedBestFitAllocator:
                         if st_depts and g.department not in st_depts:
                             continue
                         if not st_subjs:
-                            if not room.can_add_department(g.department, is_fallback_pass=True, is_extreme=True):
+                            if not room.can_add_department(g.department, is_fallback_pass=True, is_extreme=False):
                                 continue
-                            if not room.can_add_subject(g.subject_code, stream_name=s_name, department=g.department, subject_name=g.subject_name, is_fallback_pass=True, is_extreme=True):
+                            if not room.can_add_subject(g.subject_code, stream_name=s_name, department=g.department, subject_name=g.subject_name, is_fallback_pass=True, is_extreme=False):
                                 continue
                             other_stream_subjs = set()
                             for other_s_name, other_st in room.streams.items():
@@ -749,8 +749,8 @@ class ConstrainedBestFitAllocator:
             cohort_map = {}
             for s_name in ["A", "B", "C"]:
                 for stu in ur.get_stream(s_name).students:
-                    s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
-                    key = (stu.department, s_code)
+                    s_key = subject_conflict_key(stu.subject_code, stu.department, getattr(stu, "subject_name", ""))
+                    key = (stu.department, s_key)
                     cohort_map.setdefault(key, []).append(stu)
 
             if not cohort_map:
@@ -768,7 +768,7 @@ class ConstrainedBestFitAllocator:
             for allow_5th_subject in (False, True):
                 plan = []
                 possible = True
-                for (dept, s_code), cohort in cohort_map.items():
+                for (dept, s_key), cohort in cohort_map.items():
                     k = len(cohort)
                     placed = False
                     for r in reversed(candidate_rooms):
@@ -778,12 +778,12 @@ class ConstrainedBestFitAllocator:
                         if not r.can_add_department(dept, is_fallback_pass=True, is_extreme=allow_5th_subject):
                             continue
                         planned_subjs = {
-                            getattr(p[0][0], "normalized_subject_code", str(p[0][0].subject_code).strip().upper())
+                            subject_conflict_key(p[0][0].subject_code, p[0][0].department, getattr(p[0][0], "subject_name", ""))
                             for p in plan if p[1] == r
                         }
-                        cur_subjs = r.subjects | planned_subjs
+                        cur_subjs = set(r.subjects) | planned_subjs
                         max_allowed = 5 if allow_5th_subject else 4
-                        if s_code not in cur_subjs and len(cur_subjs) >= max_allowed:
+                        if s_key not in cur_subjs and len(cur_subjs) >= max_allowed:
                             continue
 
                         for s_name in ["A", "B", "C"]:
@@ -806,21 +806,21 @@ class ConstrainedBestFitAllocator:
                             if s_name == "C" and dept in st_b_depts:
                                 continue
 
-                            # Cross-stream subject disjointness: s_code cannot be in any other stream of room r
+                            # Cross-stream subject disjointness: s_key cannot be in any other stream of room r
                             other_subjs = set()
                             for other_s_name in ["A", "B", "C"]:
                                 if other_s_name != s_name:
                                     other_st = r.get_stream(other_s_name)
                                     if other_st:
                                         other_subjs.update(
-                                            getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                                            subject_conflict_key(s.subject_code, s.department, getattr(s, "subject_name", ""))
                                             for s in other_st.students
                                         )
                                     other_subjs.update(
-                                        getattr(p[0][0], "normalized_subject_code", str(p[0][0].subject_code).strip().upper())
+                                        subject_conflict_key(p[0][0].subject_code, p[0][0].department, getattr(p[0][0], "subject_name", ""))
                                         for p in plan if p[1] == r and p[2] == other_s_name
                                     )
-                            if s_code in other_subjs:
+                            if s_key in other_subjs:
                                 continue
 
                             plan.append((cohort, r, s_name))
@@ -872,92 +872,120 @@ class ConstrainedBestFitAllocator:
 
     def _balance_tail_rooms(self, context) -> bool:
         """
-        Balances students between the last active room and its preceding room if the
-        last room is below the 25-student threshold while the preceding room has spare students.
-        Moves intact cohorts to ensure both rooms achieve >= 25 students without introducing errors.
+        Balances students into underfilled tail rooms (< 25 students) by moving intact cohorts
+        or sub-cohorts from candidate preceding donor rooms that have surplus (>= 28 students).
+        Ensures:
+          1. Donor room never drops below the 25-student threshold.
+          2. No stream is emptied to 0 in an active donor room.
+          3. Receiver room strictly respects the 4-department and 4-subject maximum.
+          4. Zero adjacent horizontal clashes or intra-room subject duplicate clashes.
         """
-        active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
-        if len(active_rooms) < 2:
-            return False
-
-        last_room = active_rooms[-1]
-        prev_room = active_rooms[-2]
-
-        if last_room.used_capacity < 25 and prev_room.used_capacity > 25:
-            donor, receiver = prev_room, last_room
-        elif prev_room.used_capacity < 25 and last_room.used_capacity > 25:
-            donor, receiver = last_room, prev_room
-        else:
-            return False
-
-        if donor.used_capacity + receiver.used_capacity < 45:
-            return False
-
         from engine.validators.allocation_validator import AllocationValidator
         validator = AllocationValidator()
 
-        for s_from in ["C", "B", "A"]:
-            stream_from = donor.get_stream(s_from)
-            if not stream_from or len(stream_from.students) < 3:
+        active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
+        underfilled = [r for r in active_rooms if r.used_capacity < 25]
+        if not underfilled:
+            return False
+
+        changed_any = False
+        for receiver in underfilled:
+            if receiver.used_capacity >= 25:
                 continue
 
-            cohort_map = {}
-            for stu in stream_from.students:
-                s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
-                cohort_map.setdefault((stu.department, s_code), []).append(stu)
+            deficit = 25 - receiver.used_capacity
+            candidate_donors = [r for r in reversed(active_rooms) if r != receiver and r.used_capacity >= 28]
 
-            for (dept, s_code), cohort in cohort_map.items():
-                k = len(cohort)
-                # Keep donor reasonable
-                if donor.used_capacity - k < 20:
-                    continue
-                if not receiver.can_add_department(dept, is_fallback_pass=True, is_extreme=True):
-                    continue
-                if not receiver.can_add_subject(s_code, department=dept, is_fallback_pass=True, is_extreme=True):
-                    continue
+            for donor in candidate_donors:
+                if receiver.used_capacity >= 25:
+                    break
+                needed = 25 - receiver.used_capacity
 
-                for s_to in ["A", "B", "C"]:
-                    stream_to = receiver.get_stream(s_to)
-                    if not stream_to or len(stream_to.students) + k > stream_to.capacity:
+                move_found = False
+                for s_from in ["C", "B", "A"]:
+                    stream_from = donor.get_stream(s_from)
+                    if not stream_from or len(stream_from.students) < 3:
                         continue
 
-                    # Strict adjacent stream department checks on receiver
-                    st_a_depts = receiver.get_stream("A").departments
-                    st_b_depts = receiver.get_stream("B").departments
-                    st_c_depts = receiver.get_stream("C").departments
-                    if s_to in ("A", "C") and dept in st_b_depts:
-                        continue
-                    if s_to == "B" and (dept in st_a_depts or dept in st_c_depts):
-                        continue
+                    cohort_map = {}
+                    for stu in stream_from.students:
+                        s_key = subject_conflict_key(stu.subject_code, stu.department, getattr(stu, "subject_name", ""))
+                        cohort_map.setdefault((stu.department, s_key), []).append(stu)
 
-                    to_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream_to.students}
-                    if to_subjs and s_code not in to_subjs:
-                        if receiver.used_capacity >= 25:
+                    for (dept, s_key), cohort in cohort_map.items():
+                        # Strict department and subject limits: MAX 4 on receiver
+                        if len(receiver.departments) >= 4 and dept not in receiver.departments:
+                            continue
+                        if len(receiver.subjects) >= 4 and s_key not in receiver.subjects:
                             continue
 
-                    other_subjs = set()
-                    for other_s in ["A", "B", "C"]:
-                        if other_s != s_to:
-                            other_st = receiver.get_stream(other_s)
-                            if other_st:
-                                other_subjs.update(
-                                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
-                                    for s in other_st.students
-                                )
-                    if s_code in other_subjs:
-                        continue
+                        possible_k = []
+                        if needed <= len(cohort) and (len(cohort) - needed >= 3 or len(cohort) == needed):
+                            possible_k.append(needed)
+                        if len(cohort) not in possible_k:
+                            possible_k.append(len(cohort))
+                        for cand_k in range(3, min(len(cohort) + 1, needed + 4)):
+                            if cand_k not in possible_k and (len(cohort) - cand_k >= 3 or len(cohort) == cand_k):
+                                possible_k.append(cand_k)
 
-                    # Test move with validation
-                    snapshot = context.snapshot()
-                    stream_from.students = [s for s in stream_from.students if s not in cohort]
-                    stream_to.students.extend(cohort)
+                        for k in possible_k:
+                            if k < 3 or len(cohort) - k in (1, 2):
+                                continue
+                            # Guard 1: Donor must stay >= 25
+                            if donor.used_capacity - k < 25:
+                                continue
+                            # Guard 2: Never empty an active stream down to 0
+                            if len(stream_from.students) - k == 0 and donor.used_capacity - k > 0:
+                                continue
 
-                    val = validator.validate(context)
-                    val_errs = [e for e in val.errors if "unallocated student" not in e]
-                    if not val_errs and (receiver.used_capacity >= 25 or receiver.used_capacity > donor.used_capacity):
-                        return True
-                    else:
-                        context.restore(snapshot)
+                            for s_to in ["A", "B", "C"]:
+                                stream_to = receiver.get_stream(s_to)
+                                if not stream_to or len(stream_to.students) + k > stream_to.capacity:
+                                    continue
 
-        return False
+                                # Guard 3: Horizontal adjacency
+                                st_a_depts = receiver.get_stream("A").departments
+                                st_b_depts = receiver.get_stream("B").departments
+                                st_c_depts = receiver.get_stream("C").departments
+                                if s_to in ("A", "C") and dept in st_b_depts:
+                                    continue
+                                if s_to == "B" and (dept in st_a_depts or dept in st_c_depts):
+                                    continue
+
+                                # Guard 4: Cross-stream subject disjointness
+                                other_subjs = set()
+                                for other_s in ["A", "B", "C"]:
+                                    if other_s != s_to:
+                                        other_st = receiver.get_stream(other_s)
+                                        if other_st:
+                                            other_subjs.update(
+                                                subject_conflict_key(s.subject_code, s.department, getattr(s, "subject_name", ""))
+                                                for s in other_st.students
+                                            )
+                                if s_key in other_subjs:
+                                    continue
+
+                                # Test move with validation
+                                move_cohort = cohort[:k]
+                                snapshot = context.snapshot()
+                                stream_from.students = [s for s in stream_from.students if s not in move_cohort]
+                                stream_to.students.extend(move_cohort)
+
+                                val = validator.validate(context)
+                                val_errs = [e for e in val.errors if "unallocated student" not in e]
+                                if not val_errs:
+                                    changed_any = True
+                                    move_found = True
+                                    break
+                                else:
+                                    context.restore(snapshot)
+
+                            if move_found:
+                                break
+                        if move_found:
+                            break
+                    if move_found:
+                        break
+
+        return changed_any
 
