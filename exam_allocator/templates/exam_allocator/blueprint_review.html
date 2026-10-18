@@ -958,7 +958,7 @@
     <div id="validationAlertsContainer">
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
-        <strong>⚠️ Blueprint Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+        <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
         <ul style="margin: 6px 0 0 18px; padding: 0;">
             {% for err in blueprint.validation_errors %}
             <li>{{ err }}</li>
@@ -968,13 +968,18 @@
     {% endif %}
 
     {% if blueprint and blueprint.validation_warnings %}
-    <div class="alert-box alert-warning">
-        <strong>ℹ️ Optimization Warnings:</strong>
-        <ul style="margin: 6px 0 0 18px; padding: 0;">
-            {% for w in blueprint.validation_warnings %}
-            <li>{{ w }}</li>
-            {% endfor %}
-        </ul>
+    <div class="alert-box alert-warning" id="blueprintWarningBox">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+            <div style="flex: 1;">
+                <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                    {% for w in blueprint.validation_warnings %}
+                    <li>{{ w }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     </div>
     {% endif %}
 
@@ -1025,19 +1030,7 @@
     </div>
     {% endif %}
 
-    {% if has_dummy_rooms %}
-    <div id="dummyRoomsAlertBanner" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #f59e0b; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 24px;">⚠️</span>
-            <div>
-                <strong style="color: #92400e; font-size: 14px;">Placeholder Dummy Rooms Allocated</strong>
-                <div style="color: #b45309; font-size: 12px; margin-top: 2px;">
-                    Available classrooms were insufficient for all students. Dummy rooms were automatically created so all students could be allocated. <strong>Please assign real room names to all dummy rooms before physical seats can be generated.</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+
 
     <!-- MINIMALISTIC ROOM ALLOCATION BOARD -->
     {% if rooms_data %}
@@ -1925,7 +1918,7 @@ function updateBoardFromData(data) {
         if (data.errors && data.errors.length) {
             alertsHtml += `
             <div class="alert-box alert-danger">
-                <strong>⚠️ Blueprint Hard Constraint Errors (${data.errors.length}):</strong>
+                <strong>⚠️ Allocation Hard Constraint Errors (${data.errors.length}):</strong>
                 <ul style="margin: 6px 0 0 18px; padding: 0;">
                     ${data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
                 </ul>
@@ -1933,11 +1926,16 @@ function updateBoardFromData(data) {
         }
         if (data.warnings && data.warnings.length) {
             alertsHtml += `
-            <div class="alert-box alert-warning">
-                <strong>ℹ️ Optimization Warnings:</strong>
-                <ul style="margin: 6px 0 0 18px; padding: 0;">
-                    ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
-                </ul>
+            <div class="alert-box alert-warning" id="blueprintWarningBox">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+                    <div style="flex: 1;">
+                        <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                        <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                            ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
             </div>`;
         }
         if ((!data.errors || !data.errors.length) && (!data.warnings || !data.warnings.length)) {
@@ -1999,12 +1997,7 @@ function updateBoardFromData(data) {
         card.innerHTML = buildRoomCardHTML(r);
     });
 
-    // Update Dummy Rooms Alert Banner
-    const dummyRemaining = (data.rooms || []).some(r => r.is_dummy || (r.room_number && r.room_number.startsWith('Dummy Room')));
-    const banner = document.getElementById('dummyRoomsAlertBanner');
-    if (banner) {
-        banner.style.display = dummyRemaining ? 'flex' : 'none';
-    }
+
 
     // Rebind Drag and Drop listeners
     initDragAndDrop();
@@ -2810,11 +2803,7 @@ function submitAssignRoomName(event) {
             updateUIWithResult(data);
             showToast('Real classroom name assigned successfully!', 'success');
             closeAssignRoomNameModal();
-            const dummyRemaining = (data.rooms || []).some(r => r.is_dummy || (r.room_number && r.room_number.startsWith('Dummy Room')));
-            const banner = document.getElementById('dummyRoomsAlertBanner');
-            if (banner) {
-                banner.style.display = dummyRemaining ? 'flex' : 'none';
-            }
+
         } else {
             showToast('Failed to assign room: ' + (data.error || 'Unknown error'), 'error');
         }

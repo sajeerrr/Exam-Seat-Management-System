@@ -601,24 +601,16 @@ class BlueprintService:
                     f"{', '.join(sorted(overlap_bc))}."
                 )
 
-            # Check if ABA is used when ABC was possible
-            if rb.pattern == "ABA" and len(room_depts) >= 3:
-                warnings.append(
-                    f"Room {rb.room.room_number} is configured as ABA despite having 3+ departments available."
-                )
-
-            # Check if this room is an unassigned dummy placeholder room
-            if rb.room.is_dummy_room:
-                errors.append(
-                    f"Room '{rb.room.room_number}' is an unassigned placeholder. Please assign a real classroom name before finalizing or generating seats."
-                )
+        # Check if there are unassigned dummy placeholder rooms
+        dummy_rooms = [rb.room.room_number for rb in room_blueprints if rb.room.is_dummy_room]
+        if dummy_rooms:
+            names = ", ".join(f"'{name}'" for name in dummy_rooms)
+            warnings.append(
+                f"Placeholder dummy room(s) allocated: {names}. Please assign real classroom name(s) before finalizing."
+            )
 
         # Department scattering metric: sum of (rooms_count - 1) for depts spanning multiple rooms
         dept_scattering = sum(max(0, len(rms) - 1) for rms in dept_room_map.values())
-        if dept_scattering > 8:
-            warnings.append(
-                f"High department scattering detected ({dept_scattering} split instances across rooms)."
-            )
 
         room_utilization = (
             round((total_allocated / total_room_cap) * 100, 1) if total_room_cap > 0 else 0.0
@@ -1989,6 +1981,13 @@ class BlueprintService:
         Blocks finalization if any hard constraint fails.
         """
         with transaction.atomic():
+            dummy_rbs = [rb for rb in slot_blueprint.room_blueprints.all() if rb.room.is_dummy_room]
+            if dummy_rbs:
+                names = ", ".join(f"'{rb.room.room_number}'" for rb in dummy_rbs)
+                raise BlueprintValidationError(
+                    f"Blueprint finalization blocked: {len(dummy_rbs)} room(s) ({names}) are unassigned dummy placeholders. Please assign real classroom names before finalizing."
+                )
+
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
             if not is_valid:
                 raise BlueprintValidationError(

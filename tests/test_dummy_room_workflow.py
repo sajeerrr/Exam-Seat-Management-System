@@ -90,8 +90,8 @@ class DummyRoomWorkflowTests(TestCase):
 
         # Validation should report that the dummy room needs a real name
         is_valid, errors, warnings, stats = BlueprintService.validate_blueprint(bp)
-        self.assertFalse(is_valid)
-        self.assertTrue(any("dummy" in err.lower() or "unassigned placeholder" in err.lower() for err in errors))
+        self.assertTrue(is_valid)
+        self.assertTrue(any("dummy" in w.lower() or "placeholder" in w.lower() for w in warnings))
 
     def test_pre_seating_guard_blocks_physical_seats_for_dummy_rooms(self):
         """Physical seating generation must be blocked while dummy rooms remain."""
@@ -303,10 +303,10 @@ class DummyRoomWorkflowTests(TestCase):
         self.assertIsNotNone(dummy_rb)
         self.assertTrue(dummy_rb.room.is_dummy_room)
 
-        # Validate that bp has unassigned dummy placeholder error
-        is_valid, errors, _, _ = BlueprintService.validate_blueprint(bp)
-        self.assertFalse(is_valid)
-        self.assertTrue(any("unassigned placeholder" in err.lower() for err in errors))
+        # Validate that bp has unassigned dummy placeholder warning
+        is_valid, errors, warnings, _ = BlueprintService.validate_blueprint(bp)
+        self.assertTrue(is_valid)
+        self.assertTrue(any("dummy" in w.lower() or "placeholder" in w.lower() for w in warnings))
 
         # Create an available classroom Room 102 (capacity 45) and add it to the blueprint
         room102 = Room.objects.create(session=self.session, room_number="102", capacity=45, benches=15)
