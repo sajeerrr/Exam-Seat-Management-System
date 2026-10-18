@@ -29,26 +29,21 @@ class ConstrainedBestFitAllocator:
         prev_stream_depts = {"A": None, "B": None, "C": None}
         prev_special_code = None
 
-        total_students = sum(g.remaining_count for g in context.groups)
-        min_rooms = max(1, (total_students + 44) // 45)
-        remainder = total_students % 45
-        effective_caps = {}
-        if min_rooms > 1 and 0 < remainder < 25 and use_block_allocation:
-            total_streams = min_rooms * 3
-            base_cap = total_students // total_streams
-            extra = total_students % total_streams
-            extras_distributed = 0
-            for r_i in range(min_rooms):
-                for s_name in ["A", "B", "C"]:
-                    if extras_distributed < extra and s_name == "A":
-                        effective_caps[(r_i, s_name)] = base_cap + 1
-                        extras_distributed += 1
-                    else:
-                        effective_caps[(r_i, s_name)] = base_cap
-
         for room_idx, room in enumerate(room_allocations):
             if all(g.remaining_count == 0 for g in context.groups):
                 break
+
+            total_rem = sum(g.remaining_count for g in context.groups)
+            min_rooms_rem = max(1, (total_rem + 44) // 45)
+
+            # Tail room pacing: when only 2 rooms are needed and remaining students < 70,
+            # balance the remaining students evenly so neither room falls below 25.
+            if use_block_allocation and min_rooms_rem == 2 and total_rem < 70:
+                target_room_cap = max(25, (total_rem + 1) // 2)
+                target_stream_cap = max(8, min(15, (target_room_cap + 2) // 3))
+            else:
+                target_room_cap = room.classroom.capacity
+                target_stream_cap = stream_cap
 
             # Pre-plan room stream department targets
             if use_block_allocation:
@@ -102,7 +97,7 @@ class ConstrainedBestFitAllocator:
             fill_modes = ("empty_only", "same_dept_partial") if use_block_allocation else ("empty_only",)
             for fill_mode in fill_modes:
                 room_active = True
-                while room_active and room.used_capacity < room.classroom.capacity:
+                while room_active and room.used_capacity < (target_room_cap if use_block_allocation else room.classroom.capacity):
                     if use_block_allocation:
                         available_candidates = [
                             g for g in context.groups
@@ -130,7 +125,7 @@ class ConstrainedBestFitAllocator:
                         target_streams = [
                             s_name for s_name in ["A", "B", "C"]
                             if room.get_stream(s_name)
-                            and len(room.get_stream(s_name).students) < (13 if use_block_allocation else stream_cap)
+                            and len(room.get_stream(s_name).students) < (target_stream_cap if use_block_allocation else stream_cap)
                         ]
 
                     if not target_streams:
@@ -140,7 +135,8 @@ class ConstrainedBestFitAllocator:
 
                     for stream_name in target_streams:
                         stream = room.get_stream(stream_name)
-                        rem_in_stream = stream.capacity - len(stream.students)
+                        cur_stream_cap = target_stream_cap if use_block_allocation else stream.capacity
+                        rem_in_stream = cur_stream_cap - len(stream.students)
                         if rem_in_stream <= 0:
                             continue
 
@@ -304,10 +300,9 @@ class ConstrainedBestFitAllocator:
                     st = room.get_stream(s_name)
                     if not st:
                         continue
-                    # Guard: Never stuff additional students into streams that already have >= 13 students
-                    if len(st.students) >= 13:
+                    if len(st.students) >= (target_stream_cap if use_block_allocation else 13):
                         continue
-                    rem = st.capacity - len(st.students)
+                    rem = (target_stream_cap if use_block_allocation else st.capacity) - len(st.students)
                     if rem <= 0:
                         continue
                     st_b_subjs = room.get_stream("B").subject_codes
@@ -384,6 +379,44 @@ class ConstrainedBestFitAllocator:
                 if room.used_capacity < room.classroom.capacity:
                     self._allocate_special_in_room(room, context)
 
+        # Flex Top-Up Pass: if any students remain unallocated due to discrete cohort sizes,
+        # allow rooms to flex up to their physical capacity (15 per stream, 45 per room)
+        if use_block_allocation and any(g.remaining_count > 0 for g in context.groups):
+            for room in room_allocations:
+                if room.used_capacity == 0 or room.used_capacity >= room.classroom.capacity:
+                    continue
+                if all(g.remaining_count == 0 for g in context.groups):
+                    break
+                for s_name in ["A", "B", "C"]:
+                    stream = room.get_stream(s_name)
+                    if not stream or len(stream.students) >= stream.capacity:
+                        continue
+                    st_depts = set(stream.departments)
+                    st_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream.students}
+                    for g in context.groups:
+                        if g.remaining_count == 0:
+                            continue
+                        g_norm = g.normalized_subject_code
+                        if st_subjs and g_norm not in st_subjs:
+                            continue
+                        if st_depts and g.department not in st_depts:
+                            continue
+                        take = min(stream.capacity - len(stream.students), g.remaining_count)
+                        if take <= 0:
+                            continue
+                        if take <= 2 and g.remaining_count > take:
+                            continue
+                        if g.remaining_count > take and (g.remaining_count - take) in (1, 2):
+                            if take - 2 >= 3:
+                                take -= 2
+                            elif take - 1 >= 3:
+                                take -= 1
+                            else:
+                                continue
+                        room.assign_to_stream(s_name, g, take)
+                        if len(stream.students) >= stream.capacity:
+                            break
+
         context.remaining_pool = RemainingPool(context.groups)
 
         total_capacity = sum(r.classroom.capacity for r in context.room_allocations)
@@ -435,6 +468,9 @@ class ConstrainedBestFitAllocator:
 
         # Consolidate underfilled tail rooms to eliminate threshold violations
         self._absorb_underfilled_tail_rooms(context)
+
+        # Balance tail rooms if the final room is underfilled (< 25 students)
+        self._balance_tail_rooms(context)
 
         # Balance streams within rooms (Option A: Cohorts-Intact)
         self._balance_room_streams(context)
@@ -602,7 +638,8 @@ class ConstrainedBestFitAllocator:
 
                         stream_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream.students}
                         if stream_subjs and s_code not in stream_subjs:
-                            continue
+                            if r.used_capacity >= 25:
+                                continue
 
                         st_a_depts = set(r.get_stream("A").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "A"}
                         st_b_depts = set(r.get_stream("B").departments) | {p[0][0].department for p in plan if p[1] == r and p[2] == "B"}
@@ -657,7 +694,8 @@ class ConstrainedBestFitAllocator:
                     ur.get_stream(s_name).students.clear()
 
                 from engine.validators.allocation_validator import AllocationValidator
-                val_errs, _ = AllocationValidator().validate(context, active_rooms)
+                val = AllocationValidator().validate(context)
+                val_errs = [e for e in val.errors if "unallocated student" not in e]
                 if val_errs:
                     # Rollback changes if validation fails
                     for r_obj, s_dict in snapshot.items():
@@ -677,4 +715,71 @@ class ConstrainedBestFitAllocator:
         """
         from engine.adaptive.stream_balancer import RoomStreamBalancer
         return RoomStreamBalancer().balance(context)
+
+    def _balance_tail_rooms(self, context) -> bool:
+        """
+        Balances students between the last active room and its preceding room if the
+        last room is below the 25-student threshold while the preceding room has spare students.
+        Moves intact cohorts to ensure both rooms achieve >= 25 students without introducing errors.
+        """
+        active_rooms = [r for r in context.room_allocations if r.used_capacity > 0]
+        if len(active_rooms) < 2:
+            return False
+
+        last_room = active_rooms[-1]
+        prev_room = active_rooms[-2]
+
+        if last_room.used_capacity < 25 and prev_room.used_capacity > 25:
+            donor, receiver = prev_room, last_room
+        elif prev_room.used_capacity < 25 and last_room.used_capacity > 25:
+            donor, receiver = last_room, prev_room
+        else:
+            return False
+
+        if donor.used_capacity + receiver.used_capacity < 45:
+            return False
+
+        from engine.validators.allocation_validator import AllocationValidator
+        validator = AllocationValidator()
+
+        for s_from in ["C", "B", "A"]:
+            stream_from = donor.get_stream(s_from)
+            if not stream_from or len(stream_from.students) < 3:
+                continue
+
+            cohort_map = {}
+            for stu in stream_from.students:
+                s_code = getattr(stu, "normalized_subject_code", str(stu.subject_code).strip().upper())
+                cohort_map.setdefault((stu.department, s_code), []).append(stu)
+
+            for (dept, s_code), cohort in cohort_map.items():
+                k = len(cohort)
+                # Keep donor reasonable
+                if donor.used_capacity - k < 20:
+                    continue
+                if not receiver.can_add_department(dept, is_fallback_pass=True):
+                    continue
+
+                for s_to in ["A", "B", "C"]:
+                    stream_to = receiver.get_stream(s_to)
+                    if not stream_to or len(stream_to.students) + k > stream_to.capacity:
+                        continue
+
+                    to_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in stream_to.students}
+                    if to_subjs and s_code not in to_subjs:
+                        continue
+
+                    # Test move with validation
+                    snapshot = context.snapshot()
+                    stream_from.students = [s for s in stream_from.students if s not in cohort]
+                    stream_to.students.extend(cohort)
+
+                    val = validator.validate(context)
+                    val_errs = [e for e in val.errors if "unallocated student" not in e]
+                    if not val_errs and (receiver.used_capacity >= 25 or receiver.used_capacity > donor.used_capacity):
+                        return True
+                    else:
+                        context.restore(snapshot)
+
+        return False
 

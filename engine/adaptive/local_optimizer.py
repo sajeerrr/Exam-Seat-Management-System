@@ -322,13 +322,13 @@ class LocalOptimizer:
                     if not source_stream.students:
                         break
 
-        # Phase 2: If an underfilled room still exists, try rebalancing from a 3-stream (45 students) room
+        # Phase 2: If an underfilled room still exists, try rebalancing from another room
         for target_room in context.room_allocations:
             if target_room.used_capacity == 0 or target_room.used_capacity >= dynamic_min:
                 continue
 
             for donor_room in context.room_allocations:
-                if donor_room == target_room or donor_room.used_capacity < 45:
+                if donor_room == target_room or donor_room.used_capacity <= dynamic_min:
                     continue
 
                 for d_stream_name in ["C", "A"]:
@@ -337,6 +337,8 @@ class LocalOptimizer:
                         continue
 
                     d_count = len(d_stream.students)
+                    if donor_room.used_capacity - d_count < dynamic_min:
+                        continue
                     for t_stream_name in ["C", "A", "B"]:
                         t_stream = target_room.get_stream(t_stream_name)
                         if t_stream and len(t_stream.students) == 0 and t_stream.remaining_capacity >= d_count:
