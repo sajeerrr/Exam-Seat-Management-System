@@ -19,6 +19,13 @@ class ConstrainedBestFitAllocator:
         initial_snapshot = context.snapshot()
         room_allocations = context.room_allocations
         has_special_groups = any(g.is_special_subject for g in context.groups)
+        stream_cap = room_allocations[0].classroom.column_capacity if room_allocations else 15
+        distinct_all_depts = set(g.department for g in context.groups)
+        use_block_allocation = (
+            len(distinct_all_depts) >= 2 or
+            any(g.strength >= stream_cap for g in context.groups) or
+            not has_special_groups
+        )
         prev_stream_depts = {"A": None, "B": None, "C": None}
         prev_special_code = None
 
@@ -26,16 +33,19 @@ class ConstrainedBestFitAllocator:
             if all(g.remaining_count == 0 for g in context.groups):
                 break
 
-            # Pre-plan room stream department targets for normal subjects
-            available_normal = [
-                g for g in context.groups
-                if not g.is_special_subject and g.remaining_count > 0
-            ]
+            # Pre-plan room stream department targets
+            if use_block_allocation:
+                available_for_plan = [g for g in context.groups if g.remaining_count > 0]
+            else:
+                available_for_plan = [
+                    g for g in context.groups
+                    if not g.is_special_subject and g.remaining_count > 0
+                ]
             room_plan_depts = {"A": None, "B": None, "C": None}
 
-            if available_normal:
+            if available_for_plan:
                 dept_totals = {}
-                for g in available_normal:
+                for g in available_for_plan:
                     dept_totals[g.department] = dept_totals.get(g.department, 0) + g.remaining_count
 
                 distinct_depts = sorted(dept_totals.keys(), key=lambda d: (-dept_totals[d], d))
@@ -74,163 +84,217 @@ class ConstrainedBestFitAllocator:
                     room_plan_depts["A"] = d_only
                     room_plan_depts["C"] = d_only
 
+            # Stream allocation:
+            # When use_block_allocation is True, Pass 1 prioritizes empty streams for fresh blocks,
+            # and Pass 2 fills partial streams if the room has remaining space.
+            fill_modes = ("empty_only", "partial") if use_block_allocation else ("empty_only",)
+            for fill_mode in fill_modes:
+                room_active = True
+                while room_active and room.used_capacity < room.classroom.capacity:
+                    if use_block_allocation:
+                        available_candidates = [
+                            g for g in context.groups
+                            if g.remaining_count > 0
+                        ]
+                    else:
+                        available_candidates = [
+                            g for g in context.groups
+                            if not g.is_special_subject and g.remaining_count > 0
+                        ]
+                    if not available_candidates:
+                        break
 
-            room_active = True
-            while room_active and room.used_capacity < room.classroom.capacity:
-                available_normal = [
-                    g for g in context.groups
-                    if not g.is_special_subject and g.remaining_count > 0
-                ]
-                if not available_normal:
-                    break
+                    if fill_mode == "empty_only":
+                        target_streams = [
+                            s_name for s_name in ["A", "B", "C"]
+                            if room.get_stream(s_name)
+                            and room.get_stream(s_name).remaining_capacity > 0
+                            and len(room.get_stream(s_name).students) == 0
+                        ]
+                        if not use_block_allocation:
+                            # If special groups remain, reserve Stream A for them so Streams B & C buffer them
+                            if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
+                                target_streams = [s for s in target_streams if s != "A"]
+                    else:
+                        target_streams = [
+                            s_name for s_name in ["A", "B", "C"]
+                            if room.get_stream(s_name)
+                            and room.get_stream(s_name).remaining_capacity > 0
+                        ]
 
-                target_streams = [
-                    s_name for s_name in ["A", "B", "C"]
-                    if room.get_stream(s_name)
-                    and room.get_stream(s_name).remaining_capacity > 0
-                    and len(room.get_stream(s_name).students) == 0
-                ]
-                # If special groups remain, reserve Stream A for them so Streams B & C buffer them
-                if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
-                    target_streams = [s for s in target_streams if s != "A"]
-                if not target_streams:
-                    break
+                    if not target_streams:
+                        break
 
-                best_assignment = None
+                    best_assignment = None
 
-                for stream_name in target_streams:
-                    stream = room.get_stream(stream_name)
-                    st_a_depts = room.get_stream("A").departments
-                    st_b_depts = room.get_stream("B").departments
-                    st_c_depts = room.get_stream("C").departments
+                    for stream_name in target_streams:
+                        stream = room.get_stream(stream_name)
+                        st_a_depts = room.get_stream("A").departments
+                        st_b_depts = room.get_stream("B").departments
+                        st_c_depts = room.get_stream("C").departments
 
-                    for group in available_normal:
-                        if not room.can_add_department(group.department, is_fallback_pass=False):
-                            if not room.can_add_department(group.department, is_fallback_pass=True):
+                        st_a_norm = {
+                            getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                            for s in room.get_stream("A").students
+                        }
+                        st_b_norm = {
+                            getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                            for s in room.get_stream("B").students
+                        }
+                        st_c_norm = {
+                            getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                            for s in room.get_stream("C").students
+                        }
+
+                        for group in available_candidates:
+                            if not room.can_add_department(group.department, is_fallback_pass=False):
+                                if not room.can_add_department(group.department, is_fallback_pass=True):
+                                    continue
+
+                            g_norm = group.normalized_subject_code
+
+                            # Subject clash checks
+                            if not group.is_special_subject:
+                                if not room.can_seat_subject(
+                                    stream_name,
+                                    group.subject_code,
+                                    group.department,
+                                    group.subject_name,
+                                    is_special_subject=False,
+                                ):
+                                    continue
+                            else:
+                                # Horizontal subject clash check for special subjects
+                                if stream_name == "A" and (group.subject_code in room.get_stream("B").subject_codes or g_norm in st_b_norm):
+                                    continue
+                                if stream_name == "B":
+                                    if group.subject_code in room.get_stream("A").subject_codes or g_norm in st_a_norm:
+                                        continue
+                                    if group.subject_code in room.get_stream("C").subject_codes or g_norm in st_c_norm:
+                                        continue
+                                if stream_name == "C" and (group.subject_code in room.get_stream("B").subject_codes or g_norm in st_b_norm):
+                                    continue
+
+                            # Adjacent stream department checks
+                            avail_other_depts = any(g.department != group.department for g in available_candidates)
+                            if stream_name == "A" and group.department in st_b_depts:
+                                if avail_other_depts or not use_block_allocation:
+                                    continue
+                            if stream_name == "B":
+                                if (group.department in st_a_depts or group.department in st_c_depts) and (avail_other_depts or not use_block_allocation):
+                                    continue
+                                if not use_block_allocation and any(sg.department == group.department for sg in context.groups if sg.is_special_subject and sg.remaining_count > 0):
+                                    continue
+                            if stream_name == "C" and group.department in st_b_depts:
+                                if avail_other_depts or not use_block_allocation:
+                                    continue
+
+                            take = min(stream.remaining_capacity, group.remaining_count)
+                            if take <= 0:
                                 continue
 
-                        if not room.can_seat_subject(
-                            stream_name,
-                            group.subject_code,
-                            group.department,
-                            group.subject_name,
-                            is_special_subject=False,
+                            # Match with pre-planned room stream targets
+                            is_target_dept = 0 if room_plan_depts.get(stream_name) == group.department else 1
+
+                            # Pattern priority calculation:
+                            # 1: ABC Pattern (3 distinct departments across A, B, C)
+                            # 2: ABA Pattern (Stream A & C share department, B is different)
+                            # 3: Fallback / other
+                            pattern_prio = 3
+                            if stream_name == "C":
+                                if st_a_depts and st_b_depts:
+                                    if group.department not in st_a_depts and group.department not in st_b_depts:
+                                        pattern_prio = 1  # ABC
+                                    elif group.department in st_a_depts:
+                                        pattern_prio = 2  # ABA
+                            elif stream_name == "B":
+                                if st_a_depts and st_c_depts:
+                                    if group.department not in st_a_depts and group.department not in st_c_depts:
+                                        pattern_prio = 1  # ABC
+                                elif st_a_depts and not st_c_depts:
+                                    other_depts = {
+                                        g.department for g in available_candidates
+                                        if g.department not in st_a_depts and g.department != group.department
+                                    }
+                                    pattern_prio = 1 if other_depts else 2
+                            elif stream_name == "A":
+                                if st_b_depts and st_c_depts:
+                                    if group.department not in st_b_depts and group.department not in st_c_depts:
+                                        pattern_prio = 1  # ABC
+                                    elif group.department in st_c_depts:
+                                        pattern_prio = 2  # ABA
+                                else:
+                                    pattern_prio = 1
+
+                            consolidation_bonus = 0
+                            if prev_stream_depts.get(stream_name) == group.department:
+                                consolidation_bonus = 2
+                            elif group.department in stream.departments:
+                                consolidation_bonus = 1
+
+                            same_stream_dept_bonus = 3 if group.department in stream.departments else 0
+
+                            stream_order = {"A": 0, "B": 1, "C": 2}.get(stream_name, 0)
+                            candidate_key = (
+                                is_target_dept,
+                                -same_stream_dept_bonus,
+                                pattern_prio,
+                                stream_order,
+                                -consolidation_bonus,
+                                -group.remaining_count,
+                                group.department,
+                                group.subject_code,
+                            )
+
+                            if best_assignment is None or candidate_key < best_assignment[0]:
+                                best_assignment = (candidate_key, stream_name, group, take)
+
+                    if best_assignment:
+                        _, b_stream_name, b_group, b_take = best_assignment
+                        room.assign_to_stream(b_stream_name, b_group, b_take)
+                        prev_stream_depts[b_stream_name] = b_group.department
+                    else:
+                        room_active = False
+
+            if not use_block_allocation:
+                # If special groups remain, try to allocate Stream A as a dedicated pure elective stream
+                # ONLY when buffered horizontally by an occupied Stream B
+                stream_a = room.get_stream("A")
+                stream_b = room.get_stream("B")
+                if stream_a and len(stream_a.students) == 0 and stream_b and len(stream_b.students) > 0:
+                    avail_special = [
+                        g for g in context.groups
+                        if g.is_special_subject and g.remaining_count > 0
+                    ]
+                    st_b_subjs = room.get_stream("B").subject_codes
+                    st_b_norm_subjs = {
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                        for s in room.get_stream("B").students
+                    }
+
+                    valid_spec = []
+                    for g in avail_special:
+                        if not room.can_add_department(g.department, is_fallback_pass=True):
+                            continue
+                        if (
+                            g.subject_code in st_b_subjs
+                            or g.normalized_subject_code in st_b_subjs
+                            or g.normalized_subject_code in st_b_norm_subjs
                         ):
                             continue
 
-                        # Adjacent stream department checks
-                        if stream_name == "A" and group.department in st_b_depts:
-                            continue
-                        if stream_name == "B":
-                            if group.department in st_a_depts or group.department in st_c_depts:
-                                continue
-                            if any(sg.department == group.department for sg in context.groups if sg.is_special_subject and sg.remaining_count > 0):
-                                continue
-                        if stream_name == "C" and group.department in st_b_depts:
-                            continue
+                        cont_bonus = 2 if g.subject_code == prev_special_code else 0
+                        dept_bonus = 1 if prev_stream_depts.get("A") == g.department else 0
+                        key = (-cont_bonus, -dept_bonus, -g.remaining_count, g.subject_code)
+                        valid_spec.append((key, g))
 
-                        take = min(stream.remaining_capacity, group.remaining_count)
-                        if take <= 0:
-                            continue
-
-                        # Match with pre-planned room stream targets
-                        is_target_dept = 0 if room_plan_depts.get(stream_name) == group.department else 1
-
-                        # Pattern priority calculation:
-                        # 1: ABC Pattern (3 distinct departments across A, B, C)
-                        # 2: ABA Pattern (Stream A & C share department, B is different)
-                        # 3: Fallback / other
-                        pattern_prio = 3
-                        if stream_name == "C":
-                            if st_a_depts and st_b_depts:
-                                if group.department not in st_a_depts and group.department not in st_b_depts:
-                                    pattern_prio = 1  # ABC
-                                elif group.department in st_a_depts:
-                                    pattern_prio = 2  # ABA
-                        elif stream_name == "B":
-                            if st_a_depts and st_c_depts:
-                                if group.department not in st_a_depts and group.department not in st_c_depts:
-                                    pattern_prio = 1  # ABC
-                            elif st_a_depts and not st_c_depts:
-                                other_depts = {
-                                    g.department for g in available_normal
-                                    if g.department not in st_a_depts and g.department != group.department
-                                }
-                                pattern_prio = 1 if other_depts else 2
-                        elif stream_name == "A":
-                            if st_b_depts and st_c_depts:
-                                if group.department not in st_b_depts and group.department not in st_c_depts:
-                                    pattern_prio = 1  # ABC
-                                elif group.department in st_c_depts:
-                                    pattern_prio = 2  # ABA
-                            else:
-                                pattern_prio = 1
-
-                        consolidation_bonus = 0
-                        if prev_stream_depts.get(stream_name) == group.department:
-                            consolidation_bonus = 2
-                        elif group.department in stream.departments:
-                            consolidation_bonus = 1
-
-                        stream_order = {"A": 0, "B": 1, "C": 2}.get(stream_name, 0)
-                        candidate_key = (
-                            is_target_dept,
-                            pattern_prio,
-                            stream_order,
-                            -consolidation_bonus,
-                            -group.remaining_count,
-                            group.department,
-                            group.subject_code,
-                        )
-
-                        if best_assignment is None or candidate_key < best_assignment[0]:
-                            best_assignment = (candidate_key, stream_name, group, take)
-
-                if best_assignment:
-                    _, b_stream_name, b_group, b_take = best_assignment
-                    room.assign_to_stream(b_stream_name, b_group, b_take)
-                    prev_stream_depts[b_stream_name] = b_group.department
-                else:
-                    room_active = False
-
-            # If special groups remain, try to allocate Stream A as a dedicated pure elective stream
-            # ONLY when buffered horizontally by an occupied Stream B
-            stream_a = room.get_stream("A")
-            stream_b = room.get_stream("B")
-            if stream_a and len(stream_a.students) == 0 and stream_b and len(stream_b.students) > 0:
-                avail_special = [
-                    g for g in context.groups
-                    if g.is_special_subject and g.remaining_count > 0
-                ]
-                st_b_subjs = room.get_stream("B").subject_codes
-                st_b_norm_subjs = {
-                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
-                    for s in room.get_stream("B").students
-                }
-
-                valid_spec = []
-                for g in avail_special:
-                    if not room.can_add_department(g.department, is_fallback_pass=True):
-                        continue
-                    if (
-                        g.subject_code in st_b_subjs
-                        or g.normalized_subject_code in st_b_subjs
-                        or g.normalized_subject_code in st_b_norm_subjs
-                    ):
-                        continue
-
-                    cont_bonus = 2 if g.subject_code == prev_special_code else 0
-                    dept_bonus = 1 if prev_stream_depts.get("A") == g.department else 0
-                    key = (-cont_bonus, -dept_bonus, -g.remaining_count, g.subject_code)
-                    valid_spec.append((key, g))
-
-                if valid_spec:
-                    valid_spec.sort(key=lambda x: x[0])
-                    best_spec = valid_spec[0][1]
-                    take = min(stream_a.capacity, best_spec.remaining_count)
-                    room.assign_to_stream("A", best_spec, take)
-                    prev_stream_depts["A"] = best_spec.department
-                    prev_special_code = best_spec.subject_code
+                    if valid_spec:
+                        valid_spec.sort(key=lambda x: x[0])
+                        best_spec = valid_spec[0][1]
+                        take = min(stream_a.capacity, best_spec.remaining_count)
+                        room.assign_to_stream("A", best_spec, take)
+                        prev_stream_depts["A"] = best_spec.department
+                        prev_special_code = best_spec.subject_code
 
             if any(g.is_special_subject and g.remaining_count > 0 for g in context.groups):
                 self._allocate_special_in_room(room, context)
@@ -262,8 +326,8 @@ class ConstrainedBestFitAllocator:
             else:
                 context.restore(snapshot)
 
-        if not has_special_groups:
-            snapshot_before_balance = context.snapshot()
+        snapshot_before_balance = context.snapshot()
+        if use_block_allocation:
             try:
                 context = self.local_optimizer.optimize(context)
                 bal_result = self.validator.validate(context)

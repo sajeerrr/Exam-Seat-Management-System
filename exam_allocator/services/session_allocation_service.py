@@ -331,6 +331,44 @@ def save_session_seat_plan(
             adj_c = s_num + dc
             if adj_c < 1 or adj_c > 3:
                 continue
+
+            # Column seating (vertical adjacency dc == 0) within a stream is valid
+            # when horizontally buffered by an adjacent stream with different department/subject
+            if dc == 0:
+                is_buffered = False
+                if s_num in (1, 3):  # Stream A (1) or Stream C (3) buffered by Stream B (2)
+                    b_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 2
+                    ]
+                    if b_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in b_students
+                    ):
+                        is_buffered = True
+                elif s_num == 2:  # Stream B (2) buffered by Stream A (1) or Stream C (3)
+                    a_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 1
+                    ]
+                    c_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 3
+                    ]
+                    buff_a = a_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in a_students
+                    )
+                    buff_c = c_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in c_students
+                    )
+                    if buff_a or buff_c:
+                        is_buffered = True
+
+                if is_buffered:
+                    continue
+
             for db in (-1, 0, 1):
                 if dc == 0 and db == 0:
                     continue
