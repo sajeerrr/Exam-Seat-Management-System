@@ -14,6 +14,12 @@ class AllocationLimits:
     MAX_DEPARTMENTS_EXTREME: int = 5
     MAX_DEPARTMENTS_PER_ROOM: int = 4
 
+    # Maximum subjects (exams / question papers) per room
+    MAX_SUBJECTS_NORMAL: int = 4
+    MAX_SUBJECTS_FALLBACK: int = 4
+    MAX_SUBJECTS_EXTREME: int = 5
+    MAX_SUBJECTS_PER_ROOM: int = 4
+
     # Stream capacity (students per stream/column)
     DEFAULT_STREAM_CAPACITY: int = 15
 

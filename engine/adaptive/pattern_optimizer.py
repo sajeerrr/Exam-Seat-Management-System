@@ -158,8 +158,13 @@ class PatternEvaluator:
             len(left_room.departments) <= 4
             and len(right_room.departments) <= 4
         )
+        subjs_count_valid = (
+            len(left_room.subjects) <= 4
+            and len(right_room.subjects) <= 4
+        )
         valid = (
             depts_valid
+            and subjs_count_valid
             and self._room_subjects_valid(left_room)
             and self._room_subjects_valid(right_room)
             and self._department_fragmentation(context) <= before_fragments

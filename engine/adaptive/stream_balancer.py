@@ -122,6 +122,15 @@ class RoomStreamBalancer:
                             st_to.students = orig_to
                             continue
 
+                        # Check that no two streams share any subject code
+                        st_a_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("A").students}
+                        st_b_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("B").students}
+                        st_c_subjs = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("C").students}
+                        if not st_a_subjs.isdisjoint(st_b_subjs) or not st_b_subjs.isdisjoint(st_c_subjs) or not st_a_subjs.isdisjoint(st_c_subjs):
+                            st_from.students = orig_from
+                            st_to.students = orig_to
+                            continue
+
                         # Validate against full allocation constraints
                         v_res = self.validator.validate(context)
                         st_from.students = orig_from

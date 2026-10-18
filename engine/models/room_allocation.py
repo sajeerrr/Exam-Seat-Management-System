@@ -98,6 +98,52 @@ class RoomAllocation:
 
         return len(current_depts) < limit
 
+    @property
+    def subjects(self) -> set:
+        """Set of unique normalized subject codes currently in this room."""
+        subjs = set()
+        for stream in self.streams.values():
+            for s in stream.students:
+                code = (
+                    getattr(s, "normalized_subject_code", None)
+                    or str(getattr(s, "subject_code", "")).strip().upper()
+                )
+                if code:
+                    subjs.add(code)
+        return subjs
+
+    def can_add_subject(
+        self,
+        subject_code: str,
+        stream_name: Optional[str] = None,
+        is_fallback_pass: bool = False,
+        is_extreme: bool = False,
+    ) -> bool:
+        """Checks if adding this subject code would stay within room subject limits and single-stream invariant."""
+        norm_code = str(subject_code or "").strip().upper()
+        if stream_name:
+            for s_name, stream in self.streams.items():
+                if s_name != stream_name:
+                    other_subjs = {
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                        for s in stream.students
+                    }
+                    if norm_code in other_subjs:
+                        return False
+
+        current_subjs = self.subjects
+        if norm_code in current_subjs:
+            return True
+
+        if is_extreme:
+            limit = getattr(AllocationLimits, "MAX_SUBJECTS_EXTREME", 5)
+        elif is_fallback_pass:
+            limit = getattr(AllocationLimits, "MAX_SUBJECTS_FALLBACK", 4)
+        else:
+            limit = getattr(AllocationLimits, "MAX_SUBJECTS_NORMAL", 4)
+
+        return len(current_subjs) < limit
+
     def get_adjacent_seats(self, stream_name: str, bench_no: int) -> List[tuple[str, int]]:
         col_map = {"A": 0, "B": 1, "C": 2}
         inv_map = {0: "A", 1: "B", 2: "C"}
@@ -148,12 +194,24 @@ class RoomAllocation:
         subject_name: str = "",
         is_special_subject: bool = False,
     ) -> bool:
+        norm_code = str(subject_code or "").strip().upper()
+
+        # Cross-stream subject disjointness: each subject code in a room must be confined to exactly one stream
+        for s_name, stream in self.streams.items():
+            if s_name != stream_name:
+                other_subjs = {
+                    getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                    for s in stream.students
+                }
+                if norm_code in other_subjs:
+                    return False
+
         if is_special_subject:
             bench_no = len(self.streams[stream_name].students) + 1
             return self.can_seat_special_subject(stream_name, bench_no, subject_code)
 
         name = stream_name
-        subject_code = subject_conflict_key(
+        conflict_key = subject_conflict_key(
             subject_code,
             department,
             subject_name,
@@ -163,11 +221,11 @@ class RoomAllocation:
         sub_c = self.streams["C"].subject_codes
 
         if name == "A":
-            return subject_code not in sub_b
+            return conflict_key not in sub_b and conflict_key not in sub_c
         elif name == "B":
-            return (subject_code not in sub_a) and (subject_code not in sub_c)
+            return conflict_key not in sub_a and conflict_key not in sub_c
         elif name == "C":
-            return subject_code not in sub_b
+            return conflict_key not in sub_b and conflict_key not in sub_a
         return True
 
     def assign_to_stream(self, stream_name: str, group, count: int):

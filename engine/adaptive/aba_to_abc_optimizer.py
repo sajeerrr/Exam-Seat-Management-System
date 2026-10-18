@@ -118,6 +118,10 @@ class ABAToABCOptimizer:
         if len(room.departments) > max_depts:
             return False
 
+        max_subjs = getattr(AllocationLimits, "MAX_SUBJECTS_NORMAL", 4)
+        if len(room.subjects) > max_subjs:
+            return False
+
         return True
 
     def _swap_aba_stream_c_pairs(self, rooms: List[RoomAllocation]) -> None:

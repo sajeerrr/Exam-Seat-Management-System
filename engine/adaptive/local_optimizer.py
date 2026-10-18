@@ -138,6 +138,11 @@ class LocalOptimizer:
             if fragment["key"][0] not in target_room.departments:
                 continue
 
+            first_stu = fragment["students"][0]
+            frag_subj_code = getattr(first_stu, "normalized_subject_code", str(first_stu.subject_code).strip().upper())
+            if not target_room.can_add_subject(frag_subj_code, is_fallback_pass=False):
+                continue
+
             for target_stream_name in ("A", "B", "C"):
                 target_stream = target_room.get_stream(target_stream_name)
                 if target_stream.remaining_capacity < fragment["count"]:

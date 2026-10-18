@@ -591,11 +591,29 @@ class BlueprintService:
                     f"Room {rb.room.room_number} has {len(room_depts)} departments (extreme situation consolidation): {', '.join(sorted(room_depts))}."
                 )
 
+            # Subject limit check (<= 4 subjects per room normally, up to 5 in extreme situations)
+            room_subjects = set()
+            for s_subjs in stream_subjects.values():
+                room_subjects.update(s_subjs)
+
+            max_subj_ext = getattr(AllocationLimits, "MAX_SUBJECTS_EXTREME", 5)
+            max_subj_norm = getattr(AllocationLimits, "MAX_SUBJECTS_PER_ROOM", 4)
+            if len(room_subjects) > max_subj_ext:
+                errors.append(
+                    f"Room {rb.room.room_number} contains {len(room_subjects)} subjects "
+                    f"(limit is {max_subj_ext}): {', '.join(sorted(room_subjects))}."
+                )
+            elif len(room_subjects) > max_subj_norm:
+                warnings.append(
+                    f"Room {rb.room.room_number} has {len(room_subjects)} subjects (extreme situation consolidation): {', '.join(sorted(room_subjects))}."
+                )
+
             # ── 3. Special Subject Feasibility ──────────────────────────────
             # For special subjects (ELECTIVE, MINOR, HONOURS), adjacent streams with same subject code
             # would cause immediate horizontal adjacency conflicts on benches!
             overlap_ab = stream_subjects["A"].intersection(stream_subjects["B"])
             overlap_bc = stream_subjects["B"].intersection(stream_subjects["C"])
+            overlap_ac = stream_subjects["A"].intersection(stream_subjects["C"])
             if overlap_ab:
                 errors.append(
                     f"Room {rb.room.room_number} has same subject code in adjacent Streams A and B: "
@@ -605,6 +623,17 @@ class BlueprintService:
                 errors.append(
                     f"Room {rb.room.room_number} has same subject code in adjacent Streams B and C: "
                     f"{', '.join(sorted(overlap_bc))}."
+                )
+            special_subjs_in_room = {
+                sa.subject_code.strip().upper()
+                for sa in rb.stream_assignments.all()
+                if (sa.subject_category or "").upper() in ("ELECTIVE", "MINOR", "HONOURS")
+            }
+            special_overlap_ac = overlap_ac.intersection(special_subjs_in_room)
+            if special_overlap_ac:
+                errors.append(
+                    f"Room {rb.room.room_number} has same elective/special subject code in Streams A and C: "
+                    f"{', '.join(sorted(special_overlap_ac))}."
                 )
 
         # Check if there are unassigned dummy placeholder rooms
@@ -933,7 +962,9 @@ class BlueprintService:
 
             hard_errors = [
                 e for e in errors
-                if "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
             ]
 
             if hard_errors and reject_invalid:
@@ -1020,7 +1051,9 @@ class BlueprintService:
 
             hard_errors = [
                 e for e in errors
-                if "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
             ]
 
             if hard_errors and reject_invalid:
@@ -1435,8 +1468,9 @@ class BlueprintService:
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
             hard_errors = [
                 e for e in errors
-                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower())
-                and "unassigned placeholder" not in e.lower() and "dummy" not in e.lower()
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
             ]
             if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)

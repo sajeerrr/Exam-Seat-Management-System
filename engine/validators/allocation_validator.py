@@ -10,6 +10,7 @@ class AllocationValidator:
         self.validate_capacity(context, result)
         self.validate_streams(context, result)
         self.validate_departments(context, result)
+        self.validate_subjects(context, result)
         self.validate_adjacent_conflicts(context, result)
         self.validate_special_subject_adjacency(context, result)
         self.validate_unallocated_groups(context, result)
@@ -56,6 +57,22 @@ class AllocationValidator:
                     f"Room {room.classroom.room_no} has 5 departments (extreme situation fallback)"
                 )
         result.max_departments_per_room = max_depts
+
+    def validate_subjects(self, context, result):
+        max_subjs = 0
+        for room in context.room_allocations:
+            subjs_count = len(room.subjects)
+            if subjs_count > max_subjs:
+                max_subjs = subjs_count
+            if subjs_count > 5:
+                result.add_error(
+                    f"Room {room.classroom.room_no} exceeds max 5 subjects: {subjs_count} ({sorted(room.subjects)})"
+                )
+            elif subjs_count == 5:
+                result.add_warning(
+                    f"Room {room.classroom.room_no} has 5 subjects (extreme situation fallback): {sorted(room.subjects)}"
+                )
+        result.max_subjects_per_room = max_subjs
 
     def validate_adjacent_conflicts(self, context, result):
         for room in context.room_allocations:

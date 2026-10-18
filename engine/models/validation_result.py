@@ -13,6 +13,7 @@ class ValidationResult:
     minor_adjacency_violations: int = 0
     honours_adjacency_violations: int = 0
     max_departments_per_room: int = 0
+    max_subjects_per_room: int = 0
     missing_students: int = 0
     duplicate_students: int = 0
     capacity_violations: int = 0
@@ -33,6 +34,7 @@ class ValidationResult:
             f"Minor subject adjacency violations: {self.minor_adjacency_violations}\n"
             f"Honours subject adjacency violations: {self.honours_adjacency_violations}\n"
             f"Maximum departments per room: {self.max_departments_per_room}\n"
+            f"Maximum subjects per room: {self.max_subjects_per_room}\n"
             f"Missing students: {self.missing_students}\n"
             f"Duplicate students: {self.duplicate_students}\n"
             f"Capacity violations: {self.capacity_violations}\n"
