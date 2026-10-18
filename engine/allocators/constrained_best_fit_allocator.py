@@ -29,6 +29,23 @@ class ConstrainedBestFitAllocator:
         prev_stream_depts = {"A": None, "B": None, "C": None}
         prev_special_code = None
 
+        total_students = sum(g.remaining_count for g in context.groups)
+        min_rooms = max(1, (total_students + 44) // 45)
+        remainder = total_students % 45
+        effective_caps = {}
+        if min_rooms > 1 and 0 < remainder < 25 and use_block_allocation:
+            total_streams = min_rooms * 3
+            base_cap = total_students // total_streams
+            extra = total_students % total_streams
+            extras_distributed = 0
+            for r_i in range(min_rooms):
+                for s_name in ["A", "B", "C"]:
+                    if extras_distributed < extra and s_name == "A":
+                        effective_caps[(r_i, s_name)] = base_cap + 1
+                        extras_distributed += 1
+                    else:
+                        effective_caps[(r_i, s_name)] = base_cap
+
         for room_idx, room in enumerate(room_allocations):
             if all(g.remaining_count == 0 for g in context.groups):
                 break
@@ -82,12 +99,11 @@ class ConstrainedBestFitAllocator:
                 elif len(distinct_depts) == 1:
                     d_only = distinct_depts[0]
                     room_plan_depts["A"] = d_only
+                    room_plan_depts["B"] = d_only
                     room_plan_depts["C"] = d_only
 
-            # Stream allocation:
-            # When use_block_allocation is True, Pass 1 prioritizes empty streams for fresh blocks,
-            # and Pass 2 fills partial streams if the room has remaining space.
-            fill_modes = ("empty_only", "partial") if use_block_allocation else ("empty_only",)
+            # Stream allocation passes
+            fill_modes = ("empty_only", "same_dept_partial") if use_block_allocation else ("empty_only",)
             for fill_mode in fill_modes:
                 room_active = True
                 while room_active and room.used_capacity < room.classroom.capacity:
@@ -108,7 +124,6 @@ class ConstrainedBestFitAllocator:
                         target_streams = [
                             s_name for s_name in ["A", "B", "C"]
                             if room.get_stream(s_name)
-                            and room.get_stream(s_name).remaining_capacity > 0
                             and len(room.get_stream(s_name).students) == 0
                         ]
                         if not use_block_allocation:
@@ -119,7 +134,7 @@ class ConstrainedBestFitAllocator:
                         target_streams = [
                             s_name for s_name in ["A", "B", "C"]
                             if room.get_stream(s_name)
-                            and room.get_stream(s_name).remaining_capacity > 0
+                            and len(room.get_stream(s_name).students) < effective_caps.get((room_idx, s_name), stream_cap)
                         ]
 
                     if not target_streams:
@@ -129,6 +144,11 @@ class ConstrainedBestFitAllocator:
 
                     for stream_name in target_streams:
                         stream = room.get_stream(stream_name)
+                        target_cap = effective_caps.get((room_idx, stream_name), stream.capacity)
+                        rem_in_stream = target_cap - len(stream.students)
+                        if rem_in_stream <= 0:
+                            continue
+
                         st_a_depts = room.get_stream("A").departments
                         st_b_depts = room.get_stream("B").departments
                         st_c_depts = room.get_stream("C").departments
@@ -150,6 +170,9 @@ class ConstrainedBestFitAllocator:
                             if not room.can_add_department(group.department, is_fallback_pass=False):
                                 if not room.can_add_department(group.department, is_fallback_pass=True):
                                     continue
+
+                            if fill_mode == "same_dept_partial" and group.department not in stream.departments:
+                                continue
 
                             g_norm = group.normalized_subject_code
 
@@ -189,7 +212,7 @@ class ConstrainedBestFitAllocator:
                                 if avail_other_depts or not use_block_allocation:
                                     continue
 
-                            take = min(stream.remaining_capacity, group.remaining_count)
+                            take = min(rem_in_stream, group.remaining_count)
                             if take <= 0:
                                 continue
 
@@ -255,6 +278,69 @@ class ConstrainedBestFitAllocator:
                         prev_stream_depts[b_stream_name] = b_group.department
                     else:
                         room_active = False
+
+        if use_block_allocation and any(g.remaining_count > 0 for g in context.groups):
+            for room_idx, room in enumerate(room_allocations):
+                for s_name in ["A", "B", "C"]:
+                    st = room.get_stream(s_name)
+                    if not st:
+                        continue
+                    target_cap = effective_caps.get((room_idx, s_name), st.capacity)
+                    rem = target_cap - len(st.students)
+                    if rem <= 0:
+                        continue
+                    st_b_subjs = room.get_stream("B").subject_codes
+                    st_b_norm = {
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                        for s in room.get_stream("B").students
+                    }
+                    for g in [grp for grp in context.groups if grp.remaining_count > 0]:
+                        if not room.can_add_department(g.department, is_fallback_pass=True):
+                            continue
+                        g_norm = g.normalized_subject_code
+                        if s_name in ("A", "C") and (g.subject_code in st_b_subjs or g_norm in st_b_norm):
+                            continue
+                        if s_name == "B":
+                            st_a_subjs = room.get_stream("A").subject_codes
+                            st_c_subjs = room.get_stream("C").subject_codes
+                            st_a_norm = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("A").students}
+                            st_c_norm = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("C").students}
+                            if g.subject_code in st_a_subjs or g_norm in st_a_norm or g.subject_code in st_c_subjs or g_norm in st_c_norm:
+                                continue
+                        take = min(rem, g.remaining_count)
+                        room.assign_to_stream(s_name, g, take)
+                        rem -= take
+                        if rem <= 0:
+                            break
+
+            if any(g.remaining_count > 0 for g in context.groups):
+                for room in reversed(room_allocations):
+                    for s_name in ["A", "B", "C"]:
+                        st = room.get_stream(s_name)
+                        if not st or st.remaining_capacity <= 0:
+                            continue
+                        st_b_subjs = room.get_stream("B").subject_codes
+                        st_b_norm = {
+                            getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper())
+                            for s in room.get_stream("B").students
+                        }
+                        for g in [grp for grp in context.groups if grp.remaining_count > 0]:
+                            if not room.can_add_department(g.department, is_fallback_pass=True):
+                                continue
+                            g_norm = g.normalized_subject_code
+                            if s_name in ("A", "C") and (g.subject_code in st_b_subjs or g_norm in st_b_norm):
+                                continue
+                            if s_name == "B":
+                                st_a_subjs = room.get_stream("A").subject_codes
+                                st_c_subjs = room.get_stream("C").subject_codes
+                                st_a_norm = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("A").students}
+                                st_c_norm = {getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) for s in room.get_stream("C").students}
+                                if g.subject_code in st_a_subjs or g_norm in st_a_norm or g.subject_code in st_c_subjs or g_norm in st_c_norm:
+                                    continue
+                            take = min(st.remaining_capacity, g.remaining_count)
+                            room.assign_to_stream(s_name, g, take)
+                            if st.remaining_capacity <= 0:
+                                break
 
             if not use_block_allocation:
                 # If special groups remain, try to allocate Stream A as a dedicated pure elective stream
