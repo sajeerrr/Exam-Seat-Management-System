@@ -923,29 +923,31 @@
     }
 
     /* ════════════════ ALL STUDENTS FLAT TABLE VIEW ════════════════ */
-    .all-students-container {
-        width: 100%;
-        margin-bottom: 24px;
-        box-sizing: border-box;
-    }
-    .all-students-navbar {
+    .all-students-window {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: 12px;
-        padding: 10px 16px;
+        padding: 18px 22px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .all-students-window-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
-        box-sizing: border-box;
+        padding-bottom: 16px;
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
     }
     .all-students-search-wrap {
         position: relative;
         display: flex;
         align-items: center;
-        width: 420px;
+        width: 380px;
         max-width: 100%;
     }
     .all-students-search-icon {
@@ -981,40 +983,51 @@
         border-radius: 20px;
         white-space: nowrap;
     }
-    .all-students-table-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-        overflow: hidden;
+    .all-students-table-wrap {
+        overflow-x: auto;
         width: 100%;
-        box-sizing: border-box;
     }
-    .all-students-table-card table.alloc-table {
+    .all-students-window table.alloc-table {
         width: 100%;
         table-layout: fixed;
         border-collapse: collapse;
     }
-    .all-students-table-card table.alloc-table th {
+    .all-students-window table.alloc-table th {
         background: rgba(99, 102, 241, 0.06);
         color: var(--text-secondary);
         font-weight: 700;
         font-size: 11.5px;
         letter-spacing: 0.04em;
         text-transform: uppercase;
-        padding: 12px 16px;
+        padding: 10px 14px;
         border-bottom: 1px solid var(--border);
         white-space: nowrap;
     }
-    .all-students-table-card table.alloc-table td {
-        padding: 12px 16px;
+    .all-students-window table.alloc-table th:first-child {
+        border-top-left-radius: 6px;
+        border-bottom-left-radius: 6px;
+        padding-left: 18px;
+    }
+    .all-students-window table.alloc-table th:last-child {
+        border-top-right-radius: 6px;
+        border-bottom-right-radius: 6px;
+        padding-right: 18px;
+    }
+    .all-students-window table.alloc-table td {
+        padding: 12px 14px;
         border-bottom: 1px solid var(--border);
         color: var(--text-primary);
         vertical-align: middle;
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .all-students-table-card table.alloc-table tr:last-child td {
+    .all-students-window table.alloc-table td:first-child {
+        padding-left: 18px;
+    }
+    .all-students-window table.alloc-table td:last-child {
+        padding-right: 18px;
+    }
+    .all-students-window table.alloc-table tr:last-child td {
         border-bottom: none;
     }
     .class-tag {
@@ -2069,7 +2082,6 @@
             </div>
 
         </div>
-    </div>
 
     <!-- ════════════════ VIEW 2: DEPARTMENT / CLASS WISE ALLOCATIONS ════════════════ -->
     <!-- ════════════════ VIEW 2: DEPARTMENT / MASTER SEATING NOTICE ════════════════ -->
@@ -2247,9 +2259,9 @@
 
     <!-- ════════════════ VIEW 3: ALL STUDENTS FLAT TABLE ════════════════ -->
     <div id="view-all-students" class="view-panel" style="display: none;">
-        <div class="all-students-container">
-            <!-- TOP NAVBAR CARD (MATCHING ROOM NAVBAR CARD) -->
-            <div class="all-students-navbar">
+        <!-- UNIFIED STUDENT WINDOW (MATCHING EXACT HORIZONTAL SIZE, BORDER, BACKGROUND, AND PADDING OF TOP TUESDAY CARD) -->
+        <div class="all-students-window">
+            <div class="all-students-window-header">
                 <div class="all-students-search-wrap">
                     <span class="all-students-search-icon">🔍</span>
                     <input type="text" id="all-students-filter" class="search-input" placeholder="Search by Roll No, Name, Room, Class, Subject..." onkeyup="filterAllStudentsTable()">
@@ -2259,54 +2271,51 @@
                 </div>
             </div>
 
-            <!-- UNIFIED TABLE CARD (MATCHING ROOM-BLOCK CONTAINER) -->
-            <div class="all-students-table-card">
-                <div class="all-students-table-wrap">
-                    <table class="alloc-table" id="all-students-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 14%;">Roll Number</th>
-                                <th style="width: 26%;">Student Name</th>
-                                <th style="width: 14%;">Class</th>
-                                <th style="width: 12%;">Room</th>
-                                <th style="width: 16%;">Seat</th>
-                                <th style="width: 18%;">Subject</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for st in all_students %}
-                            <tr class="student-row">
-                                <td class="cell-roll">{{ st.roll_number }}</td>
-                                <td class="cell-name">{{ st.student_name }}</td>
-                                <td>
-                                    <span class="class-tag">{% if st.class_name %}{{ st.class_name }}{% else %}{{ st.department }}{% endif %}</span>
-                                </td>
-                                <td>
-                                    <span class="room-pill-sm">Room {{ st.room_number }}</span>
-                                </td>
-                                <td>
-                                    <span class="seat-pos-text">Bench {{ st.bench_number }} · Seat {{ st.seat_number }}</span>
-                                    <span class="stream-badge-sm">{{ st.stream_letter }}</span>
-                                </td>
-                                <td>
-                                    <div class="subject-cell-stack">
-                                        <span class="code-badge {% if st.is_special %}special-badge{% else %}normal-badge{% endif %}">
-                                            {{ st.subject_code }}
-                                        </span>
-                                        <span class="subject-name-sub" title="{{ st.subject_name }}">{{ st.subject_name }}</span>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
-                                    No student allocations found for this exam slot.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="all-students-table-wrap">
+                <table class="alloc-table" id="all-students-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Roll Number</th>
+                            <th style="width: 26%;">Student Name</th>
+                            <th style="width: 14%;">Class</th>
+                            <th style="width: 12%;">Room</th>
+                            <th style="width: 16%;">Seat</th>
+                            <th style="width: 18%;">Subject</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for st in all_students %}
+                        <tr class="student-row">
+                            <td class="cell-roll">{{ st.roll_number }}</td>
+                            <td class="cell-name">{{ st.student_name }}</td>
+                            <td>
+                                <span class="class-tag">{% if st.class_name %}{{ st.class_name }}{% else %}{{ st.department }}{% endif %}</span>
+                            </td>
+                            <td>
+                                <span class="room-pill-sm">Room {{ st.room_number }}</span>
+                            </td>
+                            <td>
+                                <span class="seat-pos-text">Bench {{ st.bench_number }} · Seat {{ st.seat_number }}</span>
+                                <span class="stream-badge-sm">{{ st.stream_letter }}</span>
+                            </td>
+                            <td>
+                                <div class="subject-cell-stack">
+                                    <span class="code-badge {% if st.is_special %}special-badge{% else %}normal-badge{% endif %}">
+                                        {{ st.subject_code }}
+                                    </span>
+                                    <span class="subject-name-sub" title="{{ st.subject_name }}">{{ st.subject_name }}</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
+                                No student allocations found for this exam slot.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
