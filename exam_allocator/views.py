@@ -1344,6 +1344,39 @@ def api_blueprint_room_add(request, session_id):
         return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
 
 
+def api_blueprint_dummy_room_add(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    capacity = int(data.get("capacity", 45))
+
+    if not blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id is required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.add_dummy_room_to_blueprint(
+            slot_blueprint=blueprint,
+            capacity=capacity,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
 def api_blueprint_assign_room_name(request, session_id):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)

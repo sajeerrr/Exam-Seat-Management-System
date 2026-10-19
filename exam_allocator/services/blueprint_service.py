@@ -1595,6 +1595,85 @@ class BlueprintService:
             }
 
     @classmethod
+    def add_dummy_room_to_blueprint(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        capacity: int = 45,
+    ) -> Dict[str, Any]:
+        """
+        Create and append a new dummy placeholder room to the blueprint.
+        Ensures a unique 'Dummy Room N' name within the session.
+        """
+        with transaction.atomic():
+            session = slot_blueprint.session
+
+            existing_dummy_numbers = []
+            for r in Room.objects.filter(session=session):
+                if r.is_dummy_room:
+                    parts = str(r.room_number).strip().split()
+                    if len(parts) >= 3 and parts[-1].isdigit():
+                        existing_dummy_numbers.append(int(parts[-1]))
+                    elif len(parts) == 2 and parts[1].isdigit():
+                        existing_dummy_numbers.append(int(parts[1]))
+
+            for rb in slot_blueprint.room_blueprints.all():
+                parts = str(rb.room.room_number).strip().split()
+                if len(parts) >= 2 and parts[-1].isdigit():
+                    existing_dummy_numbers.append(int(parts[-1]))
+
+            next_num = max(existing_dummy_numbers, default=0) + 1
+            room_name = f"Dummy Room {next_num}"
+
+            while RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room__room_number=room_name).exists():
+                next_num += 1
+                room_name = f"Dummy Room {next_num}"
+
+            dummy_room, _ = Room.objects.get_or_create(
+                session=session,
+                room_number=room_name,
+                defaults={
+                    "capacity": capacity,
+                    "benches": math.ceil(capacity / 3),
+                    "building": "Unassigned",
+                    "is_dummy": True,
+                },
+            )
+
+            next_order = (slot_blueprint.room_blueprints.aggregate(models.Max("room_order"))["room_order__max"] or 0) + 1
+            rb = RoomBlueprint.objects.create(
+                slot_blueprint=slot_blueprint,
+                room=dummy_room,
+                capacity=dummy_room.capacity,
+                room_order=next_order,
+                pattern="EMPTY",
+                unused_capacity=dummy_room.capacity,
+            )
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+                "added_room_blueprint_id": rb.room_blueprint_id,
+                "added_room_number": dummy_room.room_number,
+            }
+
+    @classmethod
     def assign_real_room_name(
         cls,
         slot_blueprint: SlotBlueprint,

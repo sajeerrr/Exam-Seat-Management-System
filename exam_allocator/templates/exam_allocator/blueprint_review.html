@@ -747,6 +747,31 @@
         font-family: inherit;
         font-size: 13px;
     }
+    .add-dummy-room-tab-card {
+        border: 2px dashed rgba(99, 102, 241, 0.45);
+        border-radius: var(--radius);
+        padding: 18px 24px;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(99, 102, 241, 0.04);
+        transition: all 0.2s ease;
+        margin-top: 18px;
+        margin-bottom: 24px;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+    .add-dummy-room-tab-card:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+    }
+    .add-dummy-room-tab-card:active {
+        transform: translateY(0);
+    }
 
     /* ALLOCATION LOADING ANIMATION */
     .inline-spinner {
@@ -920,6 +945,9 @@
                 </button>
                 <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
                     ➕ Add Classroom
+                </button>
+                <button class="action-btn btn-secondary-action" onclick="addDummyRoom()" title="Add an unassigned placeholder classroom to this blueprint">
+                    ➕ Add Dummy Room
                 </button>
 
                 {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
@@ -1290,6 +1318,15 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- ADD DUMMY ROOM TAB AT BOTTOM OF ROOM BOARD -->
+    <div class="add-dummy-room-tab-card" id="addDummyRoomTab" onclick="addDummyRoom()" title="Click to add a dummy placeholder classroom">
+        <span style="font-size: 20px; line-height: 1;">➕</span>
+        <div style="text-align: left;">
+            <div style="font-weight: 700; font-size: 14px; color: #6366f1;">Add Dummy Room</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Add an unassigned placeholder room to reorganize, split, or balance students</div>
+        </div>
+    </div>
     {% elif blueprint %}
     <div class="alert-box alert-warning">
         Blueprint has no rooms allocated yet. Click "Recalculate Allocation" to allocate rooms.
@@ -1373,6 +1410,12 @@
                     <option value="" disabled>All available classrooms are already assigned</option>
                     {% endfor %}
                 </select>
+            </div>
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); text-align: center;">
+                <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px;">No real classrooms left or need extra placeholder capacity?</span>
+                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(99, 102, 241, 0.08); color: #6366f1; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
+                    ➕ Add Dummy Room Placeholder
+                </button>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button type="button" class="action-btn btn-secondary-action" onclick="closeAddRoomModal()">Cancel</button>
@@ -2271,6 +2314,61 @@ function submitAddRoom(e) {
         }
     })
     .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function addDummyRoom(capacity = 45) {
+    if (!BLUEPRINT_ID) return;
+
+    const tab = document.getElementById('addDummyRoomTab');
+    if (tab) {
+        tab.style.pointerEvents = 'none';
+        tab.style.opacity = '0.6';
+    }
+    showToast('Creating new dummy placeholder room...', 'info', 2000);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/dummy-room/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            capacity: capacity
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (tab) {
+            tab.style.pointerEvents = '';
+            tab.style.opacity = '';
+        }
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`✓ Added ${data.added_room_number || 'Dummy Room'} to blueprint!`, 'success', 3500);
+
+            // Smooth scroll to the newly added room card
+            if (data.added_room_blueprint_id) {
+                setTimeout(() => {
+                    const newCard = document.getElementById(`roomCard-${data.added_room_blueprint_id}`);
+                    if (newCard) {
+                        newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        newCard.style.outline = '2px solid #6366f1';
+                        setTimeout(() => { newCard.style.outline = ''; }, 2000);
+                    }
+                }, 100);
+            }
+        } else {
+            showToast('Failed to add dummy room: ' + (data.error || 'Unknown error'), 'error', 4500);
+        }
+    })
+    .catch(err => {
+        if (tab) {
+            tab.style.pointerEvents = '';
+            tab.style.opacity = '';
+        }
+        showToast('Request error: ' + err, 'error', 4000);
+    });
 }
 
 function removeRoomFromBlueprint(roomId, roomNumber) {

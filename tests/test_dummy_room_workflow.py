@@ -242,6 +242,57 @@ class DummyRoomWorkflowTests(TestCase):
         self.assertEqual(dummy_rb.room.room_number, "Auditorium Hall A")
         self.assertFalse(dummy_rb.room.is_dummy_room)
 
+    def test_add_dummy_room_to_blueprint(self):
+        """User can manually add dummy rooms to a blueprint with auto-incremented numbering."""
+        bp = BlueprintService.allocate_departments_for_slot(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+        )
+        initial_room_count = bp.room_blueprints.count()
+
+        # Add a dummy room
+        res1 = BlueprintService.add_dummy_room_to_blueprint(bp, capacity=45)
+        self.assertTrue(res1["success"])
+        self.assertEqual(bp.room_blueprints.count(), initial_room_count + 1)
+        new_rb1 = bp.room_blueprints.get(room_blueprint_id=res1["added_room_blueprint_id"])
+        self.assertTrue(new_rb1.room.is_dummy_room)
+        self.assertEqual(new_rb1.capacity, 45)
+        self.assertEqual(new_rb1.pattern, "EMPTY")
+
+        # Add a second dummy room and verify numbering increments
+        res2 = BlueprintService.add_dummy_room_to_blueprint(bp, capacity=60)
+        self.assertTrue(res2["success"])
+        new_rb2 = bp.room_blueprints.get(room_blueprint_id=res2["added_room_blueprint_id"])
+        self.assertNotEqual(new_rb1.room.room_number, new_rb2.room.room_number)
+        self.assertEqual(new_rb2.capacity, 60)
+        self.assertGreater(new_rb2.room_order, new_rb1.room_order)
+
+    def test_api_add_dummy_room(self):
+        """Test the POST /api/session/<id>/blueprint/dummy-room/add/ endpoint."""
+        bp = BlueprintService.allocate_departments_for_slot(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+        )
+        import json
+        from django.urls import reverse
+
+        url = reverse("exam_allocator:api_blueprint_dummy_room_add", args=[self.session.session_id])
+        response = self.client.post(
+            url,
+            data=json.dumps({
+                "blueprint_id": bp.blueprint_id,
+                "capacity": 45,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["success"])
+        self.assertIn("added_room_number", data)
+        self.assertTrue(data["added_room_number"].startswith("Dummy Room"))
+
     def test_tight_capacity_cp_fallback_and_overflow_dummy_handling(self):
         """
         Verify that when room capacity equals or is tight with cohort size,
