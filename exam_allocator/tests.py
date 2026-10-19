@@ -525,4 +525,42 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse("exam_allocator:import_data", args=[self.session.session_id]), response.url)
 
+    def test_session_allocation_result_department_allocations_view(self):
+        from exam_allocator.models import Department, Class, Student, Subject, Exam, ExamRegistration, Allocation
+        dept = Department.objects.create(session=self.session, department_code="MCA", department_name="Master of Computer Applications")
+        cls = Class.objects.create(department=dept, class_name="MCA 2 Year", semester=4, academic_year="2025-2026")
+        st1 = Student.objects.create(student_class=cls, roll_number="B23MCA01", student_name="Alice")
+        st2 = Student.objects.create(student_class=cls, roll_number="B23MCA02", student_name="Bob")
+
+        subj = Subject.objects.create(session=self.session, subject_code="MCA201", subject_name="Data Structures", semester=4)
+        exam = Exam.objects.create(subject=subj, exam_date="2026-03-12", session="AN", duration=180)
+
+        reg1 = ExamRegistration.objects.create(student=st1, exam=exam)
+        reg2 = ExamRegistration.objects.create(student=st2, exam=exam)
+
+        Allocation.objects.create(exam=exam, registration=reg1, room=self.room1, bench_number=1, seat_number=1)
+        Allocation.objects.create(exam=exam, registration=reg2, room=self.room1, bench_number=1, seat_number=2)
+
+        client = Client()
+        url = reverse("exam_allocator:session_allocation_result", args=[self.session.session_id])
+        response = client.get(url + "?date=2026-03-12&shift=AN")
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn("department_allocations", response.context)
+        dept_allocs = response.context["department_allocations"]
+        self.assertTrue(any(d["department_code"] == "MCA" for d in dept_allocs))
+
+        mca_alloc = next(d for d in dept_allocs if d["department_code"] == "MCA")
+        self.assertEqual(mca_alloc["total_students"], 2)
+        self.assertEqual(mca_alloc["class_name"], "MCA 2 Year")
+        self.assertEqual(len(mca_alloc["rooms_breakdown"]), 1)
+        self.assertEqual(mca_alloc["rooms_breakdown"][0]["room_number"], self.room1.room_number)
+        self.assertEqual(mca_alloc["rooms_breakdown"][0]["roll_range_display"], "B23MCA01 – B23MCA02")
+
+        html = response.content.decode("utf-8")
+        self.assertIn("btn-view-department", html)
+        self.assertIn("view-department", html)
+        self.assertIn("MCA 2 Year", html)
+
+
 

@@ -385,7 +385,6 @@ def session_allocation_result(request, session_id):
         # Pre-cache elective registrations for fast in-memory resolution
         from exam_allocator.models import ElectiveStudentRegistration
         from exam_allocator.services.engine_adapter import _is_matching_elective_exam
-        from collections import defaultdict
 
         elec_regs = ElectiveStudentRegistration.objects.filter(
             elective_subject__group__session=session
@@ -572,6 +571,80 @@ def session_allocation_result(request, session_id):
 
     all_slot_classes = sorted(list(set(r['class_name'] for r in all_slot_students if r['class_name'])))
 
+    # Build Department / Class Wise Allocations Breakdown
+    dept_class_groups = defaultdict(list)
+    for st in all_slot_students:
+        grp_name = st['class_name'] if st['class_name'] else st['department']
+        group_key = (st['department'], grp_name)
+        dept_class_groups[group_key].append(st)
+
+    department_allocations = []
+    all_dept_codes = set()
+
+    for (dept_code, class_name), st_list in dept_class_groups.items():
+        all_dept_codes.add(dept_code)
+        subjects_map = {}
+        for s in st_list:
+            if s['subject_code'] not in subjects_map:
+                subjects_map[s['subject_code']] = s['subject_name']
+        subjects_list = [{'code': code, 'name': name} for code, name in sorted(subjects_map.items())]
+
+        # Group students by room
+        room_groups = defaultdict(list)
+        for s in st_list:
+            room_groups[s['room_number']].append(s)
+
+        rooms_breakdown = []
+        for r_num, r_students in room_groups.items():
+            r_students.sort(key=lambda x: (x['bench_number'], x['seat_number']))
+            roll_sorted = sorted(r_students, key=lambda x: x['roll_number'])
+            roll_start = roll_sorted[0]['roll_number'] if roll_sorted else ""
+            roll_end = roll_sorted[-1]['roll_number'] if roll_sorted else ""
+            roll_range_display = f"{roll_start} – {roll_end}" if roll_start != roll_end else roll_start
+
+            benches_used = sorted(list(set(x['bench_number'] for x in r_students)))
+            if benches_used:
+                if len(benches_used) == 1:
+                    bench_display = f"Bench {benches_used[0]}"
+                elif benches_used[-1] - benches_used[0] == len(benches_used) - 1:
+                    bench_display = f"Benches {benches_used[0]}–{benches_used[-1]}"
+                else:
+                    bench_display = f"Benches {', '.join(str(b) for b in benches_used)}"
+            else:
+                bench_display = ""
+
+            streams_used = sorted(list(set(x['stream_letter'] for x in r_students)))
+            streams_display = f"Stream {', '.join(streams_used)}" if streams_used else ""
+
+            rooms_breakdown.append({
+                'room_number': r_num,
+                'student_count': len(r_students),
+                'roll_start': roll_start,
+                'roll_end': roll_end,
+                'roll_range_display': roll_range_display,
+                'bench_range': bench_display,
+                'stream': streams_display,
+                'students': r_students,
+            })
+
+        rooms_breakdown.sort(key=lambda x: try_int(x['room_number']))
+        st_list_sorted = sorted(st_list, key=lambda x: (x['roll_number'], x['room_number']))
+
+        department_allocations.append({
+            'department_code': dept_code,
+            'class_name': class_name,
+            'clean_class_name': BlueprintService.strip_section_suffix(class_name) if class_name else dept_code,
+            'total_students': len(st_list),
+            'subjects': subjects_list,
+            'rooms_breakdown': rooms_breakdown,
+            'rooms_list_str': ", ".join(f"Room {rb['room_number']} ({rb['student_count']})" for rb in rooms_breakdown),
+            'all_students': st_list_sorted,
+        })
+
+    department_allocations.sort(key=lambda x: (x['department_code'], x['class_name']))
+    all_dept_list = sorted(list(all_dept_codes))
+    active_view = request.GET.get('view', 'room-cards')
+
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
@@ -586,6 +659,9 @@ def session_allocation_result(request, session_id):
             "all_classes": all_slot_classes if selected_slot else [],
             "total_slot_students": len(all_slot_students) if selected_slot else 0,
             "all_students": all_slot_students if selected_slot else [],
+            "department_allocations": department_allocations,
+            "all_departments": all_dept_list,
+            "active_view": active_view,
             "missing_data_reason": missing_data_reason,
         },
     )

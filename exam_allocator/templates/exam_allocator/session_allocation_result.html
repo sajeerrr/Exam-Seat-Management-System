@@ -915,6 +915,274 @@
         border-color: var(--accent);
     }
 
+    /* ════════════════ DEPARTMENT / CLASS WISE VIEW ════════════════ */
+    .dept-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    .dept-pills-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+    .dept-pill {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12.5px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .dept-pill:hover {
+        border-color: var(--accent);
+        color: var(--text-primary);
+    }
+    .dept-pill.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #ffffff;
+    }
+    .dept-alloc-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px 24px;
+        box-shadow: var(--shadow-sm);
+        transition: border-color 0.15s;
+    }
+    .dept-alloc-card:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+    .dept-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 18px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+    .dept-card-title-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .dept-code-tag {
+        font-size: 11.5px;
+        font-weight: 800;
+        padding: 3px 9px;
+        border-radius: 6px;
+        background: rgba(99, 102, 241, 0.15);
+        color: var(--accent-light);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        letter-spacing: 0.05em;
+    }
+    .dept-class-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    .dept-clean-name {
+        font-size: 13px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+    .dept-card-subjects {
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .dept-subject-badge {
+        font-size: 12px;
+        color: var(--text-secondary);
+        background: rgba(255, 255, 255, 0.03);
+        padding: 3px 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+    .dept-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .dept-count-badge {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-primary);
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 5px 12px;
+        border-radius: 8px;
+    }
+    .btn-print-notice {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent-light);
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s;
+    }
+    .btn-print-notice:hover {
+        background: var(--accent);
+        color: #ffffff;
+    }
+    .dept-rooms-summary-bar {
+        margin-bottom: 14px;
+    }
+    .dept-rooms-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+    .dept-rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 12px;
+    }
+    .dept-room-tile {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        transition: border-color 0.15s, transform 0.15s;
+    }
+    .dept-room-tile:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+    }
+    .drt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .drt-room {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: 0.02em;
+    }
+    .drt-count {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+        padding: 2px 7px;
+        border-radius: 5px;
+    }
+    .drt-roll-range {
+        font-size: 13px;
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .drt-roll-lbl {
+        color: var(--text-muted);
+        font-size: 11.5px;
+    }
+    .drt-roll-val {
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        letter-spacing: 0.02em;
+    }
+    .drt-sub-meta {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .drt-dot {
+        font-weight: bold;
+        color: var(--border);
+    }
+    .dept-roster-toggle-wrap {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 10px;
+    }
+    .btn-toggle-roster {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: color 0.15s, background 0.15s;
+    }
+    .btn-toggle-roster:hover {
+        color: var(--accent-light);
+        background: rgba(99, 102, 241, 0.08);
+    }
+    .dept-roster-drawer {
+        margin-top: 14px;
+        border-top: 1px dashed var(--border);
+        padding-top: 14px;
+        overflow-x: auto;
+    }
+    .dept-roster-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12.5px;
+    }
+    .dept-roster-table th {
+        background: rgba(255, 255, 255, 0.03);
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 11px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: left;
+    }
+    .dept-roster-table td {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-primary);
+    }
+    .cell-roll {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 700;
+    }
+    .cell-name {
+        font-weight: 600;
+    }
+    .room-pill-sm {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 5px;
+        background: rgba(99, 102, 241, 0.15);
+        color: var(--accent-light);
+        font-weight: 700;
+        font-size: 11.5px;
+    }
+
     .empty-state {
         text-align: center;
         padding: 60px;
@@ -941,7 +1209,7 @@
         .top-nav, .slot-bar, .slot-focus-card, .slot-drawer, .control-toolbar,
         .top-rooms-navbar, .classroom-sidebar, .room-nav-btns, .view-switcher, .search-bar-wrap,
         .sidebar-filter-group, .classroom-legend, #allocationLoadingOverlay, #view-summary,
-        #view-all-students, .messages, .btn-secondary, button {
+        #view-department, #view-all-students, .messages, .btn-secondary, button {
             display: none !important;
         }
         .page-wrapper {
@@ -1285,6 +1553,9 @@
             <button class="view-btn active" id="btn-view-room-cards" onclick="switchView('room-cards')">
                 🪑 Room-by-Room Plan
             </button>
+            <button class="view-btn" id="btn-view-department" onclick="switchView('department')">
+                🏢 Department / Class Wise
+            </button>
             <button class="view-btn" id="btn-view-summary" onclick="switchView('summary')">
                 📊 Stream Overview
             </button>
@@ -1520,6 +1791,180 @@
             </div>
 
         </div>
+    </div>
+
+    <!-- ════════════════ VIEW 2: DEPARTMENT / CLASS WISE ALLOCATIONS ════════════════ -->
+    <div id="view-department" class="view-panel" style="display: none;">
+        
+        <!-- TOP CONTROLS: QUICK SEARCH & DEPARTMENT PILL FILTER -->
+        <div class="search-bar-wrap">
+            <input type="text" id="dept-filter-search" class="search-input"
+                   placeholder="🔍 Search Department, Class, Roll No, Room No, or Subject..."
+                   onkeyup="filterDepartmentCards()">
+            <span style="font-size: 12.5px; color: var(--text-muted);" id="dept-filter-count-display">
+                Showing {{ department_allocations|length }} Classes / Departments
+            </span>
+        </div>
+
+        {% if all_departments %}
+        <div class="dept-pills-bar">
+            <button type="button" class="dept-pill active" onclick="filterDeptCategory('ALL', this)">
+                All Departments ({{ all_departments|length }})
+            </button>
+            {% for d in all_departments %}
+            <button type="button" class="dept-pill" onclick="filterDeptCategory('{{ d }}', this)">
+                {{ d }}
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- DEPARTMENT & CLASS ALLOCATION CARDS -->
+        <div class="dept-cards-container" id="deptCardsContainer">
+            {% for item in department_allocations %}
+            <div class="dept-alloc-card"
+                 id="dept-card-{{ forloop.counter }}"
+                 data-dept="{{ item.department_code }}"
+                 data-class="{{ item.class_name }}"
+                 data-search="{{ item.department_code }} {{ item.class_name }} {{ item.rooms_list_str }} {% for s in item.subjects %}{{ s.code }} {{ s.name }} {% endfor %} {% for st in item.all_students %}{{ st.roll_number }} {{ st.student_name }} {% endfor %}">
+                
+                <!-- CARD HEADER: CLASS TITLE, DEPT BADGE, SUBJECTS & CANDIDATE COUNT -->
+                <div class="dept-card-header">
+                    <div>
+                        <div class="dept-card-title-group">
+                            <span class="dept-code-tag">{{ item.department_code }}</span>
+                            <h3 class="dept-class-title">{{ item.class_name }}</h3>
+                            {% if item.clean_class_name and item.clean_class_name != item.class_name %}
+                            <span class="dept-clean-name">({{ item.clean_class_name }})</span>
+                            {% endif %}
+                        </div>
+                        <div class="dept-card-subjects">
+                            {% for s in item.subjects %}
+                            <span class="dept-subject-badge">
+                                <strong>{{ s.code }}</strong>: {{ s.name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="dept-card-meta">
+                        <span class="dept-count-badge">👥 {{ item.total_students }} Candidates</span>
+                        <button type="button" class="btn-print-notice" onclick="printDeptNotice('notice-{{ forloop.counter }}')">
+                            <span>🖨️ Print Notice Sheet</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ROOMS DISTRIBUTION BREAKDOWN (WHERE ARE THEY ALLOCATED?) -->
+                <div class="dept-rooms-summary-bar">
+                    <div class="dept-rooms-label">
+                        📍 Seating Distribution Across {{ item.rooms_breakdown|length }} Classrooms:
+                    </div>
+                    <div class="dept-rooms-grid">
+                        {% for rb in item.rooms_breakdown %}
+                        <div class="dept-room-tile">
+                            <div class="drt-header">
+                                <span class="drt-room">Room {{ rb.room_number }}</span>
+                                <span class="drt-count">{{ rb.student_count }} Students</span>
+                            </div>
+                            <div class="drt-roll-range">
+                                <span class="drt-roll-lbl">Rolls:</span>
+                                <strong class="drt-roll-val">{{ rb.roll_range_display }}</strong>
+                            </div>
+                            <div class="drt-sub-meta">
+                                <span>{{ rb.stream }}</span>
+                                {% if rb.bench_range %}
+                                <span class="drt-dot">•</span>
+                                <span>{{ rb.bench_range }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- EXPANDABLE FULL STUDENT LIST FOR THIS CLASS -->
+                <div class="dept-roster-toggle-wrap">
+                    <button type="button" class="btn-toggle-roster" onclick="toggleDeptRoster('roster-{{ forloop.counter }}', this)">
+                        <span>View All {{ item.total_students }} Students</span>
+                        <span class="caret">▾</span>
+                    </button>
+                </div>
+                <div id="roster-{{ forloop.counter }}" class="dept-roster-drawer" style="display: none;">
+                    <table class="dept-roster-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">#</th>
+                                <th style="width: 140px;">Roll Number</th>
+                                <th>Student Name</th>
+                                <th style="width: 110px;">Allocated Room</th>
+                                <th style="width: 90px;">Bench</th>
+                                <th style="width: 130px;">Seat / Stream</th>
+                                <th style="width: 120px;">Subject Code</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for st in item.all_students %}
+                            <tr>
+                                <td style="color: var(--text-muted); font-size: 11px;">{{ forloop.counter }}</td>
+                                <td class="cell-roll">{{ st.roll_number }}</td>
+                                <td class="cell-name">{{ st.student_name }}</td>
+                                <td><span class="room-pill-sm">Room {{ st.room_number }}</span></td>
+                                <td style="font-weight: 600;">Bench {{ st.bench_number }}</td>
+                                <td>Seat {{ st.seat_number }} ({{ st.stream_letter }})</td>
+                                <td><span class="code-badge normal-badge">{{ st.subject_code }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- HIDDEN PRINTABLE NOTICE SHEET TEMPLATE (POPULATED INTO IFRAME ON PRINT) -->
+                <div id="notice-{{ forloop.counter }}" style="display: none;">
+                    <div class="notice-header">
+                        <h2>EXAMINATION SEATING ARRANGEMENT</h2>
+                        <div class="notice-meta-line">
+                            <span><strong>Class / Department:</strong> {{ item.class_name }} ({{ item.department_code }})</span>
+                            <span><strong>Date & Shift:</strong> {{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</span>
+                        </div>
+                        <div class="notice-meta-line">
+                            <span><strong>Subject(s):</strong> {% for s in item.subjects %}{{ s.code }} - {{ s.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
+                            <span><strong>Total Candidates:</strong> {{ item.total_students }}</span>
+                        </div>
+                    </div>
+                    <table class="notice-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 110px;">Classroom</th>
+                                <th>Roll Number Range</th>
+                                <th style="width: 90px; text-align: center;">Candidates</th>
+                                <th>Stream & Benches</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rb in item.rooms_breakdown %}
+                            <tr>
+                                <td><strong>Room {{ rb.room_number }}</strong></td>
+                                <td style="font-family: monospace; font-weight: 700; font-size: 11.5pt;">{{ rb.roll_range_display }}</td>
+                                <td style="text-align: center; font-weight: 800;">{{ rb.student_count }}</td>
+                                <td>{{ rb.stream }}{% if rb.bench_range %} ({{ rb.bench_range }}){% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="notice-footer">
+                        <span>Issued by Exam Cell</span>
+                        <span>Session: {{ session.name }}</span>
+                    </div>
+                </div>
+
+            </div><!-- /.dept-alloc-card -->
+            {% empty %}
+            <div class="empty-state">
+                <p>No department allocations found for this examination slot.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
 
     <!-- ════════════════ VIEW 3: ALL STUDENTS FLAT TABLE ════════════════ -->
     <div id="view-all-students" class="view-panel" style="display: none;">
@@ -1614,14 +2059,25 @@ function switchView(mode) {
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
     if (mode === 'summary') {
-        document.getElementById('view-summary').style.display = 'block';
-        document.getElementById('btn-view-summary').classList.add('active');
+        const p = document.getElementById('view-summary');
+        if (p) p.style.display = 'block';
+        const b = document.getElementById('btn-view-summary');
+        if (b) b.classList.add('active');
+    } else if (mode === 'department') {
+        const p = document.getElementById('view-department');
+        if (p) p.style.display = 'block';
+        const b = document.getElementById('btn-view-department');
+        if (b) b.classList.add('active');
     } else if (mode === 'room-cards') {
-        document.getElementById('view-room-cards').style.display = 'block';
-        document.getElementById('btn-view-room-cards').classList.add('active');
+        const p = document.getElementById('view-room-cards');
+        if (p) p.style.display = 'block';
+        const b = document.getElementById('btn-view-room-cards');
+        if (b) b.classList.add('active');
     } else if (mode === 'all-students') {
-        document.getElementById('view-all-students').style.display = 'block';
-        document.getElementById('btn-view-all-students').classList.add('active');
+        const p = document.getElementById('view-all-students');
+        if (p) p.style.display = 'block';
+        const b = document.getElementById('btn-view-all-students');
+        if (b) b.classList.add('active');
     }
 }
 
@@ -1842,15 +2298,161 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Close dropdown on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const wrap = document.getElementById('printDropdownWrap');
-        const menu = document.getElementById('printDropdownMenu');
-        if (menu && menu.classList.contains('show')) {
-            menu.classList.remove('show');
-            if (wrap) wrap.classList.remove('open');
+// ════════════════ DEPARTMENT / CLASS VIEW HELPERS ════════════════
+let currentSelectedDeptPill = "ALL";
+
+function filterDeptCategory(deptCode, btnEl) {
+    currentSelectedDeptPill = deptCode;
+    document.querySelectorAll('.dept-pill').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    filterDepartmentCards();
+}
+
+function filterDepartmentCards() {
+    const searchVal = (document.getElementById('dept-filter-search')?.value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.dept-alloc-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const cardDept = (card.getAttribute('data-dept') || '').trim();
+        const cardSearchText = (card.getAttribute('data-search') || '').toLowerCase();
+
+        const matchesDept = (currentSelectedDeptPill === 'ALL' || cardDept === currentSelectedDeptPill);
+        const matchesSearch = (!searchVal || cardSearchText.includes(searchVal));
+
+        if (matchesDept && matchesSearch) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
         }
+    });
+
+    const countDisplay = document.getElementById('dept-filter-count-display');
+    if (countDisplay) {
+        countDisplay.innerText = `Showing ${visibleCount} Classes / Departments`;
+    }
+}
+
+function toggleDeptRoster(rosterId, btnEl) {
+    const drawer = document.getElementById(rosterId);
+    if (!drawer) return;
+    const isShown = drawer.style.display !== 'none';
+    if (isShown) {
+        drawer.style.display = 'none';
+        if (btnEl) {
+            btnEl.innerHTML = `<span>View All Students</span> <span class="caret">▾</span>`;
+        }
+    } else {
+        drawer.style.display = 'block';
+        if (btnEl) {
+            btnEl.innerHTML = `<span>Hide Students</span> <span class="caret">▴</span>`;
+        }
+    }
+}
+
+function printDeptNotice(noticeId) {
+    const noticeEl = document.getElementById(noticeId);
+    if (!noticeEl) return;
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Department Seating Notice</title>
+            <style>
+                @page { size: A4 portrait; margin: 15mm 20mm; }
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                    color: #000;
+                    margin: 0;
+                    padding: 15px;
+                    font-size: 11pt;
+                }
+                .notice-header {
+                    text-align: center;
+                    border-bottom: 2.5px solid #000;
+                    padding-bottom: 12px;
+                    margin-bottom: 18px;
+                }
+                .notice-header h2 {
+                    margin: 0 0 10px;
+                    font-size: 16pt;
+                    font-weight: 900;
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase;
+                }
+                .notice-meta-line {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 6px;
+                    font-size: 10.5pt;
+                }
+                .notice-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 15px;
+                    margin-bottom: 25px;
+                }
+                .notice-table th {
+                    background: #f1f5f9;
+                    border: 1.5px solid #000;
+                    padding: 8px 12px;
+                    text-align: left;
+                    font-size: 10pt;
+                    text-transform: uppercase;
+                    letter-spacing: 0.04em;
+                }
+                .notice-table td {
+                    border: 1.5px solid #000;
+                    padding: 10px 12px;
+                    font-size: 11pt;
+                }
+                .notice-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 9.5pt;
+                    color: #555;
+                    border-top: 1px dotted #888;
+                    padding-top: 10px;
+                    margin-top: 30px;
+                }
+            </style>
+        </head>
+        <body>
+            ${noticeEl.innerHTML}
+        </body>
+        </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+        setTimeout(() => {
+            if (document.body.contains(printFrame)) {
+                document.body.removeChild(printFrame);
+            }
+        }, 1500);
+    }, 250);
+}
+
+// Check if a specific initial view was requested via query parameter
+document.addEventListener('DOMContentLoaded', function() {
+    const initialView = "{{ active_view|default:'room-cards' }}";
+    if (initialView && initialView !== 'room-cards') {
+        switchView(initialView);
     }
 });
 </script>
