@@ -1261,6 +1261,56 @@ class TwoStageAllocationTests(TestCase):
         unallocated_after = BlueprintService.get_unallocated_students(bp)
         self.assertLess(len(unallocated_after), len(unallocated_before))
 
+    def test_api_clear_rooms_with_blueprints(self):
+        """Test that clearing all classrooms deletes room blueprints and rooms without ProtectedError."""
+        bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+            status=SlotBlueprint.Status.VALIDATED,
+        )
+        RoomBlueprint.objects.create(
+            slot_blueprint=bp,
+            room=self.room1,
+            room_order=1,
+            capacity=45,
+        )
+        RoomBlueprint.objects.create(
+            slot_blueprint=bp,
+            room=self.room2,
+            room_order=2,
+            capacity=45,
+        )
+
+        response = self.client.post(f"/api/session/{self.session.session_id}/clear-rooms/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"success": True})
+        self.assertFalse(Room.objects.filter(session=self.session).exists())
+        self.assertFalse(SlotBlueprint.objects.filter(session=self.session).exists())
+        self.assertFalse(RoomBlueprint.objects.filter(room__in=[self.room1, self.room2]).exists())
+
+    def test_api_delete_single_room_with_blueprint(self):
+        """Test that deleting a single room cleans up its room blueprints without ProtectedError."""
+        bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date=self.exam_date,
+            shift=self.shift,
+            status=SlotBlueprint.Status.VALIDATED,
+        )
+        rb = RoomBlueprint.objects.create(
+            slot_blueprint=bp,
+            room=self.room1,
+            room_order=1,
+            capacity=45,
+        )
+
+        response = self.client.post(f"/api/room/{self.room1.room_id}/delete/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"success": True})
+        self.assertFalse(Room.objects.filter(room_id=self.room1.room_id).exists())
+        self.assertFalse(RoomBlueprint.objects.filter(pk=rb.pk).exists())
+
+
 
 
 

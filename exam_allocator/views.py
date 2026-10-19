@@ -26,6 +26,8 @@ from .models import (
     ElectiveGroup,
     ElectiveSubject,
     ElectiveStudentRegistration,
+    SlotBlueprint,
+    RoomBlueprint,
 )
 from .services.allocation_workflow import (
     AllocationWorkflowError,
@@ -107,6 +109,9 @@ def delete_session(request, session_id):
 
             # 1. Allocations — must go before Rooms are deleted
             Allocation.objects.filter(exam_id__in=exam_ids).delete()
+
+            # Slot blueprints & Room blueprints for this session
+            SlotBlueprint.objects.filter(session=session).delete()
 
             # 2. ExamRegistrations
             ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
@@ -2126,7 +2131,9 @@ def api_delete_room(request, room_id):
                 {"success": False, "error": "Cannot delete a room that has existing seat allocations."},
                 status=400,
             )
-        room.delete()
+        with transaction.atomic():
+            RoomBlueprint.objects.filter(room=room).delete()
+            room.delete()
         return JsonResponse({"success": True})
     except Exception as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=500)
@@ -2180,6 +2187,7 @@ def api_clear_timetable(request, session_id):
     with transaction.atomic():
         exam_ids = list(Exam.objects.filter(subject__session=session).values_list("exam_id", flat=True))
         Allocation.objects.filter(exam_id__in=exam_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
         ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
         ExamTarget.objects.filter(exam_id__in=exam_ids).delete()
         Exam.objects.filter(pk__in=exam_ids).delete()
@@ -2194,6 +2202,7 @@ def api_clear_students(request, session_id):
         class_ids = list(Class.objects.filter(department__session=session).values_list("class_id", flat=True))
         student_ids = list(Student.objects.filter(student_class_id__in=class_ids).values_list("student_id", flat=True))
         Allocation.objects.filter(registration__student_id__in=student_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
         ExamRegistration.objects.filter(student_id__in=student_ids).delete()
         Student.objects.filter(pk__in=student_ids).delete()
         Class.objects.filter(pk__in=class_ids).delete()
@@ -2207,8 +2216,9 @@ def api_clear_rooms(request, session_id):
     session = get_object_or_404(AllocationSession, session_id=session_id)
     with transaction.atomic():
         room_ids = list(Room.objects.filter(session=session).values_list("room_id", flat=True))
-        if Allocation.objects.filter(room_id__in=room_ids).exists():
-            return JsonResponse({"success": False, "error": "Cannot delete rooms because seat allocations exist."}, status=400)
+        Allocation.objects.filter(room_id__in=room_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
+        RoomBlueprint.objects.filter(room_id__in=room_ids).delete()
         Room.objects.filter(pk__in=room_ids).delete()
         UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.CLASSROOM_LIST).delete()
     return JsonResponse({"success": True})
