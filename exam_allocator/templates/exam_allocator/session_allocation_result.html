@@ -106,25 +106,32 @@
     .control-toolbar {
         display: flex;
         align-items: center;
-        margin-bottom: 20px;
+        justify-content: space-between;
+        margin-bottom: 12px;
         gap: 12px;
+        flex-wrap: wrap;
+    }
+    .control-toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
     .view-switcher-segmented {
         display: inline-flex;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 4px;
+        border-radius: 8px;
+        padding: 3px;
         gap: 4px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
     }
     .view-btn {
-        padding: 7px 18px;
-        border-radius: 7px;
+        padding: 5px 14px;
+        border-radius: 6px;
         border: none;
         background: transparent;
         color: var(--text-secondary);
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
@@ -924,17 +931,17 @@
     .dept-pills-bar {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         flex-wrap: wrap;
-        margin-bottom: 16px;
+        margin-bottom: 0;
     }
     .dept-pill {
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 12.5px;
+        padding: 5px 12px;
+        border-radius: 16px;
+        font-size: 12px;
         font-weight: 700;
         border: 1px solid var(--border);
-        background: var(--bg-card);
+        background: #ffffff;
         color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.15s ease;
@@ -952,32 +959,19 @@
     /* ════════════════ MASTER SEATING NOTICE SHEET (OFFICIAL NOTICE BOARD) ════════════════ */
     .master-notice-container {
         max-width: 1040px;
-        margin: 0 auto 30px;
-    }
-    .master-toolbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
-    }
-    .master-toolbar .search-bar-wrap {
-        flex: 1;
-        min-width: 280px;
-        margin-bottom: 0;
+        margin: 0 auto 20px;
     }
     .btn-print-master {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        height: 42px;
-        padding: 0 20px;
+        gap: 6px;
+        height: 34px;
+        padding: 0 16px;
         background: var(--accent);
         color: #ffffff;
         border: 1px solid var(--accent);
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 700;
         cursor: pointer;
         box-shadow: 0 2px 8px var(--accent-glow);
@@ -988,13 +982,60 @@
         opacity: 0.94;
         transform: translateY(-1px);
     }
+    .master-bar-inline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+    .master-search-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 320px;
+        max-width: 100%;
+    }
+    .master-search-wrap .search-input {
+        width: 100%;
+        padding: 7px 12px 7px 30px;
+        font-size: 12.5px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--text-primary);
+        outline: none;
+        transition: border-color 0.15s ease;
+    }
+    .master-search-wrap .search-input:focus {
+        border-color: var(--accent);
+    }
+    .master-search-icon {
+        position: absolute;
+        left: 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+    .master-count-badge {
+        position: absolute;
+        right: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        background: var(--bg-primary);
+        padding: 2px 8px;
+        border-radius: 10px;
+        pointer-events: none;
+    }
     .master-notice-sheet {
         background: #ffffff;
         color: #000000;
         border: 1.5px solid #cbd5e1;
         border-radius: 8px;
-        padding: 32px 36px 40px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        padding: 20px 28px 30px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
         box-sizing: border-box;
     }
@@ -1003,35 +1044,35 @@
         margin-bottom: 6px;
     }
     .master-college-title {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 900;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: #000000;
         margin: 0;
-        padding-bottom: 6px;
+        padding-bottom: 4px;
         border-bottom: 1.5px solid #000000;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
     .master-exam-title {
-        font-size: 13.5px;
+        font-size: 12.5px;
         font-weight: 800;
         letter-spacing: 0.04em;
         text-transform: uppercase;
         color: #1e293b;
-        margin: 6px 0 0;
-        padding-bottom: 6px;
+        margin: 4px 0 0;
+        padding-bottom: 4px;
         border-bottom: 1.5px solid #000000;
     }
     .master-meta-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 2px 2px;
-        font-size: 13.5px;
+        padding: 4px 2px 2px;
+        font-size: 12.5px;
         font-weight: 800;
         color: #000000;
-        margin-top: 4px;
+        margin-top: 3px;
     }
     tbody.master-branch-group {
         page-break-inside: avoid !important;
@@ -1745,6 +1786,12 @@
                 📋 All Students ({{ total_slot_students }})
             </button>
         </div>
+
+        <div class="control-toolbar-actions">
+            <button type="button" class="btn-print-master" id="top-btn-print-master" onclick="printMasterNoticeSheet()" title="Print Official Master Notice Board (A4 Portrait)" style="display: none;">
+                <span>🖨️ Print Master Notice</span>
+            </button>
+        </div>
     </div>
 
     <!-- ════════════════ VIEW 1: STREAM OVERVIEW TABLE ════════════════ -->
@@ -1981,34 +2028,31 @@
         
         <div class="master-notice-container">
 
-            <!-- MASTER TOOLBAR: SEARCH & ONE-CLICK PRINT NOTICE SHEET -->
-            <div class="master-toolbar">
-                <div class="search-bar-wrap">
+            <!-- MASTER CONTROLS BAR: FILTER BUTTONS + SEARCH IN A SINGLE BALANCED LINE -->
+            <div class="master-bar-inline">
+                {% if all_departments %}
+                <div class="dept-pills-bar">
+                    <button type="button" class="dept-pill active" onclick="filterMasterDept('ALL', this)">
+                        All ({{ department_allocations|length }})
+                    </button>
+                    {% for d in all_departments %}
+                    <button type="button" class="dept-pill" onclick="filterMasterDept('{{ d }}', this)">
+                        {{ d }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="master-search-wrap">
+                    <span class="master-search-icon">🔍</span>
                     <input type="text" id="master-notice-search" class="search-input"
-                           placeholder="🔍 Search Branch, Subject, Room, or Roll No..."
+                           placeholder="Search Branch, Subject, Room..."
                            onkeyup="filterMasterNoticeTable()">
-                    <span style="font-size: 12.5px; color: var(--text-muted);" id="master-notice-count">
-                        Showing {{ department_allocations|length }} Branches
+                    <span class="master-count-badge" id="master-notice-count">
+                        {{ department_allocations|length }} Branches
                     </span>
                 </div>
-                <button type="button" class="btn-print-master" onclick="printMasterNoticeSheet()" title="Print Official Master Notice Board (A4 Portrait)">
-                    <span>🖨️ Print Master Notice</span>
-                </button>
             </div>
-
-            <!-- BRANCH FILTER PILLS -->
-            {% if all_departments %}
-            <div class="dept-pills-bar" style="margin-bottom: 20px;">
-                <button type="button" class="dept-pill active" onclick="filterMasterDept('ALL', this)">
-                    All Branches ({{ department_allocations|length }})
-                </button>
-                {% for d in all_departments %}
-                <button type="button" class="dept-pill" onclick="filterMasterDept('{{ d }}', this)">
-                    {{ d }}
-                </button>
-                {% endfor %}
-            </div>
-            {% endif %}
 
             <!-- MASTER SEATING ARRANGEMENT NOTICE SHEET (MATCHING OFFICIAL COLLEGE NOTICE BOARD) -->
             <div class="master-notice-sheet" id="masterNoticeSheet">
@@ -2244,26 +2288,32 @@ function switchView(mode) {
     document.querySelectorAll('.view-panel').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
+    const topPrintBtn = document.getElementById('top-btn-print-master');
+
     if (mode === 'summary') {
         const p = document.getElementById('view-summary');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-summary');
         if (b) b.classList.add('active');
+        if (topPrintBtn) topPrintBtn.style.display = 'none';
     } else if (mode === 'department') {
         const p = document.getElementById('view-department');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-department');
         if (b) b.classList.add('active');
+        if (topPrintBtn) topPrintBtn.style.display = 'inline-flex';
     } else if (mode === 'room-cards') {
         const p = document.getElementById('view-room-cards');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-room-cards');
         if (b) b.classList.add('active');
+        if (topPrintBtn) topPrintBtn.style.display = 'none';
     } else if (mode === 'all-students') {
         const p = document.getElementById('view-all-students');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-all-students');
         if (b) b.classList.add('active');
+        if (topPrintBtn) topPrintBtn.style.display = 'none';
     }
 }
 
@@ -2516,7 +2566,7 @@ function filterMasterNoticeTable() {
 
     const countDisplay = document.getElementById('master-notice-count');
     if (countDisplay) {
-        countDisplay.innerText = `Showing ${visibleGroupCount} Branches`;
+        countDisplay.innerText = `${visibleGroupCount} Branches`;
     }
 
     // Also filter detailed rosters if any
