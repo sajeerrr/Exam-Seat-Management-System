@@ -39,6 +39,26 @@
     .nav-breadcrumb .sep { opacity: 0.4; }
     .nav-breadcrumb .current { color: var(--text-primary); font-weight: 600; }
 
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 14px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        transition: all 0.15s ease;
+    }
+    .btn-back:hover {
+        color: var(--text-primary);
+        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.08);
+    }
+
     /* SLOT SELECTOR */
     .slot-bar {
         background: var(--bg-card);
@@ -82,61 +102,44 @@
         box-shadow: 0 4px 12px var(--accent-glow);
     }
 
-    /* CONTROL TOOLBAR */
+    /* CONTROL TOOLBAR & SEGMENTED VIEW TABS */
     .control-toolbar {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         margin-bottom: 20px;
-        flex-wrap: wrap;
         gap: 12px;
     }
-    .stats-chips {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-    .stat-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 12px;
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        font-size: 12.5px;
-        color: var(--text-secondary);
-    }
-    .stat-chip strong {
-        color: var(--text-primary);
-    }
-    
-    .view-switcher {
+    .view-switcher-segmented {
         display: inline-flex;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 3px;
-        gap: 3px;
+        border-radius: 10px;
+        padding: 4px;
+        gap: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
     }
     .view-btn {
-        padding: 6px 14px;
-        border-radius: 6px;
+        padding: 7px 18px;
+        border-radius: 7px;
         border: none;
         background: transparent;
         color: var(--text-secondary);
-        font-size: 12.5px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
     .view-btn:hover {
         color: var(--text-primary);
+        background: rgba(255, 255, 255, 0.04);
     }
     .view-btn.active {
         background: var(--accent);
         color: white;
+        box-shadow: 0 2px 8px var(--accent-glow);
     }
 
     /* ════════════════ TOP ROOMS NAVBAR (FULL SCREEN CLASSROOM VIEW) ════════════════ */
@@ -402,7 +405,8 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 14px;
+        height: 38px;
+        padding: 0 16px;
         border-radius: 8px;
         font-size: 12.5px;
         font-weight: 600;
@@ -410,6 +414,8 @@
         text-decoration: none;
         transition: all 0.15s ease;
         border: 1px solid var(--border);
+        box-sizing: border-box;
+        white-space: nowrap;
     }
     .btn-print-primary {
         background: var(--accent);
@@ -418,16 +424,8 @@
         box-shadow: 0 2px 8px var(--accent-glow);
     }
     .btn-print-primary:hover {
-        opacity: 0.92;
+        opacity: 0.94;
         transform: translateY(-1px);
-    }
-    .btn-print-secondary {
-        background: rgba(255,255,255,0.05);
-        color: var(--text-primary);
-    }
-    .btn-print-secondary:hover {
-        background: rgba(255,255,255,0.1);
-        border-color: var(--accent);
     }
     .btn-blueprint {
         background: rgba(99,102,241,0.1);
@@ -436,14 +434,88 @@
     }
     .btn-blueprint:hover {
         background: rgba(99,102,241,0.18);
+        border-color: var(--accent);
     }
     .btn-toggle-drawer {
-        background: var(--bg-primary);
+        background: var(--bg-card);
         color: var(--text-secondary);
     }
     .btn-toggle-drawer:hover {
         color: var(--text-primary);
         border-color: var(--accent);
+    }
+
+    /* Print Dropdown Menu */
+    .print-dropdown-wrap {
+        position: relative;
+        display: inline-block;
+    }
+    .print-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 270px;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 6px;
+        z-index: 1000;
+        animation: fadeInScale 0.15s ease-out;
+    }
+    .print-dropdown-menu.show {
+        display: block;
+    }
+    @keyframes fadeInScale {
+        from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .print-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-primary);
+        font-family: inherit;
+        font-size: 13px;
+        border-radius: 7px;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s ease;
+    }
+    .print-menu-item:hover {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent-light);
+    }
+    .print-menu-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+    .print-menu-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .print-menu-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+    .print-menu-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+    .dropdown-caret {
+        font-size: 10px;
+        margin-left: 2px;
+        transition: transform 0.15s;
+    }
+    .print-dropdown-wrap.open .dropdown-caret {
+        transform: rotate(180deg);
     }
 
     /* Collapsible Drawer */
@@ -1157,7 +1229,7 @@
 {% block content %}
 <div class="page-wrapper">
 
-    <!-- BREADCRUMB -->
+    <!-- BREADCRUMB & SESSION BACK -->
     <nav class="top-nav">
         <div class="nav-breadcrumb">
             <a href="{% url 'exam_allocator:session_list' %}">All Sessions</a>
@@ -1166,20 +1238,11 @@
             <span class="sep">›</span>
             <span class="current">Timetable-wise Allocation List</span>
         </div>
-        <div style="display:flex; gap:10px; align-items:center;">
-            {% if selected_slot %}
-            <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; text-decoration:none; border-radius:6px; border:1px solid var(--accent); background:rgba(99,102,241,0.1); color:var(--accent-light); font-weight:600;">
-                📐 Department Blueprint
-            </a>
-            {% endif %}
-            <button onclick="printSeatingPlan('current')" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); cursor:pointer;">
-                🖨️ Print Plan
-            </button>
-            <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-secondary" style="padding: 7px 14px; font-size:12.5px; text-decoration:none; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary);">
-                ← Session Overview
+        <div>
+            <a href="{% url 'exam_allocator:session_detail' session.session_id %}" class="btn-back" title="Back to Session Overview">
+                ← Back to Session
             </a>
         </div>
-
     </nav>
     
     <!-- FLASH MESSAGES -->
@@ -1213,15 +1276,34 @@
             </div>
         </div>
         <div class="slot-focus-actions">
-            <button type="button" onclick="printSeatingPlan('current')" class="btn-focus-action btn-print-primary" title="Print currently active classroom">
-                🖨️ Print Active Classroom
-            </button>
-            <button type="button" onclick="printSeatingPlan('all')" class="btn-focus-action btn-print-secondary" title="Print all classrooms for this date (one room per page)">
-                📄 Print All Classrooms
-            </button>
+            <!-- UNIFIED PRINT DROPDOWN -->
+            <div class="print-dropdown-wrap" id="printDropdownWrap">
+                <button type="button" class="btn-focus-action btn-print-primary" id="btnPrintDropdown" onclick="togglePrintDropdown(event)" title="Print options">
+                    <span>🖨️ Print</span>
+                    <span class="dropdown-caret">▾</span>
+                </button>
+                <div class="print-dropdown-menu" id="printDropdownMenu">
+                    <button type="button" class="print-menu-item" onclick="handlePrintAction('current')">
+                        <span class="print-menu-icon">🖨️</span>
+                        <div class="print-menu-text">
+                            <span class="print-menu-title">Print Active Classroom</span>
+                            <span class="print-menu-desc" id="printActiveRoomLabel">Current room sheet</span>
+                        </div>
+                    </button>
+                    <button type="button" class="print-menu-item" onclick="handlePrintAction('all')">
+                        <span class="print-menu-icon">📄</span>
+                        <div class="print-menu-text">
+                            <span class="print-menu-title">Print All Classrooms</span>
+                            <span class="print-menu-desc">One room per page ({{ rooms|length }} rooms)</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
             <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-blueprint" title="Back to Blueprint editor">
                 📐 Edit Blueprint
             </a>
+
             {% if slots|length > 1 %}
             <button type="button" onclick="toggleSlotDrawer()" id="btn-toggle-slot-drawer" class="btn-focus-action btn-toggle-drawer" title="Switch to another examination date">
                 📅 Switch Date ▾
@@ -1265,29 +1347,14 @@
     {% endif %}
 
     {% if selected_slot and rooms %}
-    <!-- TOOLBAR & VIEW SWITCHER -->
+    <!-- MINIMALIST VIEW TABS TOOLBAR -->
     <div class="control-toolbar">
-        <div class="stats-chips">
-            <div class="stat-chip">
-                <span>Slot:</span>
-                <strong>{{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</strong>
-            </div>
-            <div class="stat-chip">
-                <span>Total Students:</span>
-                <strong style="color:var(--accent-light);">{{ total_slot_students }}</strong>
-            </div>
-            <div class="stat-chip">
-                <span>Rooms:</span>
-                <strong>{{ rooms|length }}</strong>
-            </div>
-        </div>
-
-        <div class="view-switcher">
-            <button class="view-btn" id="btn-view-summary" onclick="switchView('summary')">
-                📊 Stream Overview
-            </button>
+        <div class="view-switcher-segmented">
             <button class="view-btn active" id="btn-view-room-cards" onclick="switchView('room-cards')">
                 🪑 Room-by-Room Plan
+            </button>
+            <button class="view-btn" id="btn-view-summary" onclick="switchView('summary')">
+                📊 Stream Overview
             </button>
             <button class="view-btn" id="btn-view-all-students" onclick="switchView('all-students')">
                 📋 All Students ({{ total_slot_students }})
@@ -1448,11 +1515,11 @@
                             <span>Room {{ r.room_number }}</span>
                             <span class="room-badge-tag">{{ r.total_students }} Students</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <span class="room-meta-simple">{{ r.total_benches }} Benches · {{ r.exam_date|date:"d-m-Y" }} ({{ r.session }})</span>
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <span class="room-meta-simple">{{ r.total_benches }} Benches</span>
                             <div class="room-nav-btns">
-                                <button class="room-nav-btn" onclick="navRoom(-1)" title="Previous Room">← Prev Room</button>
-                                <button class="room-nav-btn" onclick="navRoom(1)" title="Next Room">Next Room →</button>
+                                <button type="button" class="room-nav-btn" onclick="navRoom(-1)" title="Previous Room">‹ Prev</button>
+                                <button type="button" class="room-nav-btn" onclick="navRoom(1)" title="Next Room">Next ›</button>
                             </div>
                         </div>
                     </div>
@@ -1701,6 +1768,11 @@ function selectRoom(roomNum) {
         activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
 
+    const printLabel = document.getElementById('printActiveRoomLabel');
+    if (printLabel) {
+        printLabel.innerText = `Room ${roomNum} seating sheet`;
+    }
+
     highlightClassInCurrentRoom();
 }
 
@@ -1847,6 +1919,54 @@ window.addEventListener('afterprint', () => {
     document.body.classList.remove('print-single-room');
     if (roomList.length > 0 && currentRoomIndex < roomList.length) {
         selectRoom(roomList[currentRoomIndex]);
+    }
+});
+
+// Toggle unified print options dropdown
+function togglePrintDropdown(event) {
+    if (event) event.stopPropagation();
+    const wrap = document.getElementById('printDropdownWrap');
+    const menu = document.getElementById('printDropdownMenu');
+    if (!menu) return;
+    const isShown = menu.classList.contains('show');
+    if (isShown) {
+        menu.classList.remove('show');
+        if (wrap) wrap.classList.remove('open');
+    } else {
+        menu.classList.add('show');
+        if (wrap) wrap.classList.add('open');
+    }
+}
+
+function handlePrintAction(mode) {
+    const wrap = document.getElementById('printDropdownWrap');
+    const menu = document.getElementById('printDropdownMenu');
+    if (menu) menu.classList.remove('show');
+    if (wrap) wrap.classList.remove('open');
+    printSeatingPlan(mode);
+}
+
+// Global click-outside listener for print dropdown
+document.addEventListener('click', function(e) {
+    const wrap = document.getElementById('printDropdownWrap');
+    const menu = document.getElementById('printDropdownMenu');
+    if (menu && menu.classList.contains('show')) {
+        if (!wrap || !wrap.contains(e.target)) {
+            menu.classList.remove('show');
+            if (wrap) wrap.classList.remove('open');
+        }
+    }
+});
+
+// Close dropdown on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const wrap = document.getElementById('printDropdownWrap');
+        const menu = document.getElementById('printDropdownMenu');
+        if (menu && menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            if (wrap) wrap.classList.remove('open');
+        }
     }
 });
 </script>
