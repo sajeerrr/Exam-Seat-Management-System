@@ -546,37 +546,25 @@
         flex-wrap: wrap;
     }
 
-    /* Classroom Front Board (Chalkboard) */
+    /* Minimalist Classroom Front Orientation Bar */
     .classroom-board-simple {
-        max-width: 640px;
-        margin: 0 auto 20px;
-        background: linear-gradient(180deg, #1b382b 0%, #11281e 100%);
-        border: 2px solid #2e5944;
-        border-radius: 8px;
-        padding: 8px 16px;
+        max-width: 360px;
+        margin: 0 auto 14px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: 20px;
+        padding: 4px 16px;
         text-align: center;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 3px 10px rgba(0,0,0,0.15);
-    }
-    .chalkboard-frame {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 2px;
+        justify-content: center;
     }
     .chalkboard-main {
-        font-size: 11.5px;
-        font-weight: 800;
-        letter-spacing: 0.12em;
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
         text-transform: uppercase;
-        color: #d1fae5;
-    }
-    .chalkboard-sub {
-        font-size: 9.5px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #6ee7b7;
-        opacity: 0.85;
+        color: #34d399;
     }
 
     .print-room-sheet-header {
@@ -1037,11 +1025,8 @@
         }
         .chalkboard-main {
             color: #0f172a !important;
-            font-size: 9pt !important;
-        }
-        .chalkboard-sub {
-            color: #475569 !important;
-            font-size: 8pt !important;
+            font-size: 8.5pt !important;
+            font-weight: 700 !important;
         }
 
         /* 3-Column Bench Layout */
@@ -1417,12 +1402,9 @@
                         </div>
                     </div>
 
-                    <!-- Front / Blackboard Bar -->
+                    <!-- Front of Classroom Bar -->
                     <div class="classroom-board-simple">
-                        <div class="chalkboard-frame">
-                            <span class="chalkboard-main">▲ FRONT OF CLASSROOM / BLACKBOARD ▲</span>
-                            <span class="chalkboard-sub">FACULTY &amp; INVIGILATOR DESK</span>
-                        </div>
+                        <span class="chalkboard-main">▲ FRONT OF CLASSROOM ▲</span>
                     </div>
 
                     <!-- Exactly 3 Bench Columns (5, 5, 5 Benches) -->
