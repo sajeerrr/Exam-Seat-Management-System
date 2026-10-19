@@ -685,7 +685,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 10.5px;
+        font-size: 11px;
         font-weight: 700;
         color: var(--text-secondary);
         padding: 0 2px 3px;
@@ -699,24 +699,28 @@
         min-width: 0;
     }
 
-    /* ════════════════ MINIMALISTIC SEAT CELL ════════════════ */
+    /* ════════════════ SQUARISH MINIMALISTIC SEAT CELL ════════════════ */
     .seat-cell {
         background: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 5px 6px;
+        border-radius: 8px;
+        min-height: 68px;
+        padding: 10px 8px;
         display: flex;
-        flex-direction: column;
-        gap: 2px;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
         min-width: 0;
         transition: all 0.15s ease;
         position: relative;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        cursor: default;
+        box-sizing: border-box;
     }
     .seat-cell:hover {
         border-color: var(--accent);
         transform: translateY(-1px);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         z-index: 2;
     }
     .seat-cell.highlight-class {
@@ -725,131 +729,44 @@
         box-shadow: 0 0 0 2px var(--accent);
     }
 
-    .seat-cell-s1 { border-top: 3px solid #6366f1; }
-    .seat-cell-s2 { border-top: 3px solid #10b981; }
-    .seat-cell-s3 { border-top: 3px solid #f59e0b; }
-
-    .seat-cell-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 3px;
-        margin-bottom: 1px;
-        min-width: 0;
-    }
-    .seat-stream-tag {
-        font-size: 9px;
-        font-weight: 800;
-        padding: 1px 4px;
-        border-radius: 3px;
-        letter-spacing: 0.02em;
-        line-height: 1.2;
-        flex-shrink: 0;
-    }
-    .seat-stream-s1 {
-        background: rgba(99,102,241,0.15);
-        color: #818cf8;
-        border: 1px solid rgba(99,102,241,0.3);
-    }
-    .seat-stream-s2 {
-        background: rgba(16,185,129,0.15);
-        color: #34d399;
-        border: 1px solid rgba(16,185,129,0.3);
-    }
-    .seat-stream-s3 {
-        background: rgba(245,158,11,0.15);
-        color: #fbbf24;
-        border: 1px solid rgba(245,158,11,0.3);
-    }
-    .seat-dept-tag {
-        font-size: 9.5px;
-        font-weight: 700;
-        color: var(--text-secondary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 50px;
-        text-align: right;
-    }
+    .seat-cell-s1 { border-top: 4px solid #6366f1; }
+    .seat-cell-s2 { border-top: 4px solid #10b981; }
+    .seat-cell-s3 { border-top: 4px solid #f59e0b; }
 
     .seat-roll {
         font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 800;
-        letter-spacing: -0.01em;
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.25;
-        margin: 1px 0;
-    }
-    .seat-name {
-        font-size: 9.5px;
-        font-weight: 500;
-        color: var(--text-secondary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.2;
-    }
-
-    .seat-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 2px;
-        margin-top: 2px;
-        padding-top: 2px;
-        border-top: 1px solid rgba(255,255,255,0.06);
-        min-width: 0;
-    }
-    .seat-sub-tag {
-        font-size: 8.5px;
-        font-weight: 700;
-        padding: 1px 3px;
-        border-radius: 2px;
-        background: rgba(255,255,255,0.06);
-        color: var(--text-primary);
-        font-family: monospace;
         letter-spacing: 0.02em;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 58px;
-    }
-    .seat-cat-pill {
-        font-size: 8px;
-        font-weight: 700;
-        padding: 1px 3px;
-        border-radius: 2px;
-        background: rgba(245,158,11,0.15);
-        color: #fbbf24;
-        text-transform: uppercase;
-        flex-shrink: 0;
+        color: var(--text-primary);
+        text-align: center;
+        line-height: 1.2;
+        margin: 0;
+        word-break: break-all;
     }
 
     /* Minimalist Empty Seat */
     .seat-empty {
         background: rgba(255,255,255,0.012);
         border: 1px dashed var(--border);
-        border-radius: 6px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 58px;
+        min-height: 68px;
         text-align: center;
-        padding: 3px;
+        padding: 10px 8px;
+        box-sizing: border-box;
         transition: all 0.15s;
     }
     .seat-empty:hover {
         background: rgba(255,255,255,0.03);
     }
     .seat-empty-label {
-        font-size: 9.5px;
-        font-weight: 500;
+        font-size: 16px;
+        font-weight: 700;
         color: var(--text-muted);
-        letter-spacing: 0.02em;
+        opacity: 0.4;
     }
 
     /* Responsive Sidebar */
@@ -1170,57 +1087,33 @@
             background: #ffffff !important;
             color: #000000 !important;
             box-shadow: none !important;
-            padding: 4px 5px !important;
-            border-top-width: 2px !important;
-        }
-        .seat-stream-tag {
-            background: #f1f5f9 !important;
-            color: #000000 !important;
-            border: 1px solid #cbd5e1 !important;
-            font-size: 6.5pt !important;
-        }
-        .seat-dept-tag {
-            color: #1e293b !important;
-            font-size: 7pt !important;
-            font-weight: 800 !important;
+            padding: 6px !important;
+            min-height: 52px !important;
+            border-top-width: 3px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
         }
         .seat-roll {
             color: #000000 !important;
-            font-size: 9.5pt !important;
+            font-size: 11pt !important;
             font-weight: 800 !important;
-            margin: 1px 0 !important;
-        }
-        .seat-name {
-            color: #334155 !important;
-            font-size: 7pt !important;
-            font-weight: 600 !important;
-        }
-        .seat-footer {
-            border-top: 1px solid #e2e8f0 !important;
-            padding-top: 2px !important;
-            margin-top: 2px !important;
-        }
-        .seat-sub-tag {
-            background: #f8fafc !important;
-            color: #000000 !important;
-            border: 1px solid #cbd5e1 !important;
-            font-size: 6.5pt !important;
-            font-weight: 700 !important;
-        }
-        .seat-cat-pill {
-            background: #fef3c7 !important;
-            color: #92400e !important;
-            font-size: 6pt !important;
+            text-align: center !important;
+            margin: 0 !important;
         }
         .seat-empty {
             border: 1px dashed #cbd5e1 !important;
             background: #ffffff !important;
-            min-height: 55px !important;
-            padding: 2px !important;
+            min-height: 52px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 6px !important;
         }
         .seat-empty-label {
             color: #94a3b8 !important;
-            font-size: 7pt !important;
+            font-size: 10pt !important;
         }
     }
 </style>
@@ -1532,14 +1425,6 @@
                         </div>
                     </div>
 
-                    <!-- Spatial Stream Legend -->
-                    <div class="classroom-legend">
-                        <span class="legend-item"><span class="legend-pill legend-pill-s1">Seat 1 · A</span> <strong>Stream A</strong></span>
-                        <span class="legend-item"><span class="legend-pill legend-pill-s2">Seat 2 · B</span> <strong>Stream B</strong></span>
-                        <span class="legend-item"><span class="legend-pill legend-pill-s3">Seat 3 · C</span> <strong>Stream C</strong></span>
-                        <span class="legend-item"><span class="legend-pill legend-pill-empty">— Free —</span> <em>Available Seat</em></span>
-                    </div>
-
                     <!-- Exactly 3 Bench Columns (5, 5, 5 Benches) -->
                     <div class="classroom-3col-grid">
                         {% for col in r.columns %}
@@ -1553,73 +1438,42 @@
                             <div class="bench-box">
                                 <div class="bench-box-title">
                                     <span>Bench {{ bench.bench_number }}</span>
-                                    <span style="font-size:9.5px; opacity:0.65;">Seat 1 (A) · Seat 2 (B) · Seat 3 (C)</span>
                                 </div>
                                 <div class="bench-seats-grid">
                                     
                                     <!-- SEAT 1 (Stream A) -->
                                     {% if bench.seat_1 %}
-                                    <div class="seat-cell seat-cell-s1" data-class="{{ bench.seat_1.class_name }}">
-                                        <div class="seat-cell-header">
-                                            <span class="seat-stream-tag seat-stream-s1">Seat 1 · A</span>
-                                            <span class="seat-dept-tag" title="{{ bench.seat_1.department }}{% if bench.seat_1.clean_class_name %} ({{ bench.seat_1.clean_class_name }}){% endif %}">{{ bench.seat_1.department }}</span>
-                                        </div>
-                                        <div class="seat-roll" title="{{ bench.seat_1.roll_number }}">{{ bench.seat_1.roll_number }}</div>
-                                        <div class="seat-name" title="{{ bench.seat_1.student_name }}">{{ bench.seat_1.student_name }}</div>
-                                        <div class="seat-footer">
-                                            <span class="seat-sub-tag" title="{{ bench.seat_1.subject_code }} - {{ bench.seat_1.subject_name }}">{{ bench.seat_1.subject_code }}</span>
-                                            {% if bench.seat_1.category and bench.seat_1.category != 'NORMAL' %}
-                                            <span class="seat-cat-pill">{{ bench.seat_1.category }}</span>
-                                            {% endif %}
-                                        </div>
+                                    <div class="seat-cell seat-cell-s1" data-class="{{ bench.seat_1.class_name }}"
+                                         title="{{ bench.seat_1.student_name }} ({{ bench.seat_1.department }})&#10;{{ bench.seat_1.subject_code }}: {{ bench.seat_1.subject_name }}">
+                                        <div class="seat-roll">{{ bench.seat_1.roll_number }}</div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">
-                                        <span class="seat-empty-label">— Available —</span>
+                                    <div class="seat-empty" title="Available Seat">
+                                        <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
 
                                     <!-- SEAT 2 (Stream B) -->
                                     {% if bench.seat_2 %}
-                                    <div class="seat-cell seat-cell-s2" data-class="{{ bench.seat_2.class_name }}">
-                                        <div class="seat-cell-header">
-                                            <span class="seat-stream-tag seat-stream-s2">Seat 2 · B</span>
-                                            <span class="seat-dept-tag" title="{{ bench.seat_2.department }}{% if bench.seat_2.clean_class_name %} ({{ bench.seat_2.clean_class_name }}){% endif %}">{{ bench.seat_2.department }}</span>
-                                        </div>
-                                        <div class="seat-roll" title="{{ bench.seat_2.roll_number }}">{{ bench.seat_2.roll_number }}</div>
-                                        <div class="seat-name" title="{{ bench.seat_2.student_name }}">{{ bench.seat_2.student_name }}</div>
-                                        <div class="seat-footer">
-                                            <span class="seat-sub-tag" title="{{ bench.seat_2.subject_code }} - {{ bench.seat_2.subject_name }}">{{ bench.seat_2.subject_code }}</span>
-                                            {% if bench.seat_2.category and bench.seat_2.category != 'NORMAL' %}
-                                            <span class="seat-cat-pill">{{ bench.seat_2.category }}</span>
-                                            {% endif %}
-                                        </div>
+                                    <div class="seat-cell seat-cell-s2" data-class="{{ bench.seat_2.class_name }}"
+                                         title="{{ bench.seat_2.student_name }} ({{ bench.seat_2.department }})&#10;{{ bench.seat_2.subject_code }}: {{ bench.seat_2.subject_name }}">
+                                        <div class="seat-roll">{{ bench.seat_2.roll_number }}</div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">
-                                        <span class="seat-empty-label">— Available —</span>
+                                    <div class="seat-empty" title="Available Seat">
+                                        <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
 
                                     <!-- SEAT 3 (Stream C) -->
                                     {% if bench.seat_3 %}
-                                    <div class="seat-cell seat-cell-s3" data-class="{{ bench.seat_3.class_name }}">
-                                        <div class="seat-cell-header">
-                                            <span class="seat-stream-tag seat-stream-s3">Seat 3 · C</span>
-                                            <span class="seat-dept-tag" title="{{ bench.seat_3.department }}{% if bench.seat_3.clean_class_name %} ({{ bench.seat_3.clean_class_name }}){% endif %}">{{ bench.seat_3.department }}</span>
-                                        </div>
-                                        <div class="seat-roll" title="{{ bench.seat_3.roll_number }}">{{ bench.seat_3.roll_number }}</div>
-                                        <div class="seat-name" title="{{ bench.seat_3.student_name }}">{{ bench.seat_3.student_name }}</div>
-                                        <div class="seat-footer">
-                                            <span class="seat-sub-tag" title="{{ bench.seat_3.subject_code }} - {{ bench.seat_3.subject_name }}">{{ bench.seat_3.subject_code }}</span>
-                                            {% if bench.seat_3.category and bench.seat_3.category != 'NORMAL' %}
-                                            <span class="seat-cat-pill">{{ bench.seat_3.category }}</span>
-                                            {% endif %}
-                                        </div>
+                                    <div class="seat-cell seat-cell-s3" data-class="{{ bench.seat_3.class_name }}"
+                                         title="{{ bench.seat_3.student_name }} ({{ bench.seat_3.department }})&#10;{{ bench.seat_3.subject_code }}: {{ bench.seat_3.subject_name }}">
+                                        <div class="seat-roll">{{ bench.seat_3.roll_number }}</div>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty">
-                                        <span class="seat-empty-label">— Available —</span>
+                                    <div class="seat-empty" title="Available Seat">
+                                        <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
 
