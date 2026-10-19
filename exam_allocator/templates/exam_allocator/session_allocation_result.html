@@ -1084,29 +1084,40 @@
     .dept-pills-bar {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         flex-wrap: wrap;
         margin-bottom: 0;
     }
     .dept-pill {
-        padding: 5px 12px;
-        border-radius: 16px;
-        font-size: 12px;
-        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid var(--border);
-        background: #ffffff;
         color: var(--text-secondary);
+        font-size: 12.5px;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.15s ease;
+        white-space: nowrap;
     }
     .dept-pill:hover {
-        border-color: var(--accent);
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.3);
         color: var(--text-primary);
     }
     .dept-pill.active {
         background: var(--accent);
         border-color: var(--accent);
         color: #ffffff;
+        box-shadow: 0 3px 10px var(--accent-glow);
+    }
+    .dept-pill.dept-pill-all {
+        padding: 6px 28px;
+        font-size: 12.5px;
+        font-weight: 600;
     }
 
     /* ════════════════ MASTER SEATING NOTICE SHEET (OFFICIAL NOTICE BOARD) ════════════════ */
@@ -1137,11 +1148,17 @@
         transform: translateY(-1px);
     }
     .master-bar-inline {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 16px;
+        margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 12px;
+        gap: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+        box-sizing: border-box;
         flex-wrap: wrap;
     }
     .master-search-wrap {
@@ -1157,13 +1174,15 @@
         font-size: 12.5px;
         border-radius: 8px;
         border: 1px solid var(--border);
-        background: #ffffff;
+        background: rgba(255, 255, 255, 0.6);
         color: var(--text-primary);
         outline: none;
-        transition: border-color 0.15s ease;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
     }
     .master-search-wrap .search-input:focus {
         border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-glow);
+        background: #ffffff;
     }
     .master-search-icon {
         position: absolute;
@@ -1254,7 +1273,7 @@
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        text-align: left;
+        text-align: center;
     }
     .master-notice-table td {
         vertical-align: middle;
@@ -1265,23 +1284,29 @@
     .master-cell-branch {
         font-weight: 800;
         font-size: 13.5px;
+        text-align: center;
+        vertical-align: middle;
     }
     .master-branch-title {
         font-weight: 800;
         font-size: 13.5px;
         color: #000000;
+        text-align: center;
     }
     .master-cell-sub {
         font-size: 11px;
         font-weight: 600;
         color: #475569;
         margin-top: 2px;
+        text-align: center;
     }
     .master-cell-subject {
         font-weight: 600;
         font-size: 12.5px;
         line-height: 1.35;
         color: #000000;
+        text-align: center;
+        vertical-align: middle;
     }
     .master-cell-room {
         font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -2095,7 +2120,7 @@
             <div class="master-bar-inline">
                 {% if all_departments %}
                 <div class="dept-pills-bar">
-                    <button type="button" class="dept-pill active" onclick="filterMasterDept('ALL', this)">
+                    <button type="button" class="dept-pill dept-pill-all active" onclick="filterMasterDept('ALL', this)">
                         All ({{ department_allocations|length }})
                     </button>
                     {% for d in all_departments %}
@@ -2131,10 +2156,10 @@
                 <table class="master-notice-table" id="masterNoticeTable">
                     <thead>
                         <tr>
-                            <th style="width: 18%;">Branch</th>
-                            <th style="width: 28%;">Subject</th>
+                            <th style="width: 18%; text-align: center;">Branch</th>
+                            <th style="width: 28%; text-align: center;">Subject</th>
                             <th style="width: 14%; text-align: center;">Class</th>
-                            <th style="width: 40%;">Roll Number of Candidates</th>
+                            <th style="width: 40%; text-align: center;">Roll Number of Candidates</th>
                         </tr>
                     </thead>
                     {% for item in department_allocations %}
@@ -2783,7 +2808,7 @@ function printMasterNoticeSheet() {
                     font-weight: 800;
                     text-transform: uppercase;
                     letter-spacing: 0.03em;
-                    text-align: left;
+                    text-align: center;
                 }
                 .master-notice-table td {
                     font-size: 9.5pt;
@@ -2794,20 +2819,26 @@ function printMasterNoticeSheet() {
                 .master-cell-branch {
                     font-weight: 800;
                     font-size: 9.5pt;
+                    text-align: center;
+                    vertical-align: middle;
                 }
                 .master-branch-title {
                     font-weight: 800;
+                    text-align: center;
                 }
                 .master-cell-branch .master-cell-sub {
                     font-size: 8pt;
                     font-weight: 600;
                     color: #334155;
                     margin-top: 2px;
+                    text-align: center;
                 }
                 .master-cell-subject {
                     font-weight: 600;
                     font-size: 9pt;
                     line-height: 1.25;
+                    text-align: center;
+                    vertical-align: middle;
                 }
                 .master-cell-room {
                     text-align: center;
