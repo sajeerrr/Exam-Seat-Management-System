@@ -1653,11 +1653,27 @@ class BlueprintService:
                     if old_room.is_dummy_room and old_room != existing and not RoomBlueprint.objects.filter(room=old_room).exists():
                         old_room.delete()
                 else:
-                    # Rename the current room object
-                    old_room.room_number = clean_name
-                    old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
-                    old_room.is_dummy = False
-                    old_room.save()
+                    # Rename the current room object if it is only used in this room blueprint
+                    if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exclude(room_blueprint_id=room_blueprint_id).exists():
+                        old_room.room_number = clean_name
+                        old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
+                        old_room.is_dummy = False
+                        old_room.save()
+                        rb.room = old_room
+                        rb.save()
+                    else:
+                        new_room = Room.objects.create(
+                            session=slot_blueprint.session,
+                            room_number=clean_name,
+                            capacity=rb.capacity or 45,
+                            benches=math.ceil((rb.capacity or 45) / 3),
+                            building="Main Campus",
+                            is_dummy=False,
+                        )
+                        rb.room = new_room
+                        rb.save()
+                        if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exists():
+                            old_room.delete()
 
             else:
                 raise BlueprintServiceError("Either new_room_number or target_room_id is required.")

@@ -715,6 +715,9 @@
         z-index: 1000;
         backdrop-filter: blur(4px);
     }
+    .modal-overlay.active {
+        display: flex !important;
+    }
     .modal-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -925,13 +928,14 @@
                 </button>
                 {% else %}
                 <button class="action-btn btn-success-action" onclick="finalizeBlueprint()"
-                        {% if blueprint.validation_errors %}disabled title="Fix errors before finalizing"{% endif %}>
+                        {% if blueprint.validation_errors or has_dummy_rooms %}disabled title="{% if has_dummy_rooms %}Assign real classroom names to all dummy placeholder room(s) before finalizing{% else %}Fix errors before finalizing{% endif %}"{% endif %}>
                     🔒 Finalize Blueprint
                 </button>
                 {% endif %}
 
                 {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
-                <button class="action-btn btn-primary-action" onclick="generateSeats()">
+                <button class="action-btn btn-primary-action" onclick="generateSeats()"
+                        {% if has_dummy_rooms %}disabled title="Assign real classroom names to all dummy rooms before generating seats"{% endif %}>
                     🪑 {% if blueprint.status == "SEATS_GENERATED" %}Regenerate Seats{% else %}Generate Seats for This Slot{% endif %}
                 </button>
                 {% endif %}
@@ -956,6 +960,19 @@
 
     <!-- VALIDATION ALERTS -->
     <div id="validationAlertsContainer">
+    {% if has_dummy_rooms %}
+    <div class="alert-box alert-warning" id="dummyRoomsAlertBanner" style="border-left: 4px solid #f59e0b; background: #fffbeb; color: #92400e; margin-bottom: 12px;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <span style="font-size: 20px; line-height: 1.2;">⚠️</span>
+            <div style="flex: 1;">
+                <strong style="font-size: 14px; color: #92400e;">Placeholder Dummy Room(s) Detected:</strong>
+                <div style="font-size: 13px; margin-top: 3px; color: #b45309;">
+                    This exam slot requires additional physical classroom space. Please click <strong>✏️ Assign Real Room Name</strong> on each dummy room card below to specify a real classroom name. Seat generation will be unlocked once all dummy rooms have real classroom names assigned.
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
         <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
@@ -1956,15 +1973,39 @@ function updateBoardFromData(data) {
         }
     }
 
+    // Count remaining dummy placeholder rooms
+    const dummyRooms = data.rooms ? data.rooms.filter(r => r.is_dummy || (r.room_number && String(r.room_number).startsWith('Dummy Room'))) : [];
+
+    // Update Dummy Rooms Alert Banner
+    const dummyBanner = document.getElementById('dummyRoomsAlertBanner');
+    if (dummyBanner) {
+        dummyBanner.style.display = (dummyRooms.length > 0) ? 'block' : 'none';
+    }
+
     // Enable/Disable Finalize Button
     const finalizeBtn = document.querySelector('button[onclick="finalizeBlueprint()"]');
     if (finalizeBtn) {
         if (data.errors && data.errors.length) {
             finalizeBtn.disabled = true;
             finalizeBtn.title = 'Fix errors before finalizing';
+        } else if (dummyRooms.length > 0) {
+            finalizeBtn.disabled = true;
+            finalizeBtn.title = `Assign real room names to all ${dummyRooms.length} placeholder room(s) before finalizing`;
         } else {
             finalizeBtn.disabled = false;
             finalizeBtn.title = 'Finalize Blueprint';
+        }
+    }
+
+    // Enable/Disable Generate Seats Button
+    const genSeatsBtn = document.querySelector('button[onclick="generateSeats()"]');
+    if (genSeatsBtn) {
+        if (dummyRooms.length > 0) {
+            genSeatsBtn.disabled = true;
+            genSeatsBtn.title = `Assign real room names to all ${dummyRooms.length} placeholder room(s) before generating seats`;
+        } else {
+            genSeatsBtn.disabled = false;
+            genSeatsBtn.title = 'Generate Physical Seats';
         }
     }
 
@@ -1993,6 +2034,8 @@ function updateBoardFromData(data) {
             card.dataset.roomBpId = r.room_blueprint_id;
             card.dataset.roomId = r.room_id;
             container.appendChild(card);
+        } else {
+            card.dataset.roomId = r.room_id;
         }
         card.innerHTML = buildRoomCardHTML(r);
     });
@@ -2758,13 +2801,47 @@ function generateSeats() {
 function openAssignRoomNameModal(roomBpId, currentName) {
     document.getElementById('assignRoomBpId').value = roomBpId;
     document.getElementById('assignRoomModalTitle').textContent = `Assign Real Room Name for ${currentName}`;
-    document.getElementById('assignNewRoomInput').value = '';
-    document.getElementById('assignExistingRoomSelect').value = '';
-    document.getElementById('assignRoomNameModal').classList.add('active');
+    const newRoomInput = document.getElementById('assignNewRoomInput');
+    const existingSelect = document.getElementById('assignExistingRoomSelect');
+    if (newRoomInput) newRoomInput.value = '';
+    if (existingSelect) existingSelect.value = '';
+
+    // Filter unassigned rooms dropdown so rooms already on the board cannot be selected
+    const activeRoomIds = new Set();
+    document.querySelectorAll('.room-card').forEach(card => {
+        if (card.dataset.roomId) {
+            activeRoomIds.add(String(card.dataset.roomId));
+        }
+    });
+    if (existingSelect) {
+        Array.from(existingSelect.options).forEach(opt => {
+            if (!opt.value) return;
+            if (activeRoomIds.has(String(opt.value))) {
+                opt.style.display = 'none';
+                opt.disabled = true;
+            } else {
+                opt.style.display = '';
+                opt.disabled = false;
+            }
+        });
+    }
+
+    const modal = document.getElementById('assignRoomNameModal');
+    if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }
+    setTimeout(() => {
+        if (newRoomInput) newRoomInput.focus();
+    }, 50);
 }
 
 function closeAssignRoomNameModal() {
-    document.getElementById('assignRoomNameModal').classList.remove('active');
+    const modal = document.getElementById('assignRoomNameModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
 }
 
 function submitAssignRoomName(event) {
@@ -2801,9 +2878,8 @@ function submitAssignRoomName(event) {
         submitBtn.textContent = 'Save Real Room Name';
         if (data.success) {
             updateUIWithResult(data);
-            showToast('Real classroom name assigned successfully!', 'success');
+            showToast('✓ Real classroom name assigned successfully!', 'success');
             closeAssignRoomNameModal();
-
         } else {
             showToast('Failed to assign room: ' + (data.error || 'Unknown error'), 'error');
         }
@@ -3021,6 +3097,40 @@ function autoAllocateAllUnallocated() {
 // INITIALIZE ON LOAD
 document.addEventListener('DOMContentLoaded', () => {
     initDragAndDrop();
+
+    // Mutual clearing between new room input and existing room select
+    const newRoomInp = document.getElementById('assignNewRoomInput');
+    const existingSel = document.getElementById('assignExistingRoomSelect');
+    if (newRoomInp && existingSel) {
+        newRoomInp.addEventListener('input', function() {
+            if (this.value.trim()) {
+                existingSel.value = '';
+            }
+        });
+        existingSel.addEventListener('change', function() {
+            if (this.value) {
+                newRoomInp.value = '';
+            }
+        });
+    }
+
+    // Close modals on backdrop click or Escape key
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
+        });
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            });
+        }
+    });
 });
 </script>
 {% endblock %}
