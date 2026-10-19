@@ -1000,7 +1000,7 @@
     }
     .master-sheet-header {
         text-align: center;
-        margin-bottom: 14px;
+        margin-bottom: 6px;
     }
     .master-college-title {
         font-size: 22px;
@@ -1008,7 +1008,9 @@
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: #000000;
-        margin: 0 0 6px;
+        margin: 0;
+        padding-bottom: 6px;
+        border-bottom: 1.5px solid #000000;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
     .master-exam-title {
@@ -1017,28 +1019,38 @@
         letter-spacing: 0.04em;
         text-transform: uppercase;
         color: #1e293b;
-        margin: 0 0 12px;
+        margin: 6px 0 0;
+        padding-bottom: 6px;
+        border-bottom: 1.5px solid #000000;
     }
     .master-meta-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-top: 1.5px solid #000000;
-        border-bottom: 1.5px solid #000000;
-        padding: 6px 4px;
+        padding: 6px 2px 2px;
         font-size: 13.5px;
         font-weight: 800;
         color: #000000;
+        margin-top: 4px;
+    }
+    tbody.master-branch-group {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     .master-notice-table {
         width: 100%;
-        border-collapse: collapse;
-        border: 1.5px solid #000000;
-        margin-top: 12px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+        border-top: 1.5px solid #000000;
+        border-left: 1.5px solid #000000;
+        margin-top: 6px;
         background: #ffffff;
+        box-sizing: border-box;
     }
     .master-notice-table th {
-        border: 1.5px solid #000000;
+        border-right: 1.5px solid #000000;
+        border-bottom: 1.5px solid #000000;
         padding: 8px 10px;
         background: #f1f5f9;
         color: #000000;
@@ -1047,13 +1059,23 @@
         text-transform: uppercase;
         letter-spacing: 0.04em;
         text-align: left;
+        box-sizing: border-box;
     }
     .master-notice-table td {
-        border: 1.5px solid #000000;
+        border-right: 1.5px solid #000000;
+        border-bottom: 1.5px solid #000000;
         padding: 8px 10px;
         color: #000000;
         vertical-align: middle;
         font-size: 13px;
+        box-sizing: border-box;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    .master-notice-table th:last-child,
+    .master-notice-table td:last-child,
+    .master-cell-rolls {
+        border-right: 1.5px solid #000000 !important;
     }
     .master-cell-branch {
         font-weight: 800;
@@ -2003,7 +2025,7 @@
             <div class="master-notice-sheet" id="masterNoticeSheet">
                 <div class="master-sheet-header">
                     <h1 class="master-college-title">TKM COLLEGE OF ENGINEERING</h1>
-                    <h2 class="master-exam-title">SEATING ARRANGEMENT OF {{ session.name|upper }}</h2>
+                    <h2 class="master-exam-title">SEATING ARRANGEMENT</h2>
                     <div class="master-meta-bar">
                         <span>DATE: {{ selected_slot.date|date:"d-m-Y" }}</span>
                         <span>SHIFT: {{ selected_slot.shift }}</span>
@@ -2019,12 +2041,12 @@
                             <th style="width: 40%;">Roll Number of Candidates</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for item in department_allocations %}
-                        <tr class="master-row-group"
-                            data-group-id="grp-{{ forloop.counter }}"
-                            data-dept="{{ item.department_code }}"
-                            data-group-search="{{ item.department_code }} {{ item.branch_name }} {{ item.subject_display }} {{ item.rooms_list_str }} {% for r in item.rooms_breakdown %}{{ r.compact_rolls }} Room {{ r.room_number }} {% endfor %}">
+                    {% for item in department_allocations %}
+                    <tbody class="master-branch-group"
+                           data-group-id="grp-{{ forloop.counter }}"
+                           data-dept="{{ item.department_code }}"
+                           data-group-search="{{ item.department_code }} {{ item.branch_name }} {{ item.subject_display }} {{ item.rooms_list_str }} {% for r in item.rooms_breakdown %}{{ r.compact_rolls }} Room {{ r.room_number }} {% endfor %}">
+                        <tr class="master-row-group">
                             <td rowspan="{{ item.rowspan }}" class="master-cell-branch" style="background-color: {{ item.color }};">
                                 <div class="master-branch-title">{{ item.branch_name }}</div>
                                 <div class="master-cell-sub">({{ item.total_students }} Candidates)</div>
@@ -2049,10 +2071,7 @@
                             </td>
                         </tr>
                         {% for sub_room in item.subsequent_rooms %}
-                        <tr class="master-sub-row"
-                            data-group-id="grp-{{ forloop.parentloop.counter }}"
-                            data-dept="{{ item.department_code }}"
-                            data-group-search="{{ item.department_code }} {{ item.branch_name }} {{ item.subject_display }} {{ item.rooms_list_str }} {% for r in item.rooms_breakdown %}{{ r.compact_rolls }} Room {{ r.room_number }} {% endfor %}">
+                        <tr class="master-sub-row">
                             <td class="master-cell-room" style="background-color: {{ item.color }};">
                                 {{ sub_room.room_number }}
                             </td>
@@ -2062,14 +2081,16 @@
                             </td>
                         </tr>
                         {% endfor %}
-                        {% empty %}
+                    </tbody>
+                    {% empty %}
+                    <tbody>
                         <tr>
                             <td colspan="4" style="text-align: center; padding: 36px; color: #64748b;">
                                 No branch allocations found for this slot.
                             </td>
                         </tr>
-                        {% endfor %}
                     </tbody>
+                    {% endfor %}
                 </table>
 
                 <div class="master-sheet-footer">
@@ -2488,31 +2509,18 @@ function filterMasterDept(deptCode, btnEl) {
 
 function filterMasterNoticeTable() {
     const searchVal = (document.getElementById('master-notice-search')?.value || '').toLowerCase().trim();
-    const rows = document.querySelectorAll('#masterNoticeTable tbody tr[data-group-id]');
+    const tbodies = document.querySelectorAll('#masterNoticeTable tbody.master-branch-group');
     
-    // Group rows by group-id so rowspan integrity is preserved
-    const groupMap = {};
-    rows.forEach(r => {
-        const gid = r.getAttribute('data-group-id');
-        if (!groupMap[gid]) {
-            groupMap[gid] = {
-                rows: [],
-                dept: (r.getAttribute('data-dept') || '').trim(),
-                search: (r.getAttribute('data-group-search') || '').toLowerCase(),
-            };
-        }
-        groupMap[gid].rows.push(r);
-    });
-
     let visibleGroupCount = 0;
-    Object.values(groupMap).forEach(g => {
-        const matchesDept = (currentSelectedMasterDept === 'ALL' || g.dept === currentSelectedMasterDept);
-        const matchesSearch = (!searchVal || g.search.includes(searchVal));
+    tbodies.forEach(tb => {
+        const dept = (tb.getAttribute('data-dept') || '').trim();
+        const search = (tb.getAttribute('data-group-search') || '').toLowerCase();
+
+        const matchesDept = (currentSelectedMasterDept === 'ALL' || dept === currentSelectedMasterDept);
+        const matchesSearch = (!searchVal || search.includes(searchVal));
 
         const shouldShow = matchesDept && matchesSearch;
-        g.rows.forEach(r => {
-            r.style.display = shouldShow ? '' : 'none';
-        });
+        tb.style.display = shouldShow ? '' : 'none';
 
         if (shouldShow) {
             visibleGroupCount++;
@@ -2561,13 +2569,22 @@ function printMasterNoticeSheet() {
     const sheetEl = document.getElementById('masterNoticeSheet');
     if (!sheetEl) return;
 
+    // Remove any previous print frame if present
+    const oldFrame = document.getElementById('masterPrintIframe');
+    if (oldFrame && oldFrame.parentNode) {
+        oldFrame.parentNode.removeChild(oldFrame);
+    }
+
     const printFrame = document.createElement('iframe');
+    printFrame.id = 'masterPrintIframe';
     printFrame.style.position = 'fixed';
-    printFrame.style.right = '0';
-    printFrame.style.bottom = '0';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
+    printFrame.style.top = '-10000px';
+    printFrame.style.left = '-10000px';
+    printFrame.style.width = '210mm';
+    printFrame.style.height = '297mm';
     printFrame.style.border = '0';
+    printFrame.style.opacity = '0';
+    printFrame.style.pointerEvents = 'none';
     document.body.appendChild(printFrame);
 
     const doc = printFrame.contentWindow.document;
@@ -2580,7 +2597,7 @@ function printMasterNoticeSheet() {
             <style>
                 @page {
                     size: A4 portrait;
-                    margin: 10mm 12mm;
+                    margin: 12mm 12mm;
                 }
                 * {
                     box-sizing: border-box;
@@ -2594,43 +2611,61 @@ function printMasterNoticeSheet() {
                     padding: 0;
                     background: #fff;
                     font-size: 10pt;
+                    width: 100%;
+                    box-sizing: border-box;
                 }
                 .master-sheet-header {
                     text-align: center;
-                    margin-bottom: 12px;
+                    margin-bottom: 6px;
+                    width: 100%;
+                    box-sizing: border-box;
                 }
                 .master-college-title {
                     font-size: 16pt;
                     font-weight: 900;
                     letter-spacing: 0.05em;
-                    margin: 0 0 4px;
+                    margin: 0;
+                    padding-bottom: 4px;
+                    border-bottom: 1.5pt solid #000;
                     text-transform: uppercase;
                 }
                 .master-exam-title {
                     font-size: 11pt;
                     font-weight: 800;
                     letter-spacing: 0.03em;
-                    margin: 0 0 8px;
+                    margin: 4px 0 0;
+                    padding-bottom: 4px;
+                    border-bottom: 1.5pt solid #000;
                     text-transform: uppercase;
                 }
                 .master-meta-bar {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    border-top: 1.5px solid #000;
-                    border-bottom: 1.5px solid #000;
-                    padding: 4px 6px;
+                    padding: 4px 2px 2px;
                     font-size: 10pt;
                     font-weight: 800;
+                    width: 100%;
+                    box-sizing: border-box;
+                    margin-top: 4px;
+                }
+                tbody.master-branch-group {
+                    page-break-inside: avoid !important;
+                    break-inside: avoid !important;
                 }
                 .master-notice-table {
                     width: 100%;
-                    border-collapse: collapse;
-                    border: 1.5px solid #000;
-                    margin-top: 10px;
+                    table-layout: fixed;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                    border-top: 1.5pt solid #000;
+                    border-left: 1.5pt solid #000;
+                    margin-top: 6px;
+                    box-sizing: border-box;
                 }
                 .master-notice-table th {
-                    border: 1.5px solid #000;
+                    border-right: 1.5pt solid #000;
+                    border-bottom: 1.5pt solid #000;
                     padding: 6px 8px;
                     background: #f1f5f9;
                     font-size: 9pt;
@@ -2638,12 +2673,22 @@ function printMasterNoticeSheet() {
                     text-transform: uppercase;
                     letter-spacing: 0.03em;
                     text-align: left;
+                    box-sizing: border-box;
                 }
                 .master-notice-table td {
-                    border: 1.5px solid #000;
+                    border-right: 1.5pt solid #000;
+                    border-bottom: 1.5pt solid #000;
                     padding: 6px 8px;
                     font-size: 9.5pt;
                     vertical-align: middle;
+                    box-sizing: border-box;
+                    word-break: break-word;
+                    overflow-wrap: break-word;
+                }
+                .master-notice-table th:last-child,
+                .master-notice-table td:last-child,
+                .master-cell-rolls {
+                    border-right: 1.5pt solid #000 !important;
                 }
                 .master-cell-branch {
                     font-weight: 800;
@@ -2691,6 +2736,8 @@ function printMasterNoticeSheet() {
                     padding-top: 8px;
                     font-size: 9pt;
                     font-weight: 700;
+                    width: 100%;
+                    box-sizing: border-box;
                 }
                 tr {
                     page-break-inside: avoid;
