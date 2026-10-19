@@ -1424,7 +1424,7 @@
         /* Hide all non-printable elements */
         .top-nav, .slot-bar, .slot-focus-card, .slot-drawer, .control-toolbar,
         .top-rooms-navbar, .classroom-sidebar, .room-nav-btns, .view-switcher, .search-bar-wrap,
-        .sidebar-filter-group, .classroom-legend, #allocationLoadingOverlay, #view-summary,
+        .sidebar-filter-group, .classroom-legend, #allocationLoadingOverlay,
         #view-department, #view-all-students, .messages, .btn-secondary, button {
             display: none !important;
         }
@@ -1779,9 +1779,6 @@
             <button class="view-btn" id="btn-view-department" onclick="switchView('department')">
                 🏢 Department / Class Wise
             </button>
-            <button class="view-btn" id="btn-view-summary" onclick="switchView('summary')">
-                📊 Stream Overview
-            </button>
             <button class="view-btn" id="btn-view-all-students" onclick="switchView('all-students')">
                 📋 All Students ({{ total_slot_students }})
             </button>
@@ -1794,95 +1791,7 @@
         </div>
     </div>
 
-    <!-- ════════════════ VIEW 1: STREAM OVERVIEW TABLE ════════════════ -->
-    <div id="view-summary" class="view-panel" style="display: none;">
-        <div class="alloc-table-wrapper">
-            <table class="alloc-table">
-                <thead>
-                    <tr>
-                        <th style="width: 100px;">Room No</th>
-                        <th style="width: 90px;">Students</th>
-                        <th>Stream A (Seat 1)</th>
-                        <th>Stream B (Seat 2)</th>
-                        <th>Stream C (Seat 3)</th>
-                        <th style="width: 100px;">Date</th>
-                        <th style="width: 70px;">Slot</th>
-                        <th style="width: 110px; text-align: center;">Details</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rooms %}
-                    <tr>
-                        <td class="room-badge">{{ row.room_number }}</td>
-                        <td style="font-weight: 700; color:var(--text-primary);">{{ row.total_students }}</td>
-                        <td><div class="stream-text">{{ row.stream_a }}</div></td>
-                        <td><div class="stream-text">{{ row.stream_b }}</div></td>
-                        <td><div class="stream-text">{{ row.stream_c }}</div></td>
-                        <td style="color:var(--text-secondary); white-space:nowrap;">{{ row.exam_date|date:"d-m-Y" }}</td>
-                        <td style="font-weight: 700;">{{ row.session }}</td>
-                        <td style="text-align: center;">
-                            <button class="btn-toggle-room" onclick="toggleRoomDrawer('drawer-{{ row.room_number }}', this)">
-                                <span>Seats</span> ▾
-                            </button>
-                        </td>
-                    </tr>
-                    <tr id="drawer-{{ row.room_number }}" class="room-detail-drawer">
-                        <td colspan="8" style="padding: 14px 20px;">
-                            <div style="font-weight: 700; margin-bottom: 8px; font-size: 13px; color:var(--accent-light);">
-                                🪑 Room {{ row.room_number }} Seating Allocation ({{ row.students|length }} students)
-                            </div>
-                            <table class="room-detail-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 70px;">Bench</th>
-                                        <th style="width: 130px;">Seat / Stream</th>
-                                        <th style="width: 140px;">Roll Number</th>
-                                        <th>Student Name</th>
-                                        <th style="width: 110px;">Dept / Class</th>
-                                        <th style="width: 140px;">Subject Code</th>
-                                        <th>Subject Name</th>
-                                        <th style="width: 100px;">Category</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for st in row.students %}
-                                    <tr>
-                                        <td style="font-weight: 600;">Bench {{ st.bench_number }}</td>
-                                        <td>
-                                            <span style="font-weight: 600; color:var(--accent-light);">Seat {{ st.seat_number }}</span>
-                                            <span style="color:var(--text-muted); font-size: 11.5px;">({{ st.stream_name }})</span>
-                                        </td>
-                                        <td style="font-family: monospace; font-weight: 700;">{{ st.roll_number }}</td>
-                                        <td>{{ st.student_name }}</td>
-                                        <td>{{ st.department }}{% if st.class_name %} <span style="color:var(--text-muted); font-size:11.5px;">({{ st.class_name }})</span>{% endif %}</td>
-                                        <td>
-                                            <span class="code-badge {% if st.is_special %}special-badge{% else %}normal-badge{% endif %}">
-                                                {{ st.subject_code }}
-                                            </span>
-                                        </td>
-                                        <td>{{ st.subject_name }}</td>
-                                        <td>
-                                            {% if st.is_special %}
-                                            <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: #10b981; font-weight: 600;">
-                                                {{ st.category }}
-                                            </span>
-                                            {% else %}
-                                            <span style="font-size: 11px; color: var(--text-muted);">Normal</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- ════════════════ VIEW 2: ONE-ROOM-AT-A-TIME (FULL SCREEN WITH TOP ROOM BAR) ════════════════ -->
+    <!-- ════════════════ VIEW 1: ONE-ROOM-AT-A-TIME (FULL SCREEN WITH TOP ROOM BAR) ════════════════ -->
     <div id="view-room-cards" class="view-panel">
         
         <!-- TOP ROOM SELECTOR BAR -->
@@ -2291,12 +2200,10 @@ function switchView(mode) {
     const topPrintBtn = document.getElementById('top-btn-print-master');
 
     if (mode === 'summary') {
-        const p = document.getElementById('view-summary');
-        if (p) p.style.display = 'block';
-        const b = document.getElementById('btn-view-summary');
-        if (b) b.classList.add('active');
-        if (topPrintBtn) topPrintBtn.style.display = 'none';
-    } else if (mode === 'department') {
+        mode = 'room-cards';
+    }
+
+    if (mode === 'department') {
         const p = document.getElementById('view-department');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-department');
