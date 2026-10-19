@@ -927,13 +927,15 @@
 
     @media print {
         @page {
-            size: A4 portrait;
-            margin: 10mm 12mm;
+            size: A4 landscape;
+            margin: 8mm 10mm;
         }
         body {
             background: #ffffff !important;
             color: #000000 !important;
-            font-size: 10pt !important;
+            font-size: 9pt !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
         /* Hide all non-printable elements */
         .top-nav, .slot-bar, .slot-focus-card, .slot-drawer, .control-toolbar,
@@ -944,11 +946,14 @@
         }
         .page-wrapper {
             max-width: 100% !important;
+            width: 100% !important;
             padding: 0 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
         }
         .classroom-main-fullscreen {
             width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 auto !important;
         }
 
         /* Single Room vs All Rooms Print Modes */
@@ -968,35 +973,36 @@
             break-after: auto !important;
         }
 
-        /* Professional Printable Room Header */
+        /* Minimalist Printable Room Header */
         .print-room-sheet-header {
             display: block !important;
             border-bottom: 2px solid #000000 !important;
-            padding-bottom: 8px !important;
-            margin-bottom: 12px !important;
-            text-align: center !important;
+            padding-bottom: 6px !important;
+            margin-bottom: 8px !important;
+            width: 100% !important;
         }
-        .print-college-title {
-            font-size: 13pt !important;
-            font-weight: 800 !important;
-            text-transform: uppercase !important;
+        .print-header-row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            margin: 0 !important;
+            padding: 0 4px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+        }
+        .print-room-title {
+            font-size: 16pt !important;
+            font-weight: 900 !important;
             letter-spacing: 0.04em !important;
             color: #000000 !important;
+            text-transform: uppercase !important;
         }
-        .print-exam-title {
-            font-size: 11pt !important;
-            font-weight: 700 !important;
-            margin: 2px 0 6px !important;
+        .print-plan-title {
+            font-size: 14pt !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.06em !important;
             color: #000000 !important;
-        }
-        .print-meta-grid {
-            display: grid !important;
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 4px 10px !important;
-            font-size: 8.5pt !important;
-            text-align: left !important;
-            padding-top: 5px !important;
-            border-top: 1px solid #cccccc !important;
+            text-transform: uppercase !important;
         }
 
         /* Screen room header hidden during print */
@@ -1010,95 +1016,143 @@
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
-        /* Classroom Blackboard in Print */
+        /* Front of Classroom in Print */
         .classroom-board-simple {
-            max-width: 100% !important;
-            background: #f1f5f9 !important;
+            max-width: 320px !important;
+            background: #f8fafc !important;
             border: 1px solid #94a3b8 !important;
+            border-radius: 12px !important;
             color: #0f172a !important;
             box-shadow: none !important;
-            padding: 4px 8px !important;
-            margin-bottom: 12px !important;
+            padding: 2px 12px !important;
+            margin: 0 auto 8px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
         }
         .chalkboard-main {
             color: #0f172a !important;
-            font-size: 8.5pt !important;
+            font-size: 7.5pt !important;
             font-weight: 700 !important;
+            letter-spacing: 0.06em !important;
+            text-align: center !important;
         }
 
-        /* 3-Column Bench Layout */
+        /* 3-Column Bench Layout (Landscape) */
         .classroom-3col-grid {
             display: grid !important;
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 8px !important;
+            gap: 12px !important;
+            align-items: stretch !important;
+            width: 100% !important;
+            margin: 0 auto !important;
         }
         .column-wrap {
-            gap: 6px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+            width: 100% !important;
         }
         .column-header {
-            color: #000000 !important;
-            border-bottom: 1px solid #000000 !important;
-            font-size: 8pt !important;
-            font-weight: 800 !important;
-            padding: 2px 4px !important;
+            display: none !important;
         }
 
         /* Bench Boxes */
         .bench-box {
-            border: 1px solid #999999 !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
             background: #ffffff !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            padding: 4px 5px !important;
+            padding: 4px 6px 6px !important;
             box-shadow: none !important;
+            margin-bottom: 7px !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+        }
+        .bench-box:last-child {
+            margin-bottom: 0 !important;
         }
         .bench-box-title {
-            color: #000000 !important;
+            color: #334155 !important;
             font-size: 8pt !important;
-            font-weight: 800 !important;
-            border-bottom: 1px dotted #cccccc !important;
-            padding-bottom: 2px !important;
+            font-weight: 700 !important;
+            border-bottom: 1px dotted #e2e8f0 !important;
+            padding: 0 0 2px !important;
+            margin-bottom: 4px !important;
+            text-align: center !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.05em !important;
         }
         .bench-seats-grid {
-            gap: 4px !important;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+            width: 100% !important;
+            align-items: stretch !important;
         }
 
-        /* Minimalist Seat Cells */
+        /* Minimalist Squarish Seat Cells in Print */
         .seat-cell {
-            border: 1px solid #888888 !important;
+            border: 1.5px solid #94a3b8 !important;
+            border-radius: 6px !important;
             background: #ffffff !important;
             color: #000000 !important;
             box-shadow: none !important;
-            padding: 6px !important;
-            min-height: 52px !important;
-            border-top-width: 3px !important;
+            padding: 4px !important;
+            min-height: 82px !important;
+            height: 82px !important;
+            border-top-width: 4.5px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
         }
+        .seat-cell-s1 { border-top-color: #6366f1 !important; }
+        .seat-cell-s2 { border-top-color: #10b981 !important; }
+        .seat-cell-s3 { border-top-color: #f59e0b !important; }
+
         .seat-roll {
             color: #000000 !important;
-            font-size: 11pt !important;
+            font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+            font-size: 13pt !important;
             font-weight: 800 !important;
             text-align: center !important;
             margin: 0 !important;
+            letter-spacing: 0.03em !important;
+            line-height: 1.2 !important;
         }
         .seat-empty {
-            border: 1px dashed #cbd5e1 !important;
-            background: #ffffff !important;
-            min-height: 52px !important;
+            border: 1.5px dashed #cbd5e1 !important;
+            border-radius: 6px !important;
+            background: #fafafa !important;
+            min-height: 82px !important;
+            height: 82px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: 6px !important;
+            padding: 4px !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
         }
         .seat-empty-label {
             color: #94a3b8 !important;
-            font-size: 10pt !important;
+            font-size: 14pt !important;
+            font-weight: 700 !important;
+            text-align: center !important;
         }
     }
 </style>
@@ -1375,15 +1429,9 @@
                     
                     <!-- Printable Room Sheet Header (Visible Only in Print / PDF Mode) -->
                     <div class="print-room-sheet-header">
-                        <div class="print-college-title">{{ session.name }}</div>
-                        <div class="print-exam-title">EXAMINATION SEATING PLAN — ROOM {{ r.room_number }}</div>
-                        <div class="print-meta-grid">
-                            <div><span>Date:</span> <strong>{{ selected_slot.date|date:"l, d F Y" }}</strong></div>
-                            <div><span>Session:</span> <strong>{{ selected_slot.shift }}</strong></div>
-                            <div><span>Total Candidates:</span> <strong>{{ r.total_students }}</strong></div>
-                            <div><span>Total Benches:</span> <strong>{{ r.total_benches }}</strong></div>
-                            <div style="grid-column: span 2;"><span>Departments:</span> <strong>{{ r.departments }}</strong></div>
-                            <div style="grid-column: span 2;"><span>Classes:</span> <strong>{{ r.classes }}</strong></div>
+                        <div class="print-header-row">
+                            <span class="print-room-title">ROOM {{ r.room_number }}</span>
+                            <span class="print-plan-title">SEATING PLAN</span>
                         </div>
                     </div>
 
