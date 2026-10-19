@@ -948,6 +948,170 @@
         border-color: var(--accent);
         color: #ffffff;
     }
+
+    /* ════════════════ MASTER SEATING NOTICE SHEET (OFFICIAL NOTICE BOARD) ════════════════ */
+    .master-notice-container {
+        max-width: 1040px;
+        margin: 0 auto 30px;
+    }
+    .master-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .master-toolbar .search-bar-wrap {
+        flex: 1;
+        min-width: 280px;
+        margin-bottom: 0;
+    }
+    .btn-print-master {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 42px;
+        padding: 0 20px;
+        background: var(--accent);
+        color: #ffffff;
+        border: 1px solid var(--accent);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 2px 8px var(--accent-glow);
+        transition: all 0.15s ease;
+        white-space: nowrap;
+    }
+    .btn-print-master:hover {
+        opacity: 0.94;
+        transform: translateY(-1px);
+    }
+    .master-notice-sheet {
+        background: #ffffff;
+        color: #000000;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 32px 36px 40px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        box-sizing: border-box;
+    }
+    .master-sheet-header {
+        text-align: center;
+        margin-bottom: 14px;
+    }
+    .master-college-title {
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #000000;
+        margin: 0 0 6px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    }
+    .master-exam-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #1e293b;
+        margin: 0 0 12px;
+    }
+    .master-meta-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1.5px solid #000000;
+        border-bottom: 1.5px solid #000000;
+        padding: 6px 4px;
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #000000;
+    }
+    .master-notice-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1.5px solid #000000;
+        margin-top: 12px;
+        background: #ffffff;
+    }
+    .master-notice-table th {
+        border: 1.5px solid #000000;
+        padding: 8px 10px;
+        background: #f1f5f9;
+        color: #000000;
+        font-size: 12.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        text-align: left;
+    }
+    .master-notice-table td {
+        border: 1.5px solid #000000;
+        padding: 8px 10px;
+        color: #000000;
+        vertical-align: middle;
+        font-size: 13px;
+    }
+    .master-cell-branch {
+        font-weight: 800;
+        font-size: 13.5px;
+    }
+    .master-branch-title {
+        font-weight: 800;
+        font-size: 13.5px;
+        color: #000000;
+    }
+    .master-cell-sub {
+        font-size: 11px;
+        font-weight: 600;
+        color: #475569;
+        margin-top: 2px;
+    }
+    .master-cell-subject {
+        font-weight: 600;
+        font-size: 12.5px;
+        line-height: 1.35;
+        color: #000000;
+    }
+    .master-cell-room {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 800;
+        font-size: 14px;
+        text-align: center;
+        color: #000000;
+    }
+    .master-cell-rolls {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        line-height: 1.4;
+        color: #000000;
+    }
+    .compact-rolls-text {
+        color: #000000;
+    }
+    .rolls-count-pill {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        margin-left: 6px;
+    }
+    .master-sheet-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: 30px;
+        padding-top: 14px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
     .dept-alloc-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -1497,6 +1661,13 @@
                             <span class="print-menu-desc">One room per page ({{ rooms|length }} rooms)</span>
                         </div>
                     </button>
+                    <button type="button" class="print-menu-item" onclick="handlePrintMasterNotice()">
+                        <span class="print-menu-icon">🏢</span>
+                        <div class="print-menu-text">
+                            <span class="print-menu-title">Print Master Notice Board</span>
+                            <span class="print-menu-desc">Official branch-wise seating notice sheet (A4 Portrait)</span>
+                        </div>
+                    </button>
                 </div>
             </div>
 
@@ -1794,176 +1965,183 @@
     </div>
 
     <!-- ════════════════ VIEW 2: DEPARTMENT / CLASS WISE ALLOCATIONS ════════════════ -->
+    <!-- ════════════════ VIEW 2: DEPARTMENT / MASTER SEATING NOTICE ════════════════ -->
     <div id="view-department" class="view-panel" style="display: none;">
         
-        <!-- TOP CONTROLS: QUICK SEARCH & DEPARTMENT PILL FILTER -->
-        <div class="search-bar-wrap">
-            <input type="text" id="dept-filter-search" class="search-input"
-                   placeholder="🔍 Search Department, Class, Roll No, Room No, or Subject..."
-                   onkeyup="filterDepartmentCards()">
-            <span style="font-size: 12.5px; color: var(--text-muted);" id="dept-filter-count-display">
-                Showing {{ department_allocations|length }} Classes / Departments
-            </span>
-        </div>
+        <div class="master-notice-container">
 
-        {% if all_departments %}
-        <div class="dept-pills-bar">
-            <button type="button" class="dept-pill active" onclick="filterDeptCategory('ALL', this)">
-                All Departments ({{ all_departments|length }})
-            </button>
-            {% for d in all_departments %}
-            <button type="button" class="dept-pill" onclick="filterDeptCategory('{{ d }}', this)">
-                {{ d }}
-            </button>
-            {% endfor %}
-        </div>
-        {% endif %}
+            <!-- MASTER TOOLBAR: SEARCH & ONE-CLICK PRINT NOTICE SHEET -->
+            <div class="master-toolbar">
+                <div class="search-bar-wrap">
+                    <input type="text" id="master-notice-search" class="search-input"
+                           placeholder="🔍 Search Branch, Subject, Room, or Roll No..."
+                           onkeyup="filterMasterNoticeTable()">
+                    <span style="font-size: 12.5px; color: var(--text-muted);" id="master-notice-count">
+                        Showing {{ department_allocations|length }} Branches
+                    </span>
+                </div>
+                <button type="button" class="btn-print-master" onclick="printMasterNoticeSheet()" title="Print Official Master Notice Board (A4 Portrait)">
+                    <span>🖨️ Print Master Notice</span>
+                </button>
+            </div>
 
-        <!-- DEPARTMENT & CLASS ALLOCATION CARDS -->
-        <div class="dept-cards-container" id="deptCardsContainer">
-            {% for item in department_allocations %}
-            <div class="dept-alloc-card"
-                 id="dept-card-{{ forloop.counter }}"
-                 data-dept="{{ item.department_code }}"
-                 data-class="{{ item.class_name }}"
-                 data-search="{{ item.department_code }} {{ item.class_name }} {{ item.rooms_list_str }} {% for s in item.subjects %}{{ s.code }} {{ s.name }} {% endfor %} {% for st in item.all_students %}{{ st.roll_number }} {{ st.student_name }} {% endfor %}">
-                
-                <!-- CARD HEADER: CLASS TITLE, DEPT BADGE, SUBJECTS & CANDIDATE COUNT -->
-                <div class="dept-card-header">
-                    <div>
-                        <div class="dept-card-title-group">
-                            <span class="dept-code-tag">{{ item.department_code }}</span>
-                            <h3 class="dept-class-title">{{ item.class_name }}</h3>
-                            {% if item.clean_class_name and item.clean_class_name != item.class_name %}
-                            <span class="dept-clean-name">({{ item.clean_class_name }})</span>
-                            {% endif %}
-                        </div>
-                        <div class="dept-card-subjects">
-                            {% for s in item.subjects %}
-                            <span class="dept-subject-badge">
-                                <strong>{{ s.code }}</strong>: {{ s.name }}
-                            </span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="dept-card-meta">
-                        <span class="dept-count-badge">👥 {{ item.total_students }} Candidates</span>
-                        <button type="button" class="btn-print-notice" onclick="printDeptNotice('notice-{{ forloop.counter }}')">
-                            <span>🖨️ Print Notice Sheet</span>
-                        </button>
+            <!-- BRANCH FILTER PILLS -->
+            {% if all_departments %}
+            <div class="dept-pills-bar" style="margin-bottom: 20px;">
+                <button type="button" class="dept-pill active" onclick="filterMasterDept('ALL', this)">
+                    All Branches ({{ department_allocations|length }})
+                </button>
+                {% for d in all_departments %}
+                <button type="button" class="dept-pill" onclick="filterMasterDept('{{ d }}', this)">
+                    {{ d }}
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- MASTER SEATING ARRANGEMENT NOTICE SHEET (MATCHING OFFICIAL COLLEGE NOTICE BOARD) -->
+            <div class="master-notice-sheet" id="masterNoticeSheet">
+                <div class="master-sheet-header">
+                    <h1 class="master-college-title">TKM COLLEGE OF ENGINEERING</h1>
+                    <h2 class="master-exam-title">SEATING ARRANGEMENT OF {{ session.name|upper }}</h2>
+                    <div class="master-meta-bar">
+                        <span>DATE: {{ selected_slot.date|date:"d-m-Y" }}</span>
+                        <span>SHIFT: {{ selected_slot.shift }}</span>
                     </div>
                 </div>
 
-                <!-- ROOMS DISTRIBUTION BREAKDOWN (WHERE ARE THEY ALLOCATED?) -->
-                <div class="dept-rooms-summary-bar">
-                    <div class="dept-rooms-label">
-                        📍 Seating Distribution Across {{ item.rooms_breakdown|length }} Classrooms:
-                    </div>
-                    <div class="dept-rooms-grid">
-                        {% for rb in item.rooms_breakdown %}
-                        <div class="dept-room-tile">
-                            <div class="drt-header">
-                                <span class="drt-room">Room {{ rb.room_number }}</span>
-                                <span class="drt-count">{{ rb.student_count }} Students</span>
-                            </div>
-                            <div class="drt-roll-range">
-                                <span class="drt-roll-lbl">Rolls:</span>
-                                <strong class="drt-roll-val">{{ rb.roll_range_display }}</strong>
-                            </div>
-                            <div class="drt-sub-meta">
-                                <span>{{ rb.stream }}</span>
-                                {% if rb.bench_range %}
-                                <span class="drt-dot">•</span>
-                                <span>{{ rb.bench_range }}</span>
+                <table class="master-notice-table" id="masterNoticeTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 18%;">Branch</th>
+                            <th style="width: 28%;">Subject</th>
+                            <th style="width: 14%; text-align: center;">Class</th>
+                            <th style="width: 40%;">Roll Number of Candidates</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in department_allocations %}
+                        <tr class="master-row-group"
+                            data-group-id="grp-{{ forloop.counter }}"
+                            data-dept="{{ item.department_code }}"
+                            data-group-search="{{ item.department_code }} {{ item.branch_name }} {{ item.subject_display }} {{ item.rooms_list_str }} {% for r in item.rooms_breakdown %}{{ r.compact_rolls }} Room {{ r.room_number }} {% endfor %}">
+                            <td rowspan="{{ item.rowspan }}" class="master-cell-branch" style="background-color: {{ item.color }};">
+                                <div class="master-branch-title">{{ item.branch_name }}</div>
+                                <div class="master-cell-sub">({{ item.total_students }} Candidates)</div>
+                            </td>
+                            <td rowspan="{{ item.rowspan }}" class="master-cell-subject" style="background-color: {{ item.color }};">
+                                {{ item.subject_display }}
+                            </td>
+                            <td class="master-cell-room" style="background-color: {{ item.color }};">
+                                {% if item.first_room %}
+                                {{ item.first_room.room_number }}
+                                {% else %}
+                                —
                                 {% endif %}
-                            </div>
-                        </div>
+                            </td>
+                            <td class="master-cell-rolls" style="background-color: {{ item.color }};">
+                                {% if item.first_room %}
+                                <span class="compact-rolls-text">{{ item.first_room.compact_rolls }}</span>
+                                <span class="rolls-count-pill">({{ item.first_room.student_count }})</span>
+                                {% else %}
+                                —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% for sub_room in item.subsequent_rooms %}
+                        <tr class="master-sub-row"
+                            data-group-id="grp-{{ forloop.parentloop.counter }}"
+                            data-dept="{{ item.department_code }}"
+                            data-group-search="{{ item.department_code }} {{ item.branch_name }} {{ item.subject_display }} {{ item.rooms_list_str }} {% for r in item.rooms_breakdown %}{{ r.compact_rolls }} Room {{ r.room_number }} {% endfor %}">
+                            <td class="master-cell-room" style="background-color: {{ item.color }};">
+                                {{ sub_room.room_number }}
+                            </td>
+                            <td class="master-cell-rolls" style="background-color: {{ item.color }};">
+                                <span class="compact-rolls-text">{{ sub_room.compact_rolls }}</span>
+                                <span class="rolls-count-pill">({{ sub_room.student_count }})</span>
+                            </td>
+                        </tr>
                         {% endfor %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 36px; color: #64748b;">
+                                No branch allocations found for this slot.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="master-sheet-footer">
+                    <div>
+                        <span>Total Candidates: <strong>{{ total_slot_students }}</strong></span>
+                        <span style="margin: 0 8px; color: #94a3b8;">•</span>
+                        <span>Total Classrooms: <strong>{{ rooms|length }}</strong></span>
+                    </div>
+                    <div>
+                        <span>Chief Superintendent / Exam Cell</span>
                     </div>
                 </div>
+            </div><!-- /.master-notice-sheet -->
 
-                <!-- EXPANDABLE FULL STUDENT LIST FOR THIS CLASS -->
-                <div class="dept-roster-toggle-wrap">
-                    <button type="button" class="btn-toggle-roster" onclick="toggleDeptRoster('roster-{{ forloop.counter }}', this)">
-                        <span>View All {{ item.total_students }} Students</span>
-                        <span class="caret">▾</span>
+            <!-- COLLAPSIBLE DETAILED ROSTERS (INDIVIDUAL CANDIDATE LOOKUP) -->
+            <div class="detailed-rosters-section" style="margin-top: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <h4 style="margin: 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+                        📋 Candidate Roster Verification (Individual Names & Seats)
+                    </h4>
+                    <button type="button" class="btn-toggle-roster" onclick="toggleDetailedRosters(this)">
+                        <span>Show Detailed Rosters</span> <span class="caret">▾</span>
                     </button>
                 </div>
-                <div id="roster-{{ forloop.counter }}" class="dept-roster-drawer" style="display: none;">
-                    <table class="dept-roster-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 45px;">#</th>
-                                <th style="width: 140px;">Roll Number</th>
-                                <th>Student Name</th>
-                                <th style="width: 110px;">Allocated Room</th>
-                                <th style="width: 90px;">Bench</th>
-                                <th style="width: 130px;">Seat / Stream</th>
-                                <th style="width: 120px;">Subject Code</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for st in item.all_students %}
-                            <tr>
-                                <td style="color: var(--text-muted); font-size: 11px;">{{ forloop.counter }}</td>
-                                <td class="cell-roll">{{ st.roll_number }}</td>
-                                <td class="cell-name">{{ st.student_name }}</td>
-                                <td><span class="room-pill-sm">Room {{ st.room_number }}</span></td>
-                                <td style="font-weight: 600;">Bench {{ st.bench_number }}</td>
-                                <td>Seat {{ st.seat_number }} ({{ st.stream_letter }})</td>
-                                <td><span class="code-badge normal-badge">{{ st.subject_code }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- HIDDEN PRINTABLE NOTICE SHEET TEMPLATE (POPULATED INTO IFRAME ON PRINT) -->
-                <div id="notice-{{ forloop.counter }}" style="display: none;">
-                    <div class="notice-header">
-                        <h2>EXAMINATION SEATING ARRANGEMENT</h2>
-                        <div class="notice-meta-line">
-                            <span><strong>Class / Department:</strong> {{ item.class_name }} ({{ item.department_code }})</span>
-                            <span><strong>Date & Shift:</strong> {{ selected_slot.date|date:"d M Y" }} ({{ selected_slot.shift }})</span>
+                <div id="detailedRostersContainer" style="display: none;">
+                    {% for item in department_allocations %}
+                    <div class="dept-alloc-card" style="margin-bottom: 14px;" data-dept="{{ item.department_code }}">
+                        <div class="dept-card-header" style="margin-bottom: 10px; padding-bottom: 8px;">
+                            <div class="dept-card-title-group">
+                                <span class="dept-code-tag">{{ item.department_code }}</span>
+                                <h4 class="dept-class-title" style="font-size: 15px;">{{ item.class_name }}</h4>
+                                <span class="dept-count-badge" style="font-size: 11px; padding: 2px 8px;">{{ item.total_students }} Candidates</span>
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">
+                                {{ item.subject_display }}
+                            </div>
                         </div>
-                        <div class="notice-meta-line">
-                            <span><strong>Subject(s):</strong> {% for s in item.subjects %}{{ s.code }} - {{ s.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span>
-                            <span><strong>Total Candidates:</strong> {{ item.total_students }}</span>
+                        <div class="dept-roster-drawer" style="display: block; margin-top: 0; padding-top: 0; border: none;">
+                            <table class="dept-roster-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 45px;">#</th>
+                                        <th style="width: 140px;">Roll Number</th>
+                                        <th>Student Name</th>
+                                        <th style="width: 110px;">Room</th>
+                                        <th style="width: 90px;">Bench</th>
+                                        <th style="width: 130px;">Seat / Stream</th>
+                                        <th style="width: 120px;">Subject</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for st in item.all_students %}
+                                    <tr>
+                                        <td style="color: var(--text-muted); font-size: 11px;">{{ forloop.counter }}</td>
+                                        <td class="cell-roll">{{ st.roll_number }}</td>
+                                        <td class="cell-name">{{ st.student_name }}</td>
+                                        <td><span class="room-pill-sm">Room {{ st.room_number }}</span></td>
+                                        <td style="font-weight: 600;">Bench {{ st.bench_number }}</td>
+                                        <td>Seat {{ st.seat_number }} ({{ st.stream_letter }})</td>
+                                        <td><span class="code-badge normal-badge">{{ st.subject_code }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <table class="notice-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 110px;">Classroom</th>
-                                <th>Roll Number Range</th>
-                                <th style="width: 90px; text-align: center;">Candidates</th>
-                                <th>Stream & Benches</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for rb in item.rooms_breakdown %}
-                            <tr>
-                                <td><strong>Room {{ rb.room_number }}</strong></td>
-                                <td style="font-family: monospace; font-weight: 700; font-size: 11.5pt;">{{ rb.roll_range_display }}</td>
-                                <td style="text-align: center; font-weight: 800;">{{ rb.student_count }}</td>
-                                <td>{{ rb.stream }}{% if rb.bench_range %} ({{ rb.bench_range }}){% endif %}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    <div class="notice-footer">
-                        <span>Issued by Exam Cell</span>
-                        <span>Session: {{ session.name }}</span>
-                    </div>
+                    {% endfor %}
                 </div>
-
-            </div><!-- /.dept-alloc-card -->
-            {% empty %}
-            <div class="empty-state">
-                <p>No department allocations found for this examination slot.</p>
             </div>
-            {% endfor %}
-        </div>
+
+        </div><!-- /.master-notice-container -->
+
     </div>
 
     <!-- ════════════════ VIEW 3: ALL STUDENTS FLAT TABLE ════════════════ -->
@@ -2298,62 +2476,90 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// ════════════════ DEPARTMENT / CLASS VIEW HELPERS ════════════════
-let currentSelectedDeptPill = "ALL";
+// ════════════════ MASTER SEATING NOTICE & DEPARTMENT HELPERS ════════════════
+let currentSelectedMasterDept = "ALL";
 
-function filterDeptCategory(deptCode, btnEl) {
-    currentSelectedDeptPill = deptCode;
-    document.querySelectorAll('.dept-pill').forEach(b => b.classList.remove('active'));
+function filterMasterDept(deptCode, btnEl) {
+    currentSelectedMasterDept = deptCode;
+    document.querySelectorAll('.dept-pills-bar .dept-pill').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
-    filterDepartmentCards();
+    filterMasterNoticeTable();
 }
 
-function filterDepartmentCards() {
-    const searchVal = (document.getElementById('dept-filter-search')?.value || '').toLowerCase().trim();
-    const cards = document.querySelectorAll('.dept-alloc-card');
-    let visibleCount = 0;
+function filterMasterNoticeTable() {
+    const searchVal = (document.getElementById('master-notice-search')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#masterNoticeTable tbody tr[data-group-id]');
+    
+    // Group rows by group-id so rowspan integrity is preserved
+    const groupMap = {};
+    rows.forEach(r => {
+        const gid = r.getAttribute('data-group-id');
+        if (!groupMap[gid]) {
+            groupMap[gid] = {
+                rows: [],
+                dept: (r.getAttribute('data-dept') || '').trim(),
+                search: (r.getAttribute('data-group-search') || '').toLowerCase(),
+            };
+        }
+        groupMap[gid].rows.push(r);
+    });
 
-    cards.forEach(card => {
-        const cardDept = (card.getAttribute('data-dept') || '').trim();
-        const cardSearchText = (card.getAttribute('data-search') || '').toLowerCase();
+    let visibleGroupCount = 0;
+    Object.values(groupMap).forEach(g => {
+        const matchesDept = (currentSelectedMasterDept === 'ALL' || g.dept === currentSelectedMasterDept);
+        const matchesSearch = (!searchVal || g.search.includes(searchVal));
 
-        const matchesDept = (currentSelectedDeptPill === 'ALL' || cardDept === currentSelectedDeptPill);
-        const matchesSearch = (!searchVal || cardSearchText.includes(searchVal));
+        const shouldShow = matchesDept && matchesSearch;
+        g.rows.forEach(r => {
+            r.style.display = shouldShow ? '' : 'none';
+        });
 
-        if (matchesDept && matchesSearch) {
-            card.style.display = 'block';
-            visibleCount++;
-        } else {
-            card.style.display = 'none';
+        if (shouldShow) {
+            visibleGroupCount++;
         }
     });
 
-    const countDisplay = document.getElementById('dept-filter-count-display');
+    const countDisplay = document.getElementById('master-notice-count');
     if (countDisplay) {
-        countDisplay.innerText = `Showing ${visibleCount} Classes / Departments`;
+        countDisplay.innerText = `Showing ${visibleGroupCount} Branches`;
     }
+
+    // Also filter detailed rosters if any
+    const detailedCards = document.querySelectorAll('#detailedRostersContainer .dept-alloc-card');
+    detailedCards.forEach(card => {
+        const cDept = (card.getAttribute('data-dept') || '').trim();
+        const matchesDept = (currentSelectedMasterDept === 'ALL' || cDept === currentSelectedMasterDept);
+        card.style.display = matchesDept ? 'block' : 'none';
+    });
 }
 
-function toggleDeptRoster(rosterId, btnEl) {
-    const drawer = document.getElementById(rosterId);
-    if (!drawer) return;
-    const isShown = drawer.style.display !== 'none';
+function toggleDetailedRosters(btnEl) {
+    const container = document.getElementById('detailedRostersContainer');
+    if (!container) return;
+    const isShown = container.style.display !== 'none';
     if (isShown) {
-        drawer.style.display = 'none';
-        if (btnEl) {
-            btnEl.innerHTML = `<span>View All Students</span> <span class="caret">▾</span>`;
-        }
+        container.style.display = 'none';
+        if (btnEl) btnEl.innerHTML = `<span>Show Detailed Rosters</span> <span class="caret">▾</span>`;
     } else {
-        drawer.style.display = 'block';
-        if (btnEl) {
-            btnEl.innerHTML = `<span>Hide Students</span> <span class="caret">▴</span>`;
-        }
+        container.style.display = 'block';
+        if (btnEl) btnEl.innerHTML = `<span>Hide Detailed Rosters</span> <span class="caret">▴</span>`;
     }
 }
 
-function printDeptNotice(noticeId) {
-    const noticeEl = document.getElementById(noticeId);
-    if (!noticeEl) return;
+// Handler called from print dropdown menu in top bar
+function handlePrintMasterNotice() {
+    const wrap = document.getElementById('printDropdownWrap');
+    const menu = document.getElementById('printDropdownMenu');
+    if (menu) menu.classList.remove('show');
+    if (wrap) wrap.classList.remove('open');
+    switchView('department');
+    printMasterNoticeSheet();
+}
+
+// Print Master Notice Sheet (A4 Portrait, Official Notice Board Format)
+function printMasterNoticeSheet() {
+    const sheetEl = document.getElementById('masterNoticeSheet');
+    if (!sheetEl) return;
 
     const printFrame = document.createElement('iframe');
     printFrame.style.position = 'fixed';
@@ -2370,68 +2576,130 @@ function printDeptNotice(noticeId) {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Department Seating Notice</title>
+            <title>Seating Arrangement Notice - TKM College of Engineering</title>
             <style>
-                @page { size: A4 portrait; margin: 15mm 20mm; }
+                @page {
+                    size: A4 portrait;
+                    margin: 10mm 12mm;
+                }
+                * {
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                }
                 body {
                     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
                     color: #000;
                     margin: 0;
-                    padding: 15px;
-                    font-size: 11pt;
+                    padding: 0;
+                    background: #fff;
+                    font-size: 10pt;
                 }
-                .notice-header {
+                .master-sheet-header {
                     text-align: center;
-                    border-bottom: 2.5px solid #000;
-                    padding-bottom: 12px;
-                    margin-bottom: 18px;
+                    margin-bottom: 12px;
                 }
-                .notice-header h2 {
-                    margin: 0 0 10px;
+                .master-college-title {
                     font-size: 16pt;
                     font-weight: 900;
                     letter-spacing: 0.05em;
+                    margin: 0 0 4px;
                     text-transform: uppercase;
                 }
-                .notice-meta-line {
+                .master-exam-title {
+                    font-size: 11pt;
+                    font-weight: 800;
+                    letter-spacing: 0.03em;
+                    margin: 0 0 8px;
+                    text-transform: uppercase;
+                }
+                .master-meta-bar {
                     display: flex;
                     justify-content: space-between;
-                    margin-bottom: 6px;
-                    font-size: 10.5pt;
+                    align-items: center;
+                    border-top: 1.5px solid #000;
+                    border-bottom: 1.5px solid #000;
+                    padding: 4px 6px;
+                    font-size: 10pt;
+                    font-weight: 800;
                 }
-                .notice-table {
+                .master-notice-table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-top: 15px;
-                    margin-bottom: 25px;
+                    border: 1.5px solid #000;
+                    margin-top: 10px;
                 }
-                .notice-table th {
+                .master-notice-table th {
+                    border: 1.5px solid #000;
+                    padding: 6px 8px;
                     background: #f1f5f9;
-                    border: 1.5px solid #000;
-                    padding: 8px 12px;
-                    text-align: left;
-                    font-size: 10pt;
+                    font-size: 9pt;
+                    font-weight: 800;
                     text-transform: uppercase;
-                    letter-spacing: 0.04em;
+                    letter-spacing: 0.03em;
+                    text-align: left;
                 }
-                .notice-table td {
+                .master-notice-table td {
                     border: 1.5px solid #000;
-                    padding: 10px 12px;
-                    font-size: 11pt;
+                    padding: 6px 8px;
+                    font-size: 9.5pt;
+                    vertical-align: middle;
                 }
-                .notice-footer {
+                .master-cell-branch {
+                    font-weight: 800;
+                    font-size: 9.5pt;
+                }
+                .master-branch-title {
+                    font-weight: 800;
+                }
+                .master-cell-branch .master-cell-sub {
+                    font-size: 8pt;
+                    font-weight: 600;
+                    color: #334155;
+                    margin-top: 2px;
+                }
+                .master-cell-subject {
+                    font-weight: 600;
+                    font-size: 9pt;
+                    line-height: 1.25;
+                }
+                .master-cell-room {
+                    text-align: center;
+                    font-weight: 800;
+                    font-size: 10pt;
+                    font-family: 'JetBrains Mono', ui-monospace, monospace;
+                }
+                .master-cell-rolls {
+                    font-family: 'JetBrains Mono', ui-monospace, monospace;
+                    font-weight: 700;
+                    font-size: 9.5pt;
+                    letter-spacing: 0.02em;
+                    line-height: 1.35;
+                }
+                .rolls-count-pill {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-size: 8pt;
+                    font-weight: 700;
+                    color: #475569;
+                    margin-left: 4px;
+                }
+                .master-sheet-footer {
                     display: flex;
                     justify-content: space-between;
-                    font-size: 9.5pt;
-                    color: #555;
-                    border-top: 1px dotted #888;
-                    padding-top: 10px;
-                    margin-top: 30px;
+                    align-items: flex-end;
+                    margin-top: 25px;
+                    padding-top: 8px;
+                    font-size: 9pt;
+                    font-weight: 700;
+                }
+                tr {
+                    page-break-inside: avoid;
+                    break-inside: avoid;
                 }
             </style>
         </head>
         <body>
-            ${noticeEl.innerHTML}
+            ${sheetEl.innerHTML}
         </body>
         </html>
     `);

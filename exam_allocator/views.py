@@ -1,5 +1,6 @@
 import math
-from collections import defaultdict
+import re
+from collections import defaultdict, Counter
 from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db import transaction
@@ -58,6 +59,59 @@ from .services.registration_service import (
 
 
 
+
+
+_ROLL_NUM_PATTERN = re.compile(r'^(.*?)(\d+)$')
+
+def format_rolls_for_room(rolls, class_rolls):
+    """
+    Format a list of student roll numbers in a room into clean consecutive ranges,
+    matching official college seating arrangement notices:
+    e.g. '01-08', '10-24', '25-29, 31', 'B22CSA56, 01-08', '1-2, 4-16'
+    """
+    if not rolls:
+        return ""
+
+    matches = [_ROLL_NUM_PATTERN.match(r) for r in class_rolls if _ROLL_NUM_PATTERN.match(r)]
+    dominant_prefix = ""
+    if matches:
+        prefix_counts = Counter(m.group(1) for m in matches)
+        dominant_prefix, count = prefix_counts.most_common(1)[0]
+        if count < len(class_rolls) * 0.35:
+            dominant_prefix = ""
+
+    irregulars = []
+    regular_nums = []
+
+    for r in rolls:
+        m = _ROLL_NUM_PATTERN.match(r)
+        if dominant_prefix and m and m.group(1) == dominant_prefix:
+            regular_nums.append((int(m.group(2)), m.group(2)))
+        elif not dominant_prefix and m and not m.group(1):
+            regular_nums.append((int(m.group(2)), m.group(2)))
+        else:
+            irregulars.append(r)
+
+    regular_nums.sort(key=lambda x: x[0])
+    ranges = []
+    if regular_nums:
+        start_num, start_str = regular_nums[0]
+        prev_num = start_num
+        prev_str = start_str
+        for num, raw_str in regular_nums[1:]:
+            if num == prev_num + 1:
+                prev_num = num
+                prev_str = raw_str
+            else:
+                ranges.append(start_str if start_num == prev_num else f"{start_str}-{prev_str}")
+                start_num = num
+                start_str = raw_str
+                prev_num = num
+                prev_str = raw_str
+        ranges.append(start_str if start_num == prev_num else f"{start_str}-{prev_str}")
+
+    parts = irregulars + ranges
+    return ", ".join(parts)
 
 
 @ensure_csrf_cookie
@@ -578,16 +632,34 @@ def session_allocation_result(request, session_id):
         group_key = (st['department'], grp_name)
         dept_class_groups[group_key].append(st)
 
+    PASTEL_COLORS = [
+        "#dbeafe",  # Pastel Blue
+        "#dcfce7",  # Pastel Light Green
+        "#ffe4e6",  # Pastel Rose / Salmon
+        "#cffafe",  # Pastel Sky Blue / Cyan
+        "#ffedd5",  # Pastel Peach / Amber
+        "#f3e8ff",  # Pastel Lavender / Purple
+        "#fef9c3",  # Pastel Soft Yellow
+        "#e0e7ff",  # Pastel Periwinkle
+    ]
+
     department_allocations = []
     all_dept_codes = set()
 
     for (dept_code, class_name), st_list in dept_class_groups.items():
         all_dept_codes.add(dept_code)
+        all_class_rolls = [s['roll_number'] for s in st_list]
+
         subjects_map = {}
         for s in st_list:
             if s['subject_code'] not in subjects_map:
                 subjects_map[s['subject_code']] = s['subject_name']
         subjects_list = [{'code': code, 'name': name} for code, name in sorted(subjects_map.items())]
+
+        if subjects_list:
+            subject_display = ", ".join(f"{s['name']} ({s['code']})" if s['code'] else s['name'] for s in subjects_list)
+        else:
+            subject_display = "—"
 
         # Group students by room
         room_groups = defaultdict(list)
@@ -601,6 +673,9 @@ def session_allocation_result(request, session_id):
             roll_start = roll_sorted[0]['roll_number'] if roll_sorted else ""
             roll_end = roll_sorted[-1]['roll_number'] if roll_sorted else ""
             roll_range_display = f"{roll_start} – {roll_end}" if roll_start != roll_end else roll_start
+
+            room_rolls = [s['roll_number'] for s in r_students]
+            compact_rolls = format_rolls_for_room(room_rolls, all_class_rolls)
 
             benches_used = sorted(list(set(x['bench_number'] for x in r_students)))
             if benches_used:
@@ -619,6 +694,7 @@ def session_allocation_result(request, session_id):
             rooms_breakdown.append({
                 'room_number': r_num,
                 'student_count': len(r_students),
+                'compact_rolls': compact_rolls,
                 'roll_start': roll_start,
                 'roll_end': roll_end,
                 'roll_range_display': roll_range_display,
@@ -632,16 +708,24 @@ def session_allocation_result(request, session_id):
 
         department_allocations.append({
             'department_code': dept_code,
+            'branch_name': class_name,
             'class_name': class_name,
             'clean_class_name': BlueprintService.strip_section_suffix(class_name) if class_name else dept_code,
+            'subject_display': subject_display,
             'total_students': len(st_list),
             'subjects': subjects_list,
             'rooms_breakdown': rooms_breakdown,
+            'first_room': rooms_breakdown[0] if rooms_breakdown else None,
+            'subsequent_rooms': rooms_breakdown[1:] if len(rooms_breakdown) > 1 else [],
+            'rowspan': len(rooms_breakdown),
             'rooms_list_str': ", ".join(f"Room {rb['room_number']} ({rb['student_count']})" for rb in rooms_breakdown),
             'all_students': st_list_sorted,
         })
 
     department_allocations.sort(key=lambda x: (x['department_code'], x['class_name']))
+    for idx, d in enumerate(department_allocations):
+        d['color'] = PASTEL_COLORS[idx % len(PASTEL_COLORS)]
+
     all_dept_list = sorted(list(all_dept_codes))
     active_view = request.GET.get('view', 'room-cards')
 
