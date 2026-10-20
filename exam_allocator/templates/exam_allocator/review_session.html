@@ -1074,6 +1074,17 @@
         flex-shrink: 0;
     }
 
+    @keyframes rowFlashSuccess {
+        0% { background-color: rgba(34, 197, 94, 0.25); }
+        100% { background-color: transparent; }
+    }
+    .row-flash-success td {
+        animation: rowFlashSuccess 1.5s ease-out;
+    }
+    .missing-notice-banner {
+        transition: opacity 0.25s ease, max-height 0.25s ease;
+    }
+
 </style>
 {% endblock %}
 
@@ -1105,7 +1116,7 @@
             <div class="stat-lbl">Departments</div>
         </div>
         <div class="stat-card">
-            <div class="stat-num">{{ students_count }}</div>
+            <div class="stat-num" id="stat-students-count">{{ students_count }}</div>
             <div class="stat-lbl">Students</div>
         </div>
         <div class="stat-card">
@@ -1138,12 +1149,14 @@
         <div class="panel-toolbar">
             <div class="panel-toolbar-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span>Departments &amp; Classes ({{ departments.count }} depts)</span>
+                <span id="toolbar-missing-badge-wrap">
                 {% if missing_roll_count > 0 %}
                 <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
                     <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
                     <span>{{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)</span>
                 </span>
                 {% endif %}
+                </span>
             </div>
             <div class="panel-toolbar-actions">
                 <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Import Students</a>
@@ -1151,17 +1164,19 @@
             </div>
         </div>
         {% for dept in departments %}
-        <div class="sec-card">
+        <div class="sec-card" id="dept-card-{{ dept.department_id }}">
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
                     {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{ dept.department_code }})</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
+                    <span id="dept-missing-badge-wrap-{{ dept.department_id }}">
                     {% if dept.missing_roll_count > 0 %}
                     <span class="missing-roll-badge">
                         <span class="badge-warn-icon">⚠️</span> {{ dept.missing_roll_count }} missing roll
                     </span>
                     {% endif %}
+                    </span>
                     <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es" }}</span>
                     <span class="chevron">▼</span>
                 </div>
@@ -1169,15 +1184,17 @@
             <div class="sec-card-body collapsed">
                 <div class="class-list">
                     {% for cls in dept.classes.all %}
-                    <div class="class-row" id="class-row-{{ cls.class_id }}" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
+                    <div class="class-row" id="class-row-{{ cls.class_id }}" data-class-id="{{ cls.class_id }}" data-dept-id="{{ dept.department_id }}" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
                         <span class="class-name">{{ cls.class_name }}</span>
                         <div style="display:flex; align-items:center; gap:10px;">
+                            <span id="class-missing-badge-wrap-{{ cls.class_id }}">
                             {% if cls.missing_roll_count > 0 %}
                             <span class="missing-roll-badge">
                                 <span class="badge-warn-icon">⚠️</span> {{ cls.missing_roll_count }} missing roll
                             </span>
                             {% endif %}
-                            <span class="class-count">{{ cls.students.count }} students</span>
+                            </span>
+                            <span class="class-count" id="class-count-{{ cls.class_id }}">{{ cls.students.count }} student{{ cls.students.count|pluralize }}</span>
                             <button class="row-act-btn del" onclick="event.stopPropagation(); deleteClass({{ cls.class_id }}, '{{ cls.class_name|escapejs }}')">Delete</button>
                             <span class="class-arrow">›</span>
                         </div>
@@ -1771,17 +1788,22 @@
             .catch(() => { panel.innerHTML = '<div style="padding:12px;color:var(--error);font-size:13px;">Failed to load students.</div>'; });
     }
 
+    function escHTML(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
     function renderStudentTable(classId, students) {
         const panel = document.getElementById('sp-' + classId);
         const missingRolls = students.filter(s => !s.roll_number || !s.roll_number.trim()).length;
         let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <div style="font-size:12px; color:var(--text-muted);">${students.length} student${students.length === 1 ? '' : 's'} enrolled</div>
+            <div id="panel-stud-count-${classId}" style="font-size:12px; color:var(--text-muted);">${students.length} student${students.length === 1 ? '' : 's'} enrolled</div>
             <button class="btn-sm-primary" onclick="openAddClassStudentModal(${classId})">+ Add Student</button>
-        </div>`;
+        </div>
+        <div id="missing-notice-container-${classId}">`;
         if (missingRolls > 0) {
             html += `
-            <div style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
+            <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
                     <span>Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
@@ -1789,6 +1811,7 @@
                 <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
             </div>`;
         }
+        html += `</div>`;
         if (!students.length) {
             html += '<div style="padding:12px;color:var(--text-muted);font-size:13px;">No students in this class.</div>';
             panel.innerHTML = html;
@@ -1799,19 +1822,19 @@
         students.forEach((s, i) => {
             const hasRoll = s.roll_number && s.roll_number.trim();
             const rollDisplay = hasRoll 
-                ? `<span style="font-weight:600">${s.roll_number}</span>`
+                ? `<span style="font-weight:600">${escHTML(s.roll_number)}</span>`
                 : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
 
-            html += `<tr id="stud-row-${s.id}">
-            <td style="color:var(--text-muted)">${i + 1}</td>
-            <td>${s.admission_no || '—'}</td>
+            html += `<tr id="stud-row-${s.id}" data-student-id="${s.id}" data-class-id="${classId}">
+            <td class="row-num" style="color:var(--text-muted)">${i + 1}</td>
+            <td>${escHTML(s.admission_no || '—')}</td>
             <td>${rollDisplay}</td>
-            <td>${s.uni_reg_no || '—'}</td>
-            <td>${s.student_name}</td>
-            <td>${s.gender || '—'}</td>
+            <td>${escHTML(s.uni_reg_no || '—')}</td>
+            <td>${escHTML(s.student_name)}</td>
+            <td>${escHTML(s.gender || '—')}</td>
             <td style="text-align:right; white-space:nowrap;">
-                <button class="row-act-btn" onclick="openStudentModal(${s.id},'${escJS(s.roll_number || '')}','${escJS(s.student_name)}','${escJS(s.admission_no || '')}','${escJS(s.uni_reg_no || '')}','${escJS(s.gender || '')}')">Edit</button>
-                <button class="row-act-btn del" onclick="deleteStudent(${s.id},'${escJS(s.roll_number || '')}')">Delete</button>
+                <button class="row-act-btn" onclick="openStudentModal(${s.id},'${escJS(s.roll_number || '')}','${escJS(s.student_name)}','${escJS(s.admission_no || '')}','${escJS(s.uni_reg_no || '')}','${escJS(s.gender || '')}',${classId})">Edit</button>
+                <button class="row-act-btn del" onclick="deleteStudent(${s.id},'${escJS(s.roll_number || '')}',${classId})">Delete</button>
             </td>
         </tr>`;
         });
@@ -1822,9 +1845,12 @@
     /* ── STUDENT ADD / EDIT MODAL ───────────── */
     let editingStudentId = null;
     let addingClassId = null;
-    function openStudentModal(id, roll, name, adm, reg, gender) {
+    let editingClassId = null;
+
+    function openStudentModal(id, roll, name, adm, reg, gender, classId) {
         editingStudentId = id;
         addingClassId = null;
+        editingClassId = classId || null;
         document.getElementById('student-modal-title').textContent = 'Edit Student';
         document.getElementById('inp-roll').value = roll;
         document.getElementById('inp-name').value = name;
@@ -1833,10 +1859,16 @@
         document.getElementById('inp-gender').value = gender || '';
         document.getElementById('student-modal-error').style.display = 'none';
         document.getElementById('student-modal').hidden = false;
+        setTimeout(() => {
+            const inp = document.getElementById('inp-roll');
+            if (inp) { inp.focus(); inp.select(); }
+        }, 50);
     }
+
     function openAddClassStudentModal(classId) {
         addingClassId = classId;
         editingStudentId = null;
+        editingClassId = classId;
         document.getElementById('student-modal-title').textContent = 'Add Student to Class';
         document.getElementById('inp-roll').value = '';
         document.getElementById('inp-name').value = '';
@@ -1845,12 +1877,96 @@
         document.getElementById('inp-gender').value = '';
         document.getElementById('student-modal-error').style.display = 'none';
         document.getElementById('student-modal').hidden = false;
+        setTimeout(() => {
+            const inp = document.getElementById('inp-roll');
+            if (inp) inp.focus();
+        }, 50);
     }
+
     function closeStudentModal() {
         document.getElementById('student-modal').hidden = true;
         editingStudentId = null;
         addingClassId = null;
+        editingClassId = null;
     }
+
+    function updateStudentBadgesAndCounts(data) {
+        if (!data) return;
+
+        // 1. Notice banner in open class panel
+        const noticeContainer = document.getElementById('missing-notice-container-' + data.class_id);
+        if (noticeContainer) {
+            if (data.class_missing_count > 0) {
+                noticeContainer.innerHTML = `
+                <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between; animation: fu .3s ease both;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                        <span>Notice: <strong>${data.class_missing_count} student${data.class_missing_count > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
+                    </div>
+                    <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
+                </div>`;
+            } else {
+                noticeContainer.innerHTML = '';
+            }
+        }
+
+        // 2. Class row missing badge
+        const classBadgeWrap = document.getElementById('class-missing-badge-wrap-' + data.class_id);
+        if (classBadgeWrap) {
+            if (data.class_missing_count > 0) {
+                classBadgeWrap.innerHTML = `
+                <span class="missing-roll-badge">
+                    <span class="badge-warn-icon">⚠️</span> ${data.class_missing_count} missing roll
+                </span>`;
+            } else {
+                classBadgeWrap.innerHTML = '';
+            }
+        }
+
+        // 3. Class students count on row & panel
+        const classCountEl = document.getElementById('class-count-' + data.class_id);
+        if (classCountEl && typeof data.class_students_count !== 'undefined') {
+            classCountEl.textContent = `${data.class_students_count} student${data.class_students_count === 1 ? '' : 's'}`;
+        }
+        const panelCountEl = document.getElementById('panel-stud-count-' + data.class_id);
+        if (panelCountEl && typeof data.class_students_count !== 'undefined') {
+            panelCountEl.textContent = `${data.class_students_count} student${data.class_students_count === 1 ? '' : 's'} enrolled`;
+        }
+
+        // 4. Department header missing badge
+        const deptBadgeWrap = document.getElementById('dept-missing-badge-wrap-' + data.department_id);
+        if (deptBadgeWrap) {
+            if (data.dept_missing_count > 0) {
+                deptBadgeWrap.innerHTML = `
+                <span class="missing-roll-badge">
+                    <span class="badge-warn-icon">⚠️</span> ${data.dept_missing_count} missing roll
+                </span>`;
+            } else {
+                deptBadgeWrap.innerHTML = '';
+            }
+        }
+
+        // 5. Toolbar missing badge (Departments tab header)
+        const toolbarBadgeWrap = document.getElementById('toolbar-missing-badge-wrap');
+        if (toolbarBadgeWrap) {
+            if (data.total_missing_count > 0) {
+                toolbarBadgeWrap.innerHTML = `
+                <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
+                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span>${data.total_missing_count} student${data.total_missing_count > 1 ? 's' : ''} with missing Roll No (left blank)</span>
+                </span>`;
+            } else {
+                toolbarBadgeWrap.innerHTML = '';
+            }
+        }
+
+        // 6. Top stats band student count
+        const statStudentsEl = document.getElementById('stat-students-count');
+        if (statStudentsEl && typeof data.total_students_count !== 'undefined') {
+            statStudentsEl.textContent = data.total_students_count;
+        }
+    }
+
     function saveStudent() {
         const roll = document.getElementById('inp-roll').value.trim();
         const name = document.getElementById('inp-name').value.trim();
@@ -1863,17 +1979,22 @@
         errEl.style.display = 'none';
 
         if (addingClassId) {
-            fetch(`/api/class/${addingClassId}/add-student/`, {
+            const classId = addingClassId;
+            fetch(`/api/class/${classId}/add-student/`, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ roll_number: roll, student_name: name, admission_no: adm, uni_reg_no: reg, gender: gender })
             }).then(r => r.json()).then(data => {
                 if (data.success) {
                     closeStudentModal();
-                    loadedPanels.delete(addingClassId);
-                    fetch(`/api/class/${addingClassId}/students/`)
+                    loadedPanels.delete(classId);
+                    fetch(`/api/class/${classId}/students/`)
                         .then(r => r.json())
-                        .then(studs => renderStudentTable(addingClassId, studs));
+                        .then(studs => {
+                            loadedPanels.add(classId);
+                            renderStudentTable(classId, studs);
+                            updateStudentBadgesAndCounts(data);
+                        });
                 } else {
                     errEl.textContent = data.error || 'Save failed.';
                     errEl.style.display = 'block';
@@ -1885,32 +2006,68 @@
                 body: JSON.stringify({ roll_number: roll, student_name: name, admission_no: adm, uni_reg_no: reg, gender: gender })
             }).then(r => r.json()).then(data => {
                 if (data.success) {
-                    const row = document.getElementById('stud-row-' + editingStudentId);
+                    const row = document.getElementById('stud-row-' + data.student_id);
                     if (row) {
                         row.cells[1].textContent = data.admission_no || '—';
                         const hasRoll = data.roll_number && data.roll_number.trim();
                         row.cells[2].innerHTML = hasRoll
-                            ? `<span style="font-weight:600">${data.roll_number}</span>`
-                            : `<span class="badge-missing"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
+                            ? `<span style="font-weight:600">${escHTML(data.roll_number)}</span>`
+                            : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
                         row.cells[3].textContent = data.uni_reg_no || '—';
                         row.cells[4].textContent = data.student_name;
                         row.cells[5].textContent = data.gender || '—';
+
+                        const cid = data.class_id;
+                        row.cells[6].innerHTML = `
+                            <button class="row-act-btn" onclick="openStudentModal(${data.student_id},'${escJS(data.roll_number || '')}','${escJS(data.student_name)}','${escJS(data.admission_no || '')}','${escJS(data.uni_reg_no || '')}','${escJS(data.gender || '')}',${cid})">Edit</button>
+                            <button class="row-act-btn del" onclick="deleteStudent(${data.student_id},'${escJS(data.roll_number || '')}',${cid})">Delete</button>
+                        `;
+
+                        row.classList.remove('row-flash-success');
+                        void row.offsetWidth;
+                        row.classList.add('row-flash-success');
                     }
+
+                    updateStudentBadgesAndCounts(data);
                     closeStudentModal();
-                } else { errEl.textContent = data.error || 'Save failed.'; errEl.style.display = 'block'; }
+                } else {
+                    errEl.textContent = data.error || 'Save failed.';
+                    errEl.style.display = 'block';
+                }
             }).catch(() => { errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
         }
     }
 
-    function deleteStudent(id, roll) {
-        if (!confirm(`Delete student "${roll}"? This cannot be undone.`)) return;
+    function deleteStudent(id, roll, classId) {
+        if (!confirm(`Delete student "${roll || 'without roll number'}"? This cannot be undone.`)) return;
         fetch(`/api/student/${id}/delete/`, {
             method: 'POST', headers: { 'X-CSRFToken': CSRF }
         }).then(r => r.json()).then(data => {
             if (data.success) {
                 const row = document.getElementById('stud-row-' + id);
-                if (row) row.remove();
-            } else { alert(data.error || 'Delete failed.'); }
+                if (row) {
+                    row.remove();
+                }
+                const cid = data.class_id || classId;
+                const panel = document.getElementById('sp-' + cid);
+                if (panel) {
+                    const rows = panel.querySelectorAll('tbody tr');
+                    if (rows.length === 0) {
+                        const tableWrap = panel.querySelector('.stud-table-wrap');
+                        if (tableWrap) {
+                            tableWrap.outerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px;">No students in this class.</div>';
+                        }
+                    } else {
+                        rows.forEach((r, idx) => {
+                            const numCell = r.querySelector('.row-num');
+                            if (numCell) numCell.textContent = idx + 1;
+                        });
+                    }
+                }
+                updateStudentBadgesAndCounts(data);
+            } else {
+                alert(data.error || 'Delete failed.');
+            }
         }).catch(() => alert('Network error.'));
     }
 
@@ -2286,6 +2443,18 @@
             modalIds.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.hidden = true;
+            });
+        }
+    });
+
+    ['inp-roll', 'inp-adm', 'inp-reg', 'inp-name'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveStudent();
+                }
             });
         }
     });

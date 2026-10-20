@@ -189,3 +189,46 @@ class MissingValuesWorkflowTests(TestCase):
         self.assertEqual(data[2]["roll_number"], "")
         self.assertEqual(data[2]["student_name"], "Student Blank Roll")
 
+    def test_api_student_stats_payload_updates_missing_counts(self):
+        """
+        Verify that add, edit, and delete student APIs return real-time missing
+        counts and totals for instant UI updating without page reload.
+        """
+        from exam_allocator.views import api_delete_student
+
+        # Add a student with missing roll number
+        req_add = self.factory.post(
+            f"/api/class/{self.student_class.class_id}/add-student/",
+            data=json.dumps({"roll_number": "", "student_name": "Missing Roll Student"}),
+            content_type="application/json",
+        )
+        res_add = api_add_class_student(req_add, self.student_class.class_id)
+        data_add = json.loads(res_add.content)
+        self.assertTrue(data_add["success"])
+        self.assertEqual(data_add["class_missing_count"], 1)
+        self.assertEqual(data_add["total_missing_count"], 1)
+        self.assertEqual(data_add["class_students_count"], 1)
+        student_id = data_add["student_id"]
+
+        # Edit the student to assign a roll number
+        req_edit = self.factory.post(
+            f"/api/student/{student_id}/edit/",
+            data=json.dumps({"roll_number": "ROLL100", "student_name": "Named Student"}),
+            content_type="application/json",
+        )
+        res_edit = api_edit_student(req_edit, student_id)
+        data_edit = json.loads(res_edit.content)
+        self.assertTrue(data_edit["success"])
+        self.assertEqual(data_edit["class_missing_count"], 0)
+        self.assertEqual(data_edit["total_missing_count"], 0)
+        self.assertEqual(data_edit["class_students_count"], 1)
+
+        # Delete the student
+        req_del = self.factory.post(f"/api/student/{student_id}/delete/")
+        res_del = api_delete_student(req_del, student_id)
+        data_del = json.loads(res_del.content)
+        self.assertTrue(data_del["success"])
+        self.assertEqual(data_del["class_missing_count"], 0)
+        self.assertEqual(data_del["total_missing_count"], 0)
+        self.assertEqual(data_del["class_students_count"], 0)
+

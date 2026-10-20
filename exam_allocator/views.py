@@ -2249,6 +2249,28 @@ def api_class_students(request, class_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 import json
+from django.db.models import Q
+
+
+def _get_student_stats_payload(cls):
+    dept = cls.department
+    session = dept.session
+    missing_q = Q(roll_number="") | Q(roll_number__isnull=True) | Q(roll_number__regex=r"^\s*$")
+    cls_missing = Student.objects.filter(student_class=cls).filter(missing_q).count()
+    dept_missing = Student.objects.filter(student_class__department=dept).filter(missing_q).count()
+    total_missing = Student.objects.filter(student_class__department__session=session).filter(missing_q).count()
+    cls_students = Student.objects.filter(student_class=cls).count()
+    total_students = Student.objects.filter(student_class__department__session=session).count()
+    return {
+        "class_id": cls.class_id,
+        "department_id": dept.department_id,
+        "class_missing_count": cls_missing,
+        "dept_missing_count": dept_missing,
+        "total_missing_count": total_missing,
+        "class_students_count": cls_students,
+        "total_students_count": total_students,
+    }
+
 
 @require_POST
 def api_edit_student(request, student_id):
@@ -2279,14 +2301,19 @@ def api_edit_student(request, student_id):
         student.uni_reg_no = reg
         student.gender = gender
         student.save(update_fields=["roll_number", "student_name", "admission_no", "uni_reg_no", "gender"])
-        return JsonResponse({
+        
+        stats = _get_student_stats_payload(student.student_class)
+        res = {
             "success": True, 
+            "student_id": student.student_id,
             "roll_number": student.roll_number, 
             "student_name": student.student_name,
             "admission_no": student.admission_no,
             "uni_reg_no": student.uni_reg_no,
             "gender": student.gender
-        })
+        }
+        res.update(stats)
+        return JsonResponse(res)
     except Exception as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=500)
 
@@ -2696,12 +2723,16 @@ def api_add_exam(request, session_id):
 @require_POST
 def api_delete_student(request, student_id):
     student = get_object_or_404(Student, student_id=student_id)
+    cls = student.student_class
     with transaction.atomic():
         Allocation.objects.filter(registration__student=student).delete()
         student.exam_registrations.all().delete()
         student.elective_registrations.all().delete()
         student.delete()
-    return JsonResponse({"success": True})
+    stats = _get_student_stats_payload(cls)
+    res = {"success": True}
+    res.update(stats)
+    return JsonResponse(res)
 
 
 @require_POST
@@ -2727,7 +2758,8 @@ def api_add_class_student(request, class_id):
         uni_reg_no=reg,
         gender=gender,
     )
-    return JsonResponse({
+    stats = _get_student_stats_payload(cls)
+    res = {
         "success": True,
         "student_id": student.student_id,
         "roll_number": student.roll_number,
@@ -2735,7 +2767,9 @@ def api_add_class_student(request, class_id):
         "admission_no": student.admission_no,
         "uni_reg_no": student.uni_reg_no,
         "gender": student.gender,
-    })
+    }
+    res.update(stats)
+    return JsonResponse(res)
 
 
 @require_POST
