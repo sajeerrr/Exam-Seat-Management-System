@@ -3,8 +3,8 @@ import re
 from collections import defaultdict, Counter
 from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
-from django.db import transaction
-from django.db.models import Prefetch
+from django.db import transaction, models
+from django.db.models import Prefetch, Case, When, Value
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -2086,6 +2086,10 @@ def review_session(request, session_id):
     students_count = Student.objects.filter(
         student_class__department__session=session
     ).count()
+    missing_roll_count = Student.objects.filter(
+        student_class__department__session=session,
+        roll_number=""
+    ).count()
     rooms = Room.objects.filter(session=session).order_by("room_number")
     rooms_count = rooms.count()
 
@@ -2175,6 +2179,7 @@ def review_session(request, session_id):
             "departments": departments,
             "departments_count": departments_count,
             "students_count": students_count,
+            "missing_roll_count": missing_roll_count,
             "rooms": rooms,
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,
@@ -2197,7 +2202,14 @@ def review_session(request, session_id):
 def api_class_students(request, class_id):
     cls = get_object_or_404(Class, class_id=class_id)
     students = list(
-        cls.students.all().order_by("roll_number").values(
+        cls.students.all()
+        .order_by(
+            models.Case(models.When(roll_number="", then=models.Value(1)), default=models.Value(0)),
+            "roll_number",
+            "admission_no",
+            "student_name",
+        )
+        .values(
             "student_id", "roll_number", "student_name", "admission_no", "uni_reg_no", "gender"
         )
     )
@@ -2232,12 +2244,13 @@ def api_edit_student(request, student_id):
         reg = body.get("uni_reg_no", "").strip()
         gender = body.get("gender", "").strip()
         
-        if not roll or not name:
-            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+        if not name:
+            return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-        # Check uniqueness within class (excluding self)
+        # Check uniqueness within class (excluding self) only if roll number is provided
         if (
-            Student.objects.filter(student_class=student.student_class, roll_number=roll)
+            roll
+            and Student.objects.filter(student_class=student.student_class, roll_number__iexact=roll)
             .exclude(pk=student_id)
             .exists()
         ):
@@ -2683,10 +2696,10 @@ def api_add_class_student(request, class_id):
     adm = body.get("admission_no", "").strip()
     reg = body.get("uni_reg_no", "").strip()
     gender = body.get("gender", "").strip()
-    if not roll or not name:
-        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+    if not name:
+        return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+    if roll and Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
         return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
 
     student = Student.objects.create(

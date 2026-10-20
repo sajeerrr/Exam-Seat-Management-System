@@ -208,19 +208,18 @@ def _parse_class_sheet(worksheet):
         name = safe_get(idx_name)
         gender = safe_get(idx_gender)
         
-        if not roll_no:
-            roll_no = (reg_no or adm_no).strip()
-        if not roll_no:
-            continue
-            
         if not name:
             issues.append(f"Row {row_number} has no student name.")
             continue
-            
-        if roll_no in seen_roll_numbers:
-            issues.append(f"Duplicate roll number '{roll_no}' at row {row_number}.")
+
+        if not roll_no:
+            roll_no = ""
+            issues.append(f"Row {row_number} (Student '{name}'): Missing roll number (left blank).")
         else:
-            seen_roll_numbers[roll_no] = row_number
+            if roll_no in seen_roll_numbers:
+                issues.append(f"Duplicate roll number '{roll_no}' at row {row_number}.")
+            else:
+                seen_roll_numbers[roll_no] = row_number
             
         if cls_val: class_names.add(cls_val)
         if dept_val: departments.add(dept_val)

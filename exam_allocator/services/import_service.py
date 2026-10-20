@@ -118,51 +118,66 @@ def import_students(student_result, session):
             classes_existing += 1
 
         for student_record in class_record.students:
-
             roll_number = student_record.roll_number.strip()
-            if not roll_number:
-                roll_number = (student_record.uni_reg_no or student_record.admission_no or "").strip()
+            name = student_record.name.strip()
+            admission_no = (student_record.admission_no or "").strip()
+            uni_reg_no = (student_record.uni_reg_no or "").strip()
+            gender = (student_record.gender or "").strip()
 
-            if not roll_number:
+            if not name:
                 continue
 
-            student, created = Student.objects.get_or_create(
-                student_class=django_class,
-                roll_number=roll_number,
-                defaults={
-                    "student_name": student_record.name.strip(),
-                    "admission_no": student_record.admission_no or "",
-                    "uni_reg_no": student_record.uni_reg_no or "",
-                    "gender": student_record.gender or "",
-                },
-            )
+            student = None
+            if roll_number:
+                student = Student.objects.filter(
+                    student_class=django_class,
+                    roll_number=roll_number,
+                ).first()
+            if not student and uni_reg_no:
+                student = Student.objects.filter(
+                    student_class=django_class,
+                    uni_reg_no=uni_reg_no,
+                ).first()
+            if not student and admission_no:
+                student = Student.objects.filter(
+                    student_class=django_class,
+                    admission_no=admission_no,
+                ).first()
+            if not student and not roll_number:
+                student = Student.objects.filter(
+                    student_class=django_class,
+                    student_name=name,
+                    roll_number="",
+                ).first()
 
-            if created:
+            if student is None:
+                student = Student.objects.create(
+                    student_class=django_class,
+                    roll_number=roll_number,
+                    student_name=name,
+                    admission_no=admission_no,
+                    uni_reg_no=uni_reg_no,
+                    gender=gender,
+                )
                 students_created += 1
             else:
                 students_existing += 1
-
-                # Keep the database synchronized if the name
-                # changed in a newer Excel file.
-                new_name = student_record.name.strip()
                 update_fields = []
-                
-                if new_name and student.student_name != new_name:
-                    student.student_name = new_name
+                if roll_number and student.roll_number != roll_number:
+                    student.roll_number = roll_number
+                    update_fields.append("roll_number")
+                if name and student.student_name != name:
+                    student.student_name = name
                     update_fields.append("student_name")
-                
-                if student_record.admission_no and student.admission_no != student_record.admission_no:
-                    student.admission_no = student_record.admission_no
+                if admission_no and student.admission_no != admission_no:
+                    student.admission_no = admission_no
                     update_fields.append("admission_no")
-                    
-                if student_record.uni_reg_no and student.uni_reg_no != student_record.uni_reg_no:
-                    student.uni_reg_no = student_record.uni_reg_no
+                if uni_reg_no and student.uni_reg_no != uni_reg_no:
+                    student.uni_reg_no = uni_reg_no
                     update_fields.append("uni_reg_no")
-                    
-                if student_record.gender and student.gender != student_record.gender:
-                    student.gender = student_record.gender
+                if gender and student.gender != gender:
+                    student.gender = gender
                     update_fields.append("gender")
-                    
                 if update_fields:
                     student.save(update_fields=update_fields)
 

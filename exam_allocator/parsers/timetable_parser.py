@@ -232,7 +232,8 @@ def _parse_exam_row(row, headers, default_program, default_semester) -> ExamReco
         raise TimetableExcelParseError("Program is missing.")
 
     if not exam_date:
-        raise TimetableExcelParseError("Date is missing.")
+        item = subject_name or subject_code or "Unknown Subject"
+        raise TimetableExcelParseError(f"Missing exam date for '{item}' (row skipped).")
 
     if not session:
         raise TimetableExcelParseError("Session is missing.")

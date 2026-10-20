@@ -170,6 +170,7 @@ def parse_timetable_pdf(pdf_path: str) -> TimetableExtractionResult:
                                     sess_val = col_contexts[c].get("session", "")
 
                                     if not date_val:
+                                        issues.append(f"Page {page_num + 1}: Missing exam date for subject '{cell_clean}' (row skipped).")
                                         continue
                                         
                                     slot = ""

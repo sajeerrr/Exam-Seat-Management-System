@@ -84,7 +84,7 @@ class Student(models.Model):
     student_class = models.ForeignKey(
         Class, on_delete=models.PROTECT, related_name="students"
     )
-    roll_number = models.CharField(max_length=50)
+    roll_number = models.CharField(max_length=50, blank=True)
     student_name = models.CharField(max_length=150)
     
     admission_no = models.CharField(max_length=50, blank=True)
@@ -96,6 +96,7 @@ class Student(models.Model):
             models.UniqueConstraint(
                 fields=["student_class", "roll_number"],
                 name="unique_roll_number_per_class",
+                condition=~models.Q(roll_number=""),
             )
         ]
 
@@ -357,7 +358,7 @@ class ElectiveStudentRegistration(models.Model):
         null=True,
         blank=True,
     )
-    roll_number = models.CharField(max_length=50)
+    roll_number = models.CharField(max_length=50, blank=True)
     student_name = models.CharField(max_length=150)
     department = models.CharField(max_length=50, blank=True, default="")
     class_name = models.CharField(max_length=100, blank=True, default="")
