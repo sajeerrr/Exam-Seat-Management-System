@@ -211,15 +211,52 @@
     }
 
     /* TABS */
+    .tabs-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+        gap: 12px;
+        animation: fu .45s ease .08s both;
+    }
+
     .tabs {
         display: flex;
         gap: 4px;
-        margin-bottom: 24px;
         background: var(--bg-sunken);
         padding: 5px;
         border-radius: 12px;
         width: fit-content;
-        animation: fu .45s ease .08s both;
+    }
+
+    .btn-allocate-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 20px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        color: #ffffff;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 700;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .btn-allocate-tab:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        filter: brightness(1.05);
+    }
+
+    .btn-allocate-tab:active {
+        transform: translateY(0) scale(0.98);
     }
 
     .tab-btn {
@@ -1127,15 +1164,21 @@
 {% block content %}
 <div class="pw">
 
-    <!-- BREADCRUMB -->
+    <!-- BREADCRUMB & TOP ACTIONS -->
     <nav class="top-nav">
         <div class="breadcrumb">
             <a href="{% url 'exam_allocator:session_list' %}">All Sessions</a>
             <span class="sep">›</span>
             <span class="cur">Dashboard ({{ session.name }})</span>
         </div>
-        <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sec"
-            style="font-size:12.5px; padding:8px 16px;">Import Files</a>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <a href="{% url 'exam_allocator:session_list' %}" class="btn-sec"
+                style="font-size:12.5px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                <span style="font-size:13px;">←</span> All Sessions
+            </a>
+            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sec"
+                style="font-size:12.5px; padding:8px 16px; text-decoration:none;">Import Files</a>
+        </div>
     </nav>
 
     <!-- MESSAGES -->
@@ -1171,12 +1214,22 @@
         {% endif %}
     </div>
 
-    <!-- TABS -->
-    <div class="tabs">
-        <button class="tab-btn active" id="tab-dept" onclick="switchTab('dept')">Departments &amp; Students</button>
-        <button class="tab-btn" id="tab-tt" onclick="switchTab('tt')">Timetable</button>
-        <button class="tab-btn" id="tab-rooms" onclick="switchTab('rooms')">Classrooms</button>
-        <button class="tab-btn" id="tab-electives" onclick="switchTab('electives')">Electives</button>
+    <!-- TABS ROW WITH ALLOCATION ACTION -->
+    <div class="tabs-row">
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-dept" onclick="switchTab('dept')">Departments &amp; Students</button>
+            <button class="tab-btn" id="tab-tt" onclick="switchTab('tt')">Timetable</button>
+            <button class="tab-btn" id="tab-rooms" onclick="switchTab('rooms')">Classrooms</button>
+            <button class="tab-btn" id="tab-electives" onclick="switchTab('electives')">Electives</button>
+        </div>
+
+        <form id="form-proceed-allocation" method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn-allocate-tab" id="btn-goto-allocate" onclick="handleAllocationSubmit(this)">
+                <span>Proceed to Allocation</span>
+                <span style="font-size:16px; font-weight:800; line-height:1;">›</span>
+            </button>
+        </form>
     </div>
 
     <!-- ══ PANEL: DEPARTMENTS ══════════════════════════════════════════════ -->
@@ -1553,11 +1606,8 @@
     <!-- BOTTOM BAR -->
     <div class="bottom-bar">
         <a href="{% url 'exam_allocator:session_list' %}" class="btn-pill-back" style="margin-right: 12px;">← All Sessions</a>
-            <div style="flex-grow: 1;"></div>
-        <form method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
-    {% csrf_token %}
-    <button type="submit" class="btn-prim" id="btn-goto-allocate" onclick="this.innerHTML='Allocating Seats...'; this.style.pointerEvents='none';">Proceed to Allocation →</button>
-</form>
+        <div style="flex-grow: 1;"></div>
+        <button type="button" class="btn-prim" id="btn-goto-allocate-bottom" onclick="handleAllocationSubmit(this)">Proceed to Allocation ›</button>
     </div>
 
 </div><!-- .pw -->
@@ -1806,6 +1856,25 @@
     window.alert = function(msg) {
         showToast(msg, 'error');
     };
+
+    function handleAllocationSubmit(btn) {
+        if (btn) {
+            btn.innerHTML = '<span>Allocating Seats…</span>';
+            btn.style.pointerEvents = 'none';
+        }
+        const topBtn = document.getElementById('btn-goto-allocate');
+        const bottomBtn = document.getElementById('btn-goto-allocate-bottom');
+        if (topBtn) {
+            topBtn.innerHTML = '<span>Allocating Seats…</span>';
+            topBtn.style.pointerEvents = 'none';
+        }
+        if (bottomBtn) {
+            bottomBtn.innerHTML = 'Allocating Seats…';
+            bottomBtn.style.pointerEvents = 'none';
+        }
+        const form = document.getElementById('form-proceed-allocation');
+        if (form) form.submit();
+    }
 
     /* ── TABS ───────────────────────────────── */
     function switchTab(name) {
