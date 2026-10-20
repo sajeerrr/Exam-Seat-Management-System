@@ -262,13 +262,14 @@
     .top-class-select {
         padding: 6px 12px;
         border-radius: 8px;
-        background: var(--bg-primary);
+        background: var(--bg-card);
         border: 1px solid var(--border);
         color: var(--text-primary);
         font-size: 12px;
         font-weight: 500;
         outline: none;
         cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
     .top-class-select:focus {
         border-color: var(--accent);
@@ -1965,6 +1966,18 @@
         </div>
 
         <div class="control-toolbar-actions">
+            {% if all_classes %}
+            <div class="top-class-filter-wrap" id="top-class-filter-wrap">
+                <label for="top-class-filter">Highlight Class:</label>
+                <select id="top-class-filter" class="top-class-select" onchange="filterRoomsByClass(this.value)">
+                    <option value="">-- All Classes ({{ all_classes|length }}) --</option>
+                    {% for c in all_classes %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
             <button type="button" class="btn-print-master" id="top-btn-print-master" onclick="printMasterNoticeSheet()" title="Print Official Master Notice Board (A4 Portrait)" style="display: none;">
                 <span>🖨️ Print Master Notice</span>
             </button>
@@ -1995,20 +2008,6 @@
                     </div>
                 </div>
             </div>
-
-            {% if all_classes %}
-            <div class="top-rooms-bar-right">
-                <div class="top-class-filter-wrap">
-                    <label for="top-class-filter">Highlight Class:</label>
-                    <select id="top-class-filter" class="top-class-select" onchange="filterRoomsByClass(this.value)">
-                        <option value="">-- All Classes ({{ all_classes|length }}) --</option>
-                        {% for c in all_classes %}
-                        <option value="{{ c }}">{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            {% endif %}
         </div>
 
         <!-- FULL-SCREEN CLASSROOM CONTAINER (ONE ROOM AT A TIME) -->
@@ -2390,6 +2389,7 @@ function switchView(mode) {
     document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
     const topPrintBtn = document.getElementById('top-btn-print-master');
+    const topClassFilterWrap = document.getElementById('top-class-filter-wrap');
 
     if (mode === 'summary') {
         mode = 'room-cards';
@@ -2401,18 +2401,21 @@ function switchView(mode) {
         const b = document.getElementById('btn-view-department');
         if (b) b.classList.add('active');
         if (topPrintBtn) topPrintBtn.style.display = 'inline-flex';
+        if (topClassFilterWrap) topClassFilterWrap.style.display = 'none';
     } else if (mode === 'room-cards') {
         const p = document.getElementById('view-room-cards');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-room-cards');
         if (b) b.classList.add('active');
         if (topPrintBtn) topPrintBtn.style.display = 'none';
+        if (topClassFilterWrap) topClassFilterWrap.style.display = 'flex';
     } else if (mode === 'all-students') {
         const p = document.getElementById('view-all-students');
         if (p) p.style.display = 'block';
         const b = document.getElementById('btn-view-all-students');
         if (b) b.classList.add('active');
         if (topPrintBtn) topPrintBtn.style.display = 'none';
+        if (topClassFilterWrap) topClassFilterWrap.style.display = 'none';
     }
 }
 
