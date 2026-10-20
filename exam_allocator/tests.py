@@ -788,6 +788,76 @@ class RoomEditAndCapacityStepperTests(TestCase):
         self.rbp1.refresh_from_db()
         self.assertEqual(self.rbp1.room, self.room2)
 
+class ExamSlotOrderingTests(TestCase):
+    def setUp(self):
+        self.session = AllocationSession.objects.create(name="Slot Order Session")
+        self.subj1 = Subject.objects.create(session=self.session, subject_code="SUB101", subject_name="Subject 1", semester=1)
+        self.subj2 = Subject.objects.create(session=self.session, subject_code="SUB102", subject_name="Subject 2", semester=1)
+        self.subj3 = Subject.objects.create(session=self.session, subject_code="SUB103", subject_name="Subject 3", semester=1)
+        self.subj4 = Subject.objects.create(session=self.session, subject_code="SUB104", subject_name="Subject 4", semester=1)
 
+        # Create exams across 2 dates, deliberately inserting AN before FN
+        # Date 1: 2026-04-10
+        Exam.objects.create(subject=self.subj1, exam_date="2026-04-10", session="AN", duration=180)
+        Exam.objects.create(subject=self.subj2, exam_date="2026-04-10", session="FN", duration=180)
+        # Date 2: 2026-04-11
+        Exam.objects.create(subject=self.subj3, exam_date="2026-04-11", session="AN", duration=180)
+        Exam.objects.create(subject=self.subj4, exam_date="2026-04-11", session="FN", duration=180)
 
+    def test_blueprint_review_slot_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:blueprint_review", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        slots = resp.context["slots"]
+        slot_pairs = [(str(s["date"]), s["shift"]) for s in slots]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(slot_pairs, expected_pairs)
+
+        # Also check default selected slot is the first slot (FN)
+        selected_slot = resp.context["selected_slot"]
+        self.assertEqual(str(selected_slot["date"]), "2026-04-10")
+        self.assertEqual(selected_slot["shift"], "FN")
+
+    def test_session_allocation_result_slot_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:session_allocation_result", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        slots = resp.context["slots"]
+        slot_pairs = [(str(s["date"]), s["shift"]) for s in slots]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(slot_pairs, expected_pairs)
+
+        selected_slot = resp.context["selected_slot"]
+        self.assertEqual(str(selected_slot["date"]), "2026-04-10")
+        self.assertEqual(selected_slot["shift"], "FN")
+
+    def test_exam_list_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:session_exam_list", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        exams = list(resp.context["exams"])
+        exam_pairs = [(str(e.exam_date), e.session) for e in exams]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(exam_pairs, expected_pairs)
 

@@ -243,22 +243,33 @@ def exam_list(request, session_id=None):
             session_id=session_id,
         )
 
+        shift_order_expr = Case(
+            When(session="FN", then=Value(0)),
+            When(session="AN", then=Value(1)),
+            default=Value(2),
+            output_field=models.IntegerField(),
+        )
         exams = (
             Exam.objects.select_related("subject")
             .filter(subject__session=session)
             .order_by(
                 "exam_date",
-                "session",
+                shift_order_expr,
                 "exam_id",
             )
         )
 
     else:
         session = None
-
+        shift_order_expr = Case(
+            When(session="FN", then=Value(0)),
+            When(session="AN", then=Value(1)),
+            default=Value(2),
+            output_field=models.IntegerField(),
+        )
         exams = Exam.objects.select_related("subject").order_by(
             "exam_date",
-            "session",
+            shift_order_expr,
             "exam_id",
         )
 
@@ -391,6 +402,8 @@ def session_allocation_result(request, session_id):
             'date': slot['exam_date'],
             'shift': slot['session']
         })
+    shift_order = {"FN": 0, "AN": 1}
+    slots.sort(key=lambda s: (s['date'], shift_order.get(str(s['shift']).strip().upper(), 2), str(s['shift'])))
         
     date_filter = request.GET.get('date')
     shift_filter = request.GET.get('shift')
@@ -1424,6 +1437,9 @@ def blueprint_review(request, session_id):
             "eligible_count": reg_count,
             "allocations_count": alloc_count,
         })
+
+    shift_order = {"FN": 0, "AN": 1}
+    slots.sort(key=lambda s: (s["date"], shift_order.get(str(s["shift"]).strip().upper(), 2), str(s["shift"])))
 
     date_filter = request.GET.get("date")
     shift_filter = request.GET.get("shift")
