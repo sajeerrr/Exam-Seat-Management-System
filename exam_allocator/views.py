@@ -1962,21 +1962,6 @@ def upload_file(request, session_id):
                         if stats.get("students_count", 0) == 0:
                             raise ValueError("No valid elective records were saved to the database.")
 
-                        warning_count = len(result.issues)
-                        msg = (
-                            f"File: {record.original_filename}\n"
-                            f"Status: Success\n"
-                            f"Departments: {stats.get('departments_count', 0)}\n"
-                            f"Elective Groups: {stats.get('groups_count', 0)}\n"
-                            f"Subjects: {stats.get('subjects_count', 0)}\n"
-                            f"Students: {stats.get('students_count', 0)}\n"
-                            f"Duplicates Skipped: {stats.get('duplicates_count', 0)}\n"
-                            f"Unresolved: {stats.get('unresolved_count', 0)}\n"
-                            f"Warnings: {warning_count}\n"
-                            f"Errors: 0"
-                        )
-                        messages.success(request, msg)
-
                     # -----------------------------------------------------
                     # Mark upload as successfully processed
                     # -----------------------------------------------------
@@ -2002,16 +1987,10 @@ def upload_file(request, session_id):
                             "error_log",
                         ]
                     )
-                    if current_kind == UploadedFile.FileKind.ELECTIVE_LIST:
-                        messages.error(
-                            request,
-                            f"File: {record.original_filename}\nStatus: Failed\nErrors: 1\nDetails: {exc}",
-                        )
-                    else:
-                        messages.error(
-                            request,
-                            f"Import failed for {uploaded.name}: {exc}",
-                        )
+                    messages.error(
+                        request,
+                        f"Import failed for {uploaded.name}: {exc}",
+                    )
                     error_occurred = True
 
             if current_kind != UploadedFile.FileKind.ELECTIVE_LIST and (not error_occurred or len(uploaded_files) > 1):
