@@ -1279,16 +1279,19 @@
 
     {% if blueprint and blueprint.validation_warnings %}
     <div class="alert-box alert-warning" id="blueprintWarningBox">
-        <div style="display: flex; align-items: flex-start; gap: 10px;">
-            <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
-            <div style="flex: 1;">
-                <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
-                <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
-                    {% for w in blueprint.validation_warnings %}
-                    <li>{{ w }}</li>
-                    {% endfor %}
-                </ul>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+                <div>
+                    <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                    <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                        {% for w in blueprint.validation_warnings %}
+                        <li>{{ w }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
+            <button type="button" onclick="this.closest('.alert-box').style.display='none'" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #92400e; padding: 2px 6px; line-height: 1;" title="Dismiss warning">✕</button>
         </div>
     </div>
     {% endif %}
@@ -2270,14 +2273,17 @@ function updateBoardFromData(data) {
         if (data.warnings && data.warnings.length) {
             alertsHtml += `
             <div class="alert-box alert-warning" id="blueprintWarningBox">
-                <div style="display: flex; align-items: flex-start; gap: 10px;">
-                    <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
-                    <div style="flex: 1;">
-                        <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
-                        <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
-                            ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
-                        </ul>
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+                        <div>
+                            <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                            <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                                ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                            </ul>
+                        </div>
                     </div>
+                    <button type="button" onclick="this.closest('.alert-box').style.display='none'" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #92400e; padding: 2px 6px; line-height: 1;" title="Dismiss warning">✕</button>
                 </div>
             </div>`;
         }
@@ -3144,10 +3150,11 @@ function finalizeBlueprint() {
     if (!BLUEPRINT_ID) return;
     const dummyBadges = document.querySelectorAll('.badge-dummy-room');
     if (dummyBadges.length > 0) {
-        alert("Cannot finalize blueprint: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.");
+        showToast("Cannot finalize: Please assign real classroom names to all dummy placeholder rooms first.", "error", 4000);
         return;
     }
-    if (!confirm("Finalizing the blueprint will freeze department-stream assignments and enable physical seat generation. Proceed?")) return;
+
+    showToast("Finalizing blueprint...", "info", 1500);
 
     fetch(`/api/session/${SESSION_ID}/blueprint/finalize/`, {
         method: 'POST',
@@ -3162,15 +3169,15 @@ function finalizeBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Finalization blocked: \n" + (data.errors ? data.errors.join("\n") : (data.error || "Validation failed")));
+            showToast("Finalization blocked: " + (data.errors ? data.errors.join("; ") : (data.error || "Validation failed")), "error", 5000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 4000));
 }
 
 function unfinalizeBlueprint() {
     if (!BLUEPRINT_ID) return;
-    if (!confirm("Unfinalizing will unlock editing and mark any generated physical seating plan as outdated. Proceed?")) return;
+    showToast("Unlocking blueprint for editing...", "info", 1500);
 
     fetch(`/api/session/${SESSION_ID}/blueprint/unfinalize/`, {
         method: 'POST',
@@ -3185,10 +3192,10 @@ function unfinalizeBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Error: " + (data.error || "Failed to unfinalize"));
+            showToast("Error: " + (data.error || "Failed to unfinalize"), "error", 4000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 4000));
 }
 
 function generateSeats() {
