@@ -2086,10 +2086,26 @@ def review_session(request, session_id):
     students_count = Student.objects.filter(
         student_class__department__session=session
     ).count()
-    missing_roll_count = Student.objects.filter(
-        student_class__department__session=session,
-        roll_number=""
-    ).count()
+
+    missing_roll_classes = []
+    missing_roll_count = 0
+    for dept in departments:
+        dept_missing = 0
+        for cls in dept.classes.all():
+            cls_missing = sum(1 for s in cls.students.all() if not s.roll_number or not s.roll_number.strip())
+            cls.missing_roll_count = cls_missing
+            dept_missing += cls_missing
+            if cls_missing > 0:
+                missing_roll_classes.append({
+                    "class_id": cls.class_id,
+                    "class_name": cls.class_name,
+                    "dept_code": dept.department_code,
+                    "dept_name": dept.department_name,
+                    "missing_count": cls_missing,
+                })
+        dept.missing_roll_count = dept_missing
+        missing_roll_count += dept_missing
+
     rooms = Room.objects.filter(session=session).order_by("room_number")
     rooms_count = rooms.count()
 
@@ -2180,6 +2196,7 @@ def review_session(request, session_id):
             "departments_count": departments_count,
             "students_count": students_count,
             "missing_roll_count": missing_roll_count,
+            "missing_roll_classes": missing_roll_classes,
             "rooms": rooms,
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,

@@ -1002,6 +1002,37 @@
         color: var(--text-primary);
     }
 
+    @keyframes pulseHighlight {
+        0% { background-color: #fef3c7; box-shadow: 0 0 0 3px #f59e0b; }
+        50% { background-color: #fde68a; box-shadow: 0 0 0 6px #f59e0b; }
+        100% { background-color: transparent; box-shadow: none; }
+    }
+    .highlight-target-class {
+        animation: pulseHighlight 2.5s ease-out;
+        border-radius: 8px;
+    }
+    .missing-class-pill {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+        border-radius: 14px;
+        padding: 4px 10px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s ease;
+        user-select: none;
+    }
+    .missing-class-pill:hover, .missing-class-pill:active {
+        background: #fde68a;
+        border-color: #f59e0b;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
+    }
+
 </style>
 {% endblock %}
 
@@ -1016,7 +1047,7 @@
             <span class="cur">Dashboard ({{ session.name }})</span>
         </div>
         <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sec"
-            style="font-size:12.5px; padding:8px 16px;">📥 Import Files</a>
+            style="font-size:12.5px; padding:8px 16px;">Import Files</a>
     </nav>
 
     <!-- MESSAGES -->
@@ -1028,7 +1059,9 @@
 
     <!-- HERO -->
     <div class="hero">
-        <div class="hero-icon">📊</div>
+        <div class="hero-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
         <div>
             <h1>Dashboard: {{ session.name }}</h1>
             <p>Inspect and correct imported data before running seat allocation. All edits are saved to the session
@@ -1064,37 +1097,41 @@
 
     <!-- TABS -->
     <div class="tabs">
-        <button class="tab-btn active" id="tab-dept" onclick="switchTab('dept')">👥 Departments &amp; Students</button>
-        <button class="tab-btn" id="tab-tt" onclick="switchTab('tt')">🗓️ Timetable</button>
-        <button class="tab-btn" id="tab-rooms" onclick="switchTab('rooms')">🏫 Classrooms</button>
-        <button class="tab-btn" id="tab-electives" onclick="switchTab('electives')">📚 Electives</button>
+        <button class="tab-btn active" id="tab-dept" onclick="switchTab('dept')">Departments &amp; Students</button>
+        <button class="tab-btn" id="tab-tt" onclick="switchTab('tt')">Timetable</button>
+        <button class="tab-btn" id="tab-rooms" onclick="switchTab('rooms')">Classrooms</button>
+        <button class="tab-btn" id="tab-electives" onclick="switchTab('electives')">Electives</button>
     </div>
 
     <!-- ══ PANEL: DEPARTMENTS ══════════════════════════════════════════════ -->
     <div class="panel active" id="panel-dept">
         {% if departments %}
         <div class="panel-toolbar">
-            <div class="panel-toolbar-title">
-                👥 Departments &amp; Classes ({{ departments.count }} depts)
+            <div class="panel-toolbar-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span>Departments &amp; Classes ({{ departments.count }} depts)</span>
                 {% if missing_roll_count > 0 %}
-                <span style="font-size:12px; margin-left:10px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; padding:3px 10px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
+                <span style="font-size:12px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:3px 10px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
                     ⚠️ {{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)
                 </span>
                 {% endif %}
             </div>
             <div class="panel-toolbar-actions">
-                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Students</a>
-                <button class="btn-sm-danger" onclick="clearAllStudents()">🗑️ Clear All Students</button>
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Import Students</a>
+                <button class="btn-sm-danger" onclick="clearAllStudents()">Clear All Students</button>
             </div>
         </div>
         {% for dept in departments %}
         <div class="sec-card">
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
-                    <span>🏛️</span>
                     {{ dept.department_name }} <span style="color:var(--text-muted);font-weight:400;font-size:13px;">({{ dept.department_code }})</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
+                    {% if dept.missing_roll_count > 0 %}
+                    <span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                        ⚠️ {{ dept.missing_roll_count }} missing roll
+                    </span>
+                    {% endif %}
                     <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es" }}</span>
                     <span class="chevron">▼</span>
                 </div>
@@ -1104,9 +1141,16 @@
                     {% for cls in dept.classes.all %}
                     <div class="class-row" id="class-row-{{ cls.class_id }}" onclick="toggleStudentPanel({{ cls.class_id }}, this)">
                         <span class="class-name">{{ cls.class_name }}</span>
-                        <span class="class-count">{{ cls.students.count }} students</span>
-                        <button class="row-act-btn del" onclick="event.stopPropagation(); deleteClass({{ cls.class_id }}, '{{ cls.class_name|escapejs }}')">🗑️ Delete</button>
-                        <span class="class-arrow">›</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            {% if cls.missing_roll_count > 0 %}
+                            <span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                ⚠️ {{ cls.missing_roll_count }} missing roll
+                            </span>
+                            {% endif %}
+                            <span class="class-count">{{ cls.students.count }} students</span>
+                            <button class="row-act-btn del" onclick="event.stopPropagation(); deleteClass({{ cls.class_id }}, '{{ cls.class_name|escapejs }}')">Delete</button>
+                            <span class="class-arrow">›</span>
+                        </div>
                     </div>
                     <div id="sp-{{ cls.class_id }}" class="student-panel" style="display:none;">
                         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Loading students…</div>
@@ -1125,7 +1169,7 @@
             <div>No data imported yet for this session.</div>
             <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
                 style="display:inline-flex;width:fit-content;gap:8px;">
-                📥 Import Files
+                Import Files
             </a>
         </div>
         {% endif %}
@@ -1134,19 +1178,19 @@
     <!-- ══ PANEL: TIMETABLE ════════════════════════════════════════════════ -->
     <div class="panel" id="panel-tt">
         <div class="panel-toolbar">
-            <div class="panel-toolbar-title">🗓️ Exam Timetable</div>
+            <div class="panel-toolbar-title">Exam Timetable</div>
             <div class="panel-toolbar-actions">
-                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Timetable</a>
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Import Timetable</a>
                 <button class="btn-sm-primary" onclick="openAddExamModal()">+ Add Exam</button>
                 {% if timetable_days %}
-                <button class="btn-sm-danger" onclick="clearFullTimetable()">🗑️ Clear Full Timetable</button>
+                <button class="btn-sm-danger" onclick="clearFullTimetable()">Clear Full Timetable</button>
                 {% endif %}
             </div>
         </div>
         {% for day in timetable_days %}
         <div class="tt-date-block">
             <div class="tt-date-header">
-                <div class="date-chip">📅 {{ day.date|date:"l, d F Y" }}</div>
+                <div class="date-chip">{{ day.date|date:"l, d F Y" }}</div>
             </div>
             <div class="tt-sessions">
                 {% for slot in day.slots %}
@@ -1169,8 +1213,8 @@
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                             <div class="tt-exam-subject" id="exam-sub-{{ exam.exam_id }}">{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}</div>
                             <div style="display:flex; gap:5px; flex-shrink:0;">
-                                <button class="row-act-btn" onclick="openEditExamModal({{ exam.exam_id }}, '{{ exam.exam_date|date:'Y-m-d' }}', '{{ exam.session }}', '{{ exam.slot|default:''|escapejs }}')">✏️ Edit</button>
-                                <button class="row-act-btn del" onclick="deleteExam({{ exam.exam_id }}, '{{ exam.subject.subject_code|escapejs }}')">🗑️</button>
+                                <button class="row-act-btn" onclick="openEditExamModal({{ exam.exam_id }}, '{{ exam.exam_date|date:'Y-m-d' }}', '{{ exam.session }}', '{{ exam.slot|default:''|escapejs }}')">Edit</button>
+                                <button class="row-act-btn del" onclick="deleteExam({{ exam.exam_id }}, '{{ exam.subject.subject_code|escapejs }}')">Delete</button>
                             </div>
                         </div>
                         <div class="tt-exam-targets">
@@ -1197,7 +1241,7 @@
             <div>No timetable data imported yet for this session.</div>
             <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
                 style="display:inline-flex;width:fit-content;gap:8px;">
-                📥 Import Timetable Files
+                Import Timetable Files
             </a>
         </div>
         {% endfor %}
@@ -1206,12 +1250,12 @@
     <!-- ══ PANEL: CLASSROOMS ═══════════════════════════════════════════════ -->
     <div class="panel" id="panel-rooms">
         <div class="rooms-toolbar">
-            <div class="rooms-toolbar-title">🏫 Exam Rooms ({{ rooms|length }} total)</div>
+            <div class="rooms-toolbar-title">Exam Rooms ({{ rooms|length }} total)</div>
             <div class="panel-toolbar-actions">
-                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Rooms</a>
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Import Rooms</a>
                 <button class="btn-add-room" onclick="openRoomModal(null)" id="add-room-btn">+ Add Room</button>
                 {% if rooms %}
-                <button class="btn-sm-danger" onclick="clearAllRooms()">🗑️ Clear All Rooms</button>
+                <button class="btn-sm-danger" onclick="clearAllRooms()">Clear All Rooms</button>
                 {% endif %}
             </div>
         </div>
@@ -1227,10 +1271,10 @@
                 </div>
                 <div class="room-actions">
                     <button class="room-btn"
-                        onclick="openRoomModal({{ room.room_id }},'{{ room.room_number|escapejs }}','{{ room.building|escapejs }}',{{ room.capacity }},{{ room.benches }})">✏️
+                        onclick="openRoomModal({{ room.room_id }},'{{ room.room_number|escapejs }}','{{ room.building|escapejs }}',{{ room.capacity }},{{ room.benches }})">
                         Edit</button>
                     <button class="room-btn del"
-                        onclick="deleteRoom({{ room.room_id }}, '{{ room.room_number|escapejs }}')">🗑️ Delete</button>
+                        onclick="deleteRoom({{ room.room_id }}, '{{ room.room_number|escapejs }}')">Delete</button>
                 </div>
             </div>
             {% endfor %}
@@ -1241,7 +1285,7 @@
             <div>No classrooms imported yet for this session.</div>
             <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
                 style="display:inline-flex;width:fit-content;gap:8px;">
-                📥 Import Classroom Files
+                Import Classroom Files
             </a>
         </div>
         {% endif %}
@@ -1251,10 +1295,10 @@
     <div class="panel" id="panel-electives">
         {% if elective_groups_list %}
         <div class="panel-toolbar">
-            <div class="panel-toolbar-title">📚 Elective Groups &amp; Subjects</div>
+            <div class="panel-toolbar-title">Elective Groups &amp; Subjects</div>
             <div class="panel-toolbar-actions">
-                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">📥 Import Electives</a>
-                <button class="btn-sm-danger" onclick="clearAllElectives()">🗑️ Clear All Electives</button>
+                <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sm-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Import Electives</a>
+                <button class="btn-sm-danger" onclick="clearAllElectives()">Clear All Electives</button>
             </div>
         </div>
         <!-- Elective Statistics Summary -->
@@ -1292,12 +1336,11 @@
         <div class="sec-card" id="elective-group-card-{{ forloop.counter }}">
             <div class="sec-card-header" onclick="toggleCard(this)">
                 <div class="sec-card-title">
-                    <span>📚</span>
                     {{ group_data.elective_label }}
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;">
                     <span class="sec-card-meta">{{ group_data.subjects_count }} subject{{ group_data.subjects_count|pluralize }} · {{ group_data.total_students }} enrollment{{ group_data.total_students|pluralize }}</span>
-                    <button class="row-act-btn del" style="font-size:12px; padding:5px 11px;" onclick="event.stopPropagation(); deleteElectiveGroup({{ group_data.group.group_id }}, '{{ group_data.elective_label|escapejs }}')">🗑️ Delete Group</button>
+                    <button class="row-act-btn del" style="font-size:12px; padding:5px 11px;" onclick="event.stopPropagation(); deleteElectiveGroup({{ group_data.group.group_id }}, '{{ group_data.elective_label|escapejs }}')">Delete Group</button>
                     <span class="chevron">▲</span>
                 </div>
             </div>
@@ -1336,8 +1379,8 @@
                                     <span class="class-count" id="sub-count-{{ item.subject.elective_subject_id }}">{{ item.reg_count }} student{{ item.reg_count|pluralize }}</span>
                                 </td>
                                 <td style="text-align: right; white-space: nowrap;">
-                                    <button class="row-act-btn" onclick="event.stopPropagation(); openEditElectiveSubjectModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}', '{{ item.subject.subject_name|escapejs }}', '{{ group_data.elective_label|escapejs }}')">✏️ Edit</button>
-                                    <button class="row-act-btn del" onclick="event.stopPropagation(); deleteElectiveSubject({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">🗑️</button>
+                                    <button class="row-act-btn" onclick="event.stopPropagation(); openEditElectiveSubjectModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}', '{{ item.subject.subject_name|escapejs }}', '{{ group_data.elective_label|escapejs }}')">Edit</button>
+                                    <button class="row-act-btn del" onclick="event.stopPropagation(); deleteElectiveSubject({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">Delete</button>
                                 </td>
                                 <td style="text-align: center; padding-right: 20px;">
                                     <span class="class-arrow" style="font-size: 13px; color: var(--text-muted);">›</span>
@@ -1347,7 +1390,7 @@
                                 <td colspan="6" style="padding: 16px 20px; background: var(--bg-sunken); border-bottom: 2px solid var(--border);">
                                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                                         <div style="font-size:12.5px; font-weight:700; color:var(--text-secondary);">
-                                            👥 Enrolled Students in <span style="font-family:monospace; color:var(--accent-light);">{{ item.subject.subject_code }}</span> ({{ item.reg_count }})
+                                            Enrolled Students in <span style="font-family:monospace; color:var(--accent-light);">{{ item.subject.subject_code }}</span> ({{ item.reg_count }})
                                         </div>
                                         <button class="btn-sm-primary" onclick="openAddElectiveStudentModal({{ item.subject.elective_subject_id }}, '{{ item.subject.subject_code|escapejs }}')">+ Add Student</button>
                                     </div>
@@ -1372,7 +1415,7 @@
                                                     <td>
                                                         {{ reg.student_name }}
                                                         {% if reg.is_unresolved %}
-                                                        <span style="color:#ef4444;font-size:11px;margin-left:6px;">⚠️ {{ reg.unresolved_reason }}</span>
+                                                        <span style="color:#ef4444;font-size:11px;margin-left:6px;">Unresolved: {{ reg.unresolved_reason }}</span>
                                                         {% endif %}
                                                     </td>
                                                     <td>
@@ -1387,8 +1430,8 @@
                                                         {{ reg.source_file|default:"—" }}{% if reg.source_sheet_or_page %} <span style="opacity:0.7;">({{ reg.source_sheet_or_page }})</span>{% endif %}
                                                     </td>
                                                     <td style="text-align:right; white-space:nowrap;">
-                                                        <button class="row-act-btn" onclick="openEditElectiveRegModal({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}', '{{ reg.student_name|escapejs }}', '{{ reg.department|default:''|escapejs }}', '{{ reg.class_name|default:''|escapejs }}')">✏️ Edit</button>
-                                                        <button class="row-act-btn del" onclick="deleteElectiveReg({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}')">🗑️</button>
+                                                        <button class="row-act-btn" onclick="openEditElectiveRegModal({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}', '{{ reg.student_name|escapejs }}', '{{ reg.department|default:''|escapejs }}', '{{ reg.class_name|default:''|escapejs }}')">Edit</button>
+                                                        <button class="row-act-btn del" onclick="deleteElectiveReg({{ reg.registration_id }}, '{{ reg.roll_number|escapejs }}')">Delete</button>
                                                     </td>
                                                 </tr>
                                                 {% empty %}
@@ -1418,7 +1461,7 @@
             <div>No elective data imported yet for this session.</div>
             <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-prim"
                 style="display:inline-flex;width:fit-content;gap:8px;">
-                📥 Import Elective Files
+                Import Elective Files
             </a>
         </div>
         {% endif %}
@@ -1430,7 +1473,7 @@
             <div style="flex-grow: 1;"></div>
         <form method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
     {% csrf_token %}
-    <button type="submit" class="btn-prim" id="btn-goto-allocate" onclick="this.innerHTML='⏳ Allocating Seats...'; this.style.pointerEvents='none';">Proceed to Allocation →</button>
+    <button type="submit" class="btn-prim" id="btn-goto-allocate" onclick="this.innerHTML='Allocating Seats...'; this.style.pointerEvents='none';">Proceed to Allocation →</button>
 </form>
     </div>
 
@@ -1634,6 +1677,47 @@
         rowEl.style.background = isHidden ? 'rgba(99, 102, 241, 0.05)' : '';
     }
 
+    /* ── DIRECT CLASS NAVIGATION ─────────────── */
+    function navigateToClass(classId) {
+        if (typeof switchTab === 'function') {
+            switchTab('dept');
+        }
+
+        const classRow = document.getElementById('class-row-' + classId);
+        if (!classRow) {
+            console.warn('Class row not found for classId:', classId);
+            return;
+        }
+
+        // Expand department card if collapsed
+        const cardBody = classRow.closest('.sec-card-body');
+        if (cardBody && cardBody.classList.contains('collapsed')) {
+            cardBody.classList.remove('collapsed');
+            const header = cardBody.previousElementSibling;
+            if (header) {
+                const chev = header.querySelector('.chevron');
+                if (chev) chev.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Open student roster panel if not open
+        const panel = document.getElementById('sp-' + classId);
+        if (panel && panel.style.display === 'none') {
+            toggleStudentPanel(classId, classRow);
+        }
+
+        // Smooth scroll to target class
+        classRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Pulse highlight effect
+        classRow.classList.remove('highlight-target-class');
+        void classRow.offsetWidth;
+        classRow.classList.add('highlight-target-class');
+        setTimeout(() => {
+            classRow.classList.remove('highlight-target-class');
+        }, 2600);
+    }
+
     /* ── COLLAPSIBLE DEPT CARDS ─────────────── */
     function toggleCard(header) {
         const body = header.nextElementSibling;
@@ -1668,9 +1752,8 @@
         if (missingRolls > 0) {
             html += `
             <div style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:15px;">⚠️</span>
-                    <span><strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
+                <div>
+                    <span>⚠️ Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                 </div>
                 <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
             </div>`;
@@ -1686,7 +1769,7 @@
             const hasRoll = s.roll_number && s.roll_number.trim();
             const rollDisplay = hasRoll 
                 ? `<span style="font-weight:600">${s.roll_number}</span>`
-                : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;" title="No roll number in source file — left blank">⚠️ Missing Roll No</span>`;
+                : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;" title="No roll number in source file — left blank">⚠️ Missing Roll No</span>`;
 
             html += `<tr id="stud-row-${s.id}">
             <td style="color:var(--text-muted)">${i + 1}</td>
@@ -1777,7 +1860,7 @@
                         const hasRoll = data.roll_number && data.roll_number.trim();
                         row.cells[2].innerHTML = hasRoll
                             ? `<span style="font-weight:600">${data.roll_number}</span>`
-                            : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#b45309; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;">⚠️ Missing Roll No</span>`;
+                            : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;">⚠️ Missing Roll No</span>`;
                         row.cells[3].textContent = data.uni_reg_no || '—';
                         row.cells[4].textContent = data.student_name;
                         row.cells[5].textContent = data.gender || '—';
