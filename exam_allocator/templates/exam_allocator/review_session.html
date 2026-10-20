@@ -1328,10 +1328,7 @@
     <header class="page-header">
         <div class="header-left">
             <nav class="breadcrumb-trail">
-                <a href="{% url 'exam_allocator:session_list' %}" class="breadcrumb-link">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    <span>All Sessions</span>
-                </a>
+                <a href="{% url 'exam_allocator:session_list' %}" class="breadcrumb-link">Sessions</a>
                 <span class="breadcrumb-slash">/</span>
                 <span class="breadcrumb-current">{{ session.name }}</span>
             </nav>
@@ -1345,7 +1342,11 @@
         </div>
 
         <div class="header-actions">
-            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-header-import">
+            <a href="{% url 'exam_allocator:session_list' %}" class="btn-header-import" title="All Sessions">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>All Sessions</span>
+            </a>
+            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-header-import" title="Import Files">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                 <span>Import Files</span>
             </a>
@@ -1807,19 +1808,6 @@
         {% endif %}
     </div>
 
-    <!-- BOTTOM BAR -->
-    <div class="bottom-bar">
-        <a href="{% url 'exam_allocator:session_list' %}" class="btn-bottom-back">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <span>All Sessions</span>
-        </a>
-        <div style="flex-grow: 1;"></div>
-        <button type="button" class="btn-bottom-allocate" id="btn-goto-allocate-bottom" onclick="handleAllocationSubmit(this)">
-            <span>Proceed to Allocation</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </button>
-    </div>
-
 </div><!-- .pw -->
 
 <!-- ══ ROOM MODAL ══════════════════════════════════════════════════════ -->
@@ -2069,16 +2057,10 @@
 
     function handleAllocationSubmit(btn) {
         const topBtn = document.getElementById('btn-goto-allocate');
-        const bottomBtn = document.getElementById('btn-goto-allocate-bottom');
         if (topBtn) {
             topBtn.innerHTML = '<span>Allocating Seats…</span>';
             topBtn.style.pointerEvents = 'none';
             topBtn.style.opacity = '0.85';
-        }
-        if (bottomBtn) {
-            bottomBtn.innerHTML = '<span>Allocating Seats…</span>';
-            bottomBtn.style.pointerEvents = 'none';
-            bottomBtn.style.opacity = '0.85';
         }
         const form = document.getElementById('form-proceed-allocation');
         if (form) form.submit();
