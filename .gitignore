@@ -79,3 +79,4 @@ resources/
 *.xlsx
 docs/
 elective_data/
+tests/
