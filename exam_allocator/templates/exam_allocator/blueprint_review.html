@@ -592,6 +592,82 @@
         transform: translateY(0);
         box-shadow: 0 1px 2px rgba(217, 119, 6, 0.2);
     }
+    .btn-room-edit-inline {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        padding: 2px 6px;
+        font-size: 13px;
+        cursor: pointer;
+        color: #64748b;
+        transition: all 0.15s ease;
+        line-height: 1;
+    }
+    .btn-room-edit-inline:hover {
+        background: #e0e7ff;
+        color: #4338ca;
+        border-color: #c7d2fe;
+        transform: scale(1.05);
+    }
+    .btn-room-edit-inline:active {
+        transform: scale(0.98);
+    }
+    .cap-stepper {
+        display: inline-flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        overflow: hidden;
+        height: 26px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        vertical-align: middle;
+    }
+    .cap-stepper-btn {
+        background: #f8fafc;
+        border: none;
+        width: 24px;
+        height: 100%;
+        font-size: 14px;
+        font-weight: 700;
+        color: #334155;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.12s ease;
+        padding: 0;
+        user-select: none;
+    }
+    .cap-stepper-btn:hover:not(:disabled) {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
+    .cap-stepper-btn:active:not(:disabled) {
+        background: #cbd5e1;
+    }
+    .cap-stepper-btn:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        background: #f1f5f9;
+    }
+    .cap-stepper-val {
+        padding: 0 7px;
+        font-weight: 700;
+        font-size: 12px;
+        color: #1e293b;
+        cursor: pointer;
+        min-width: 26px;
+        text-align: center;
+        transition: color 0.15s;
+    }
+    .cap-stepper-val:hover {
+        color: #4f46e5;
+        text-decoration: underline;
+    }
     .room-meta-right {
         display: flex;
         align-items: center;
@@ -1519,10 +1595,17 @@
         <div class="room-card" id="roomCard-{{ r.room_blueprint_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-room-id="{{ r.room.room_id }}">
             <div class="room-card-header">
                 <div class="room-meta-left">
-                    <span class="room-title">Room {{ r.room_number }}</span>
+                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                        <span class="room-title">Room {{ r.room_number }}</span>
+                        {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                        <button type="button" class="btn-room-edit-inline" onclick="openRoomEditModal({{ r.room_blueprint_id }}, '{{ r.room_number|escapejs }}', {{ r.room.room_id }}, {{ r.capacity }}, {{ r.total_students }}, {{ r.is_dummy|yesno:'true,false' }})" title="Edit room name or switch room">
+                            ✏️
+                        </button>
+                        {% endif %}
+                    </div>
                     {% if r.is_dummy %}
                     <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
-                    <button type="button" class="btn-assign-room" onclick="openAssignRoomNameModal({{ r.room_blueprint_id }}, '{{ r.room_number }}')" title="Assign a real classroom name to this dummy room">
+                    <button type="button" class="btn-assign-room" onclick="openRoomEditModal({{ r.room_blueprint_id }}, '{{ r.room_number|escapejs }}', {{ r.room.room_id }}, {{ r.capacity }}, {{ r.total_students }}, true)" title="Assign a real classroom name to this dummy room">
                         Assign Real Room Name
                     </button>
                     {% endif %}
@@ -1534,17 +1617,23 @@
                     </span>
                 </div>
                 <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
-                    <span class="room-occupancy">
-                        Students: <strong id="totalCount-{{ r.room_blueprint_id }}">{{ r.total_students }}</strong> / <span id="roomCap-{{ r.room_blueprint_id }}">{{ r.capacity }}</span>
+                    <span class="room-occupancy" style="display: inline-flex; align-items: center; gap: 4px;">
+                        Students: <strong id="totalCount-{{ r.room_blueprint_id }}">{{ r.total_students }}</strong> / 
                     </span>
+                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
+                    <div class="cap-stepper" id="capStepper-{{ r.room_blueprint_id }}">
+                        <button type="button" class="cap-stepper-btn cap-btn-minus" onclick="stepRoomCapacity(event, {{ r.room.room_id }}, {{ r.room_blueprint_id }}, -1)" {% if r.capacity <= r.total_students %}disabled title="Cannot reduce below assigned students"{% else %}title="Decrease capacity by 1 (Hold Shift for -3)"{% endif %}>−</button>
+                        <span class="cap-stepper-val" id="roomCap-{{ r.room_blueprint_id }}" onclick="openCapacityModal({{ r.room.room_id }}, '{{ r.room_number|escapejs }}', {{ r.capacity }})" title="Click to enter exact capacity">{{ r.capacity }}</span>
+                        <button type="button" class="cap-stepper-btn cap-btn-plus" onclick="stepRoomCapacity(event, {{ r.room.room_id }}, {{ r.room_blueprint_id }}, 1)" title="Increase capacity by 1 (Hold Shift for +3)">+</button>
+                    </div>
+                    {% else %}
+                    <span id="roomCap-{{ r.room_blueprint_id }}" style="font-weight: 700;">{{ r.capacity }}</span>
+                    {% endif %}
                     <span class="room-unused-pill {% if r.unused_capacity > 0 %}has-unused{% endif %}" id="unusedPill-{{ r.room_blueprint_id }}">
                         {{ r.unused_capacity }} Unused
                     </span>
                     {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
-                    <button type="button" class="btn-sm-action" onclick="openCapacityModal({{ r.room.room_id }}, '{{ r.room_number }}', {{ r.capacity }})" title="Edit Room Capacity">
-                        Edit Cap
-                    </button>
-                    <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint({{ r.room.room_id }}, '{{ r.room_number }}')" title="Remove Classroom">
+                    <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint({{ r.room.room_id }}, '{{ r.room_number|escapejs }}')" title="Remove Classroom">
                         ✕
                     </button>
                     {% endif %}
@@ -1872,42 +1961,43 @@
     </div>
 </div>
 
-<!-- ASSIGN REAL ROOM NAME MODAL -->
+<!-- ASSIGN REAL ROOM NAME / EDIT ROOM MODAL -->
 <div class="modal-overlay" id="assignRoomNameModal">
     <div class="modal-card">
         <div class="modal-header">
-            <div class="modal-title" id="assignRoomModalTitle">Assign Real Room Name</div>
+            <div class="modal-title" id="assignRoomModalTitle">Edit Room / Switch Room</div>
             <button type="button" class="close-btn" onclick="closeAssignRoomNameModal()">&times;</button>
         </div>
         <form id="assignRoomNameForm" onsubmit="submitAssignRoomName(event)">
             <input type="hidden" id="assignRoomBpId">
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
-                This room is currently an unassigned dummy placeholder. To enable physical seat generation, please assign a real physical classroom name.
+            <p id="assignRoomModalDesc" style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+                Rename this classroom or switch this allocation to another classroom in the session.
             </p>
 
             <div class="form-group" style="margin-bottom: 16px;">
-                <label style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 1: Type New / Custom Room Name</label>
+                <label id="assignNewRoomLabel" style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 1: Rename Classroom</label>
                 <input type="text" id="assignNewRoomInput" class="form-control" placeholder="e.g. Drawing Hall 1, Seminar Hall, Room 305" autocomplete="off">
-                <small style="color: #64748b; font-size: 11px;">Enter the real hall or classroom name.</small>
+                <small style="color: #64748b; font-size: 11px;">Update this classroom's name or number.</small>
             </div>
 
             <div style="text-align: center; margin: 12px 0; color: #94a3b8; font-weight: 600; font-size: 12px;">── OR ──</div>
 
             <div class="form-group" style="margin-bottom: 20px;">
-                <label for="assignExistingRoomSelect" style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 2: Select Unassigned Classroom from Session</label>
+                <label for="assignExistingRoomSelect" style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 2: Select Another Classroom from Session</label>
                 <select id="assignExistingRoomSelect" class="form-control">
-                    <option value="">-- Choose Unassigned Room --</option>
-                    {% for rm in unassigned_rooms %}
+                    <option value="">-- Choose Classroom to Switch --</option>
+                    {% for rm in available_rooms %}
                     {% if not rm.is_dummy_room %}
-                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }}, Benches: {{ rm.benches|default:15 }})</option>
                     {% endif %}
                     {% endfor %}
                 </select>
+                <small style="color: #64748b; font-size: 11px;">Switches this room's allocation to an existing classroom from your session.</small>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button type="button" class="action-btn btn-secondary-action" onclick="closeAssignRoomNameModal()">Cancel</button>
-                <button type="submit" class="action-btn btn-primary-action" id="assignRoomSubmitBtn">Save Real Room Name</button>
+                <button type="submit" class="action-btn btn-primary-action" id="assignRoomSubmitBtn">Save Changes</button>
             </div>
         </form>
     </div>
@@ -2191,6 +2281,17 @@ const BLUEPRINT_ID = '{{ blueprint.blueprint_id|default:"" }}';
 const CURRENT_DATE = '{{ selected_slot.date|date:"Y-m-d"|default:"" }}';
 const CURRENT_SHIFT = '{{ selected_slot.shift|default:"" }}';
 const IS_LOCKED = {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}true{% else %}false{% endif %};
+const ALL_SESSION_ROOMS = [
+    {% for rm in available_rooms %}
+    {
+        room_id: {{ rm.room_id }},
+        room_number: "{{ rm.room_number|escapejs }}",
+        capacity: {{ rm.capacity }},
+        benches: {{ rm.benches|default:15 }},
+        is_dummy: {{ rm.is_dummy_room|yesno:'true,false' }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 
 let draggedAssignmentId = null;
 let draggedSourceRoomId = null;
@@ -2679,15 +2780,32 @@ function buildRoomCardHTML(r) {
     const isDummy = r.is_dummy || (r.room_number && r.room_number.startsWith("Dummy Room"));
     const dummyBadge = isDummy ? `
         <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
-        <button type="button" class="btn-assign-room" onclick="openAssignRoomNameModal(${r.room_blueprint_id}, '${r.room_number}')" title="Assign a real classroom name to this dummy room">
+        <button type="button" class="btn-assign-room" onclick="openRoomEditModal(${r.room_blueprint_id}, '${escapeHtml(r.room_number)}', ${r.room_id}, ${r.capacity}, ${r.total_students}, true)" title="Assign a real classroom name to this dummy room">
             Assign Real Room Name
         </button>
     ` : '';
 
+    const editBtn = !IS_LOCKED ? `
+        <button type="button" class="btn-room-edit-inline" onclick="openRoomEditModal(${r.room_blueprint_id}, '${escapeHtml(r.room_number)}', ${r.room_id}, ${r.capacity}, ${r.total_students}, ${isDummy ? 'true' : 'false'})" title="Edit room name or switch room">
+            ✏️
+        </button>
+    ` : '';
+
+    const capacityControl = !IS_LOCKED ? `
+        <div class="cap-stepper" id="capStepper-${r.room_blueprint_id}">
+            <button type="button" class="cap-stepper-btn cap-btn-minus" onclick="stepRoomCapacity(event, ${r.room_id}, ${r.room_blueprint_id}, -1)" ${r.capacity <= r.total_students ? 'disabled title="Cannot reduce below assigned students"' : 'title="Decrease capacity by 1 (Hold Shift for -3)"'}>−</button>
+            <span class="cap-stepper-val" id="roomCap-${r.room_blueprint_id}" onclick="openCapacityModal(${r.room_id}, '${escapeHtml(r.room_number)}', ${r.capacity})" title="Click to enter exact capacity">${r.capacity}</span>
+            <button type="button" class="cap-stepper-btn cap-btn-plus" onclick="stepRoomCapacity(event, ${r.room_id}, ${r.room_blueprint_id}, 1)" title="Increase capacity by 1 (Hold Shift for +3)">+</button>
+        </div>
+    ` : `<span id="roomCap-${r.room_blueprint_id}" style="font-weight: 700;">${r.capacity}</span>`;
+
     return `
         <div class="room-card-header">
             <div class="room-meta-left">
-                <span class="room-title">Room ${r.room_number}</span>
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                    <span class="room-title">Room ${escapeHtml(r.room_number)}</span>
+                    ${editBtn}
+                </div>
                 ${dummyBadge}
                 <span class="room-pattern-badge pattern-${r.pattern}" id="patternBadge-${r.room_blueprint_id}">
                     ${r.pattern}
@@ -2697,17 +2815,15 @@ function buildRoomCardHTML(r) {
                 </span>
             </div>
             <div class="room-meta-right" style="display: flex; align-items: center; gap: 8px;">
-                <span class="room-occupancy">
-                    Students: <strong id="totalCount-${r.room_blueprint_id}">${r.total_students}</strong> / <span id="roomCap-${r.room_blueprint_id}">${r.capacity}</span>
+                <span class="room-occupancy" style="display: inline-flex; align-items: center; gap: 4px;">
+                    Students: <strong id="totalCount-${r.room_blueprint_id}">${r.total_students}</strong> / 
                 </span>
+                ${capacityControl}
                 <span class="room-unused-pill ${hasUnused}" id="unusedPill-${r.room_blueprint_id}">
                     ${r.unused_capacity} Unused
                 </span>
                 ${!IS_LOCKED ? `
-                <button type="button" class="btn-sm-action" onclick="openCapacityModal(${r.room_id}, '${r.room_number}', ${r.capacity})" title="Edit Room Capacity">
-                    Edit Cap
-                </button>
-                <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint(${r.room_id}, '${r.room_number}')" title="Remove Classroom">
+                <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint(${r.room_id}, '${escapeHtml(r.room_number)}')" title="Remove Classroom">
                     ✕
                 </button>
                 ` : ''}
@@ -2870,6 +2986,65 @@ function submitRoomCapacity(e) {
         }
     })
     .catch(err => showToast('Request error: ' + err, 'error', 4000));
+}
+
+function stepRoomCapacity(event, roomId, roomBpId, direction) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    const delta = (event && event.shiftKey ? 3 : 1) * direction;
+    const card = document.getElementById(`roomCard-${roomBpId}`);
+    const capValEl = card ? card.querySelector('.cap-stepper-val') : null;
+    const currentCap = capValEl ? parseInt(capValEl.textContent.trim(), 10) : 45;
+    const totalCountEl = card ? card.querySelector(`[id^="totalCount-"]`) : null;
+    const totalStudents = totalCountEl ? parseInt(totalCountEl.textContent.trim(), 10) : 0;
+    const newCap = currentCap + delta;
+
+    if (newCap < 1) {
+        showToast('Capacity must be at least 1.', 'error', 3000);
+        return;
+    }
+    if (delta < 0 && newCap < totalStudents) {
+        showToast(`Cannot reduce capacity below currently assigned students (${totalStudents}).`, 'error', 4000);
+        return;
+    }
+
+    const stepper = document.getElementById(`capStepper-${roomBpId}`);
+    if (stepper) {
+        stepper.querySelectorAll('button').forEach(b => b.disabled = true);
+    }
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/room-capacity/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_id: roomId,
+            capacity: newCap
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`✓ Capacity updated to ${newCap}!`, 'success', 2000);
+            updateBoardFromData(data);
+        } else {
+            if (stepper) {
+                stepper.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+            showToast('Error: ' + (data.error || 'Failed to update capacity'), 'error', 5000);
+        }
+    })
+    .catch(err => {
+        if (stepper) {
+            stepper.querySelectorAll('button').forEach(b => b.disabled = false);
+        }
+        showToast('Request error: ' + err, 'error', 4000);
+    });
 }
 
 function openAddRoomModal() {
@@ -3551,42 +3726,97 @@ function generateSeats() {
     });
 }
 
-function openAssignRoomNameModal(roomBpId, currentName) {
+function openRoomEditModal(roomBpId, currentName, currentRoomId, capacity, totalStudents, isDummy) {
     document.getElementById('assignRoomBpId').value = roomBpId;
-    document.getElementById('assignRoomModalTitle').textContent = `Assign Real Room Name for ${currentName}`;
-    const newRoomInput = document.getElementById('assignNewRoomInput');
-    const existingSelect = document.getElementById('assignExistingRoomSelect');
-    if (newRoomInput) newRoomInput.value = '';
-    if (existingSelect) existingSelect.value = '';
-
-    // Filter unassigned rooms dropdown so rooms already on the board cannot be selected
-    const activeRoomIds = new Set();
-    document.querySelectorAll('.room-card').forEach(card => {
-        if (card.dataset.roomId) {
-            activeRoomIds.add(String(card.dataset.roomId));
-        }
-    });
-    if (existingSelect) {
-        Array.from(existingSelect.options).forEach(opt => {
-            if (!opt.value) return;
-            if (activeRoomIds.has(String(opt.value))) {
-                opt.style.display = 'none';
-                opt.disabled = true;
-            } else {
-                opt.style.display = '';
-                opt.disabled = false;
-            }
-        });
-    }
 
     const modal = document.getElementById('assignRoomNameModal');
-    if (modal) {
-        modal.classList.add('active');
-        modal.style.display = 'flex';
+    if (!modal) return;
+
+    modal.dataset.currentRoomId = currentRoomId || '';
+    modal.dataset.totalStudents = totalStudents || '0';
+    modal.dataset.currentName = currentName || '';
+
+    const modalTitle = document.getElementById('assignRoomModalTitle');
+    const modalDesc = document.getElementById('assignRoomModalDesc');
+    const labelNew = document.getElementById('assignNewRoomLabel');
+    const submitBtn = document.getElementById('assignRoomSubmitBtn');
+
+    if (isDummy || (currentName && currentName.startsWith('Dummy Room'))) {
+        modalTitle.textContent = `Assign Real Room Name for ${currentName}`;
+        if (modalDesc) modalDesc.textContent = 'This room is currently an unassigned dummy placeholder. To enable physical seat generation, please assign a real physical classroom name.';
+        if (labelNew) labelNew.textContent = 'Option 1: Type New / Custom Room Name';
+        if (submitBtn) submitBtn.textContent = 'Save Real Room Name';
+    } else {
+        modalTitle.textContent = `Edit Room — Room ${currentName}`;
+        if (modalDesc) modalDesc.textContent = 'Rename this classroom or switch this allocation to another classroom in the session.';
+        if (labelNew) labelNew.textContent = 'Option 1: Rename Classroom';
+        if (submitBtn) submitBtn.textContent = 'Save Changes';
     }
+
+    const newRoomInput = document.getElementById('assignNewRoomInput');
+    const existingSelect = document.getElementById('assignExistingRoomSelect');
+
+    if (newRoomInput) {
+        newRoomInput.value = isDummy ? '' : currentName;
+    }
+
+    if (existingSelect) {
+        existingSelect.innerHTML = '<option value="">-- Choose Classroom to Switch --</option>';
+
+        const activeRoomIds = new Set();
+        document.querySelectorAll('.room-card').forEach(card => {
+            const cardBpId = card.dataset.roomBpId;
+            const rId = card.dataset.roomId;
+            if (rId && String(cardBpId) !== String(roomBpId)) {
+                activeRoomIds.add(String(rId));
+            }
+        });
+
+        const studentsNum = parseInt(totalStudents, 10) || 0;
+
+        if (typeof ALL_SESSION_ROOMS !== 'undefined' && ALL_SESSION_ROOMS.length) {
+            ALL_SESSION_ROOMS.forEach(rm => {
+                if (rm.is_dummy) return;
+                const opt = document.createElement('option');
+                opt.value = rm.room_id;
+
+                const isCurrent = String(rm.room_id) === String(currentRoomId);
+                const isAlreadyOnBoard = activeRoomIds.has(String(rm.room_id));
+                const isTooSmall = rm.capacity < studentsNum;
+
+                let label = `Room ${rm.room_number} (Capacity: ${rm.capacity}, Benches: ${rm.benches})`;
+                if (isCurrent) {
+                    label += ' — [Current Room]';
+                } else if (isAlreadyOnBoard) {
+                    label += ' — [Already on Board]';
+                    opt.disabled = true;
+                } else if (isTooSmall) {
+                    label += ` — [Cap ${rm.capacity} < ${studentsNum} students]`;
+                    opt.disabled = true;
+                }
+
+                opt.textContent = label;
+                existingSelect.appendChild(opt);
+            });
+        }
+        existingSelect.value = '';
+    }
+
+    modal.classList.add('active');
+    modal.style.display = 'flex';
     setTimeout(() => {
         if (newRoomInput) newRoomInput.focus();
     }, 50);
+}
+
+function openAssignRoomNameModal(roomBpId, currentName) {
+    const card = document.getElementById(`roomCard-${roomBpId}`);
+    const roomId = card ? card.dataset.roomId : null;
+    const totalCountEl = document.getElementById(`totalCount-${roomBpId}`);
+    const totalStudents = totalCountEl ? parseInt(totalCountEl.textContent.trim(), 10) : 0;
+    const capEl = document.getElementById(`roomCap-${roomBpId}`);
+    const capacity = capEl ? parseInt(capEl.textContent.trim(), 10) : 45;
+    openRoomEditModal(roomBpId, currentName, roomId, capacity, totalStudents, true);
 }
 
 function closeAssignRoomNameModal() {
@@ -3599,12 +3829,19 @@ function closeAssignRoomNameModal() {
 
 function submitAssignRoomName(event) {
     event.preventDefault();
+    const modal = document.getElementById('assignRoomNameModal');
     const roomBpId = document.getElementById('assignRoomBpId').value;
     const newName = document.getElementById('assignNewRoomInput').value.trim();
     const targetRoomId = document.getElementById('assignExistingRoomSelect').value;
+    const currentName = modal ? modal.dataset.currentName : '';
 
     if (!newName && !targetRoomId) {
-        showToast('Please type a room name or select an existing classroom.', 'error');
+        showToast('Please type a room name or select an existing classroom.', 'error', 3500);
+        return;
+    }
+
+    if (!targetRoomId && newName && currentName && newName.toLowerCase() === currentName.toLowerCase()) {
+        closeAssignRoomNameModal();
         return;
     }
 
@@ -3621,26 +3858,26 @@ function submitAssignRoomName(event) {
         body: JSON.stringify({
             blueprint_id: BLUEPRINT_ID,
             room_blueprint_id: roomBpId,
-            new_room_number: newName || null,
+            new_room_number: (!targetRoomId && newName) ? newName : null,
             target_room_id: targetRoomId || null,
         })
     })
     .then(r => r.json())
     .then(data => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save Real Room Name';
+        submitBtn.textContent = 'Save Changes';
         if (data.success) {
             updateUIWithResult(data);
-            showToast('✓ Real classroom name assigned successfully!', 'success');
+            showToast('✓ Classroom updated successfully!', 'success', 3000);
             closeAssignRoomNameModal();
         } else {
-            showToast('Failed to assign room: ' + (data.error || 'Unknown error'), 'error');
+            showToast('Failed to update room: ' + (data.error || 'Unknown error'), 'error', 5000);
         }
     })
     .catch(err => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save Real Room Name';
-        showToast('Request error: ' + err, 'error');
+        submitBtn.textContent = 'Save Changes';
+        showToast('Request error: ' + err, 'error', 4000);
     });
 }
 

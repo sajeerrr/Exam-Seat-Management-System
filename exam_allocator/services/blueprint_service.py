@@ -1733,6 +1733,10 @@ class BlueprintService:
                     raise BlueprintServiceError(
                         f"Room '{target_room.room_number}' is already assigned in this blueprint."
                     )
+                if target_room.capacity < rb.total_students:
+                    raise BlueprintServiceError(
+                        f"Cannot switch to Room '{target_room.room_number}' (Capacity: {target_room.capacity}): it is smaller than the {rb.total_students} currently assigned students. Please reduce students first."
+                    )
                 rb.room = target_room
                 rb.capacity = target_room.capacity
                 rb.unused_capacity = max(0, target_room.capacity - rb.total_students)
@@ -1746,44 +1750,52 @@ class BlueprintService:
                 if not clean_name:
                     raise BlueprintServiceError("Room name cannot be empty.")
 
-                if clean_name.lower().startswith("dummy room"):
+                if clean_name.lower().startswith("dummy room") and not old_room.is_dummy_room:
                     raise BlueprintServiceError("Please provide a real classroom name, not a dummy placeholder.")
 
-                # Check if a room with this name already exists in this session
-                existing = Room.objects.filter(session=slot_blueprint.session, room_number__iexact=clean_name).first()
-                if existing:
-                    if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=existing).exclude(room_blueprint_id=room_blueprint_id).exists():
-                        raise BlueprintServiceError(
-                            f"Room '{clean_name}' is already assigned to another room card in this blueprint."
-                        )
-                    rb.room = existing
-                    rb.capacity = existing.capacity
-                    rb.unused_capacity = max(0, existing.capacity - rb.total_students)
-                    rb.save()
-                    if old_room.is_dummy_room and old_room != existing and not RoomBlueprint.objects.filter(room=old_room).exists():
-                        old_room.delete()
+                if clean_name.lower() == old_room.room_number.lower():
+                    # Same name, nothing to change
+                    pass
                 else:
-                    # Rename the current room object if it is only used in this room blueprint
-                    if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exclude(room_blueprint_id=room_blueprint_id).exists():
-                        old_room.room_number = clean_name
-                        old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
-                        old_room.is_dummy = False
-                        old_room.save()
-                        rb.room = old_room
+                    # Check if a room with this name already exists in this session
+                    existing = Room.objects.filter(session=slot_blueprint.session, room_number__iexact=clean_name).first()
+                    if existing:
+                        if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=existing).exclude(room_blueprint_id=room_blueprint_id).exists():
+                            raise BlueprintServiceError(
+                                f"Room '{clean_name}' is already assigned to another room card in this blueprint."
+                            )
+                        if existing.capacity < rb.total_students:
+                            raise BlueprintServiceError(
+                                f"Cannot switch to Room '{existing.room_number}' (Capacity: {existing.capacity}): it is smaller than the {rb.total_students} currently assigned students."
+                            )
+                        rb.room = existing
+                        rb.capacity = existing.capacity
+                        rb.unused_capacity = max(0, existing.capacity - rb.total_students)
                         rb.save()
-                    else:
-                        new_room = Room.objects.create(
-                            session=slot_blueprint.session,
-                            room_number=clean_name,
-                            capacity=rb.capacity or 45,
-                            benches=math.ceil((rb.capacity or 45) / 3),
-                            building="Main Campus",
-                            is_dummy=False,
-                        )
-                        rb.room = new_room
-                        rb.save()
-                        if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exists():
+                        if old_room.is_dummy_room and old_room != existing and not RoomBlueprint.objects.filter(room=old_room).exists():
                             old_room.delete()
+                    else:
+                        # Rename the current room object if it is only used in this room blueprint
+                        other_blueprints = RoomBlueprint.objects.filter(room=old_room).exclude(room_blueprint_id=room_blueprint_id).exists()
+                        if not other_blueprints:
+                            old_room.room_number = clean_name
+                            if old_room.is_dummy_room:
+                                old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
+                                old_room.is_dummy = False
+                            old_room.save()
+                            rb.room = old_room
+                            rb.save()
+                        else:
+                            new_room = Room.objects.create(
+                                session=slot_blueprint.session,
+                                room_number=clean_name,
+                                capacity=rb.capacity or 45,
+                                benches=math.ceil((rb.capacity or 45) / 3),
+                                building=old_room.building or "Main Campus",
+                                is_dummy=False,
+                            )
+                            rb.room = new_room
+                            rb.save()
 
             else:
                 raise BlueprintServiceError("Either new_room_number or target_room_id is required.")

@@ -1,3 +1,4 @@
+import json
 from django.test import TestCase, Client
 from django.urls import reverse
 from exam_allocator.models import (
@@ -657,6 +658,130 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         self.assertIn("Roll Number,Student Name,Department,Class,Subject Code", content)
         self.assertIn(st.roll_number, content)
         self.assertIn(self.room1.room_number, content)
+
+
+class RoomEditAndCapacityStepperTests(TestCase):
+    def setUp(self):
+        from exam_allocator.models import AllocationSession, SlotBlueprint, RoomBlueprint, Room, StreamBlueprintAssignment
+        self.session = AllocationSession.objects.create(name="Test Session Spring 2026", status="DRAFT")
+        self.room1 = Room.objects.create(session=self.session, room_number="101", capacity=45, benches=15, building="Main")
+        self.room2 = Room.objects.create(session=self.session, room_number="102", capacity=45, benches=15, building="Main")
+        self.room_small = Room.objects.create(session=self.session, room_number="Small 1", capacity=10, benches=4, building="Main")
+
+        self.bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date="2026-03-20",
+            shift="FN",
+            status=SlotBlueprint.Status.DRAFT,
+            total_eligible_students=20,
+            total_allocated_students=15,
+            unallocated_count=5
+        )
+        self.rbp1 = RoomBlueprint.objects.create(
+            slot_blueprint=self.bp,
+            room=self.room1,
+            capacity=45,
+            total_students=15,
+            unused_capacity=30,
+            room_order=1
+        )
+        self.assign1 = StreamBlueprintAssignment.objects.create(
+            room_blueprint=self.rbp1,
+            stream_name="A",
+            department_code="CSE",
+            class_name="CSE-A",
+            subject_code="CS101",
+            subject_name="Intro CS",
+            student_count=15,
+            student_rolls=[f"CS{i:02d}" for i in range(1, 16)],
+            order=1
+        )
+
+    def test_step_capacity_up_and_down(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        # Step capacity up by 3
+        res = BlueprintService.update_room_capacity(self.bp, self.room1.room_id, 48)
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 48)
+        self.assertEqual(self.rbp1.unused_capacity, 33)
+
+        # Step capacity down
+        res2 = BlueprintService.update_room_capacity(self.bp, self.room1.room_id, 42)
+        self.assertTrue(res2["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 42)
+        self.assertEqual(self.rbp1.unused_capacity, 27)
+
+    def test_rename_room_in_blueprint(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=self.bp,
+            room_blueprint_id=self.rbp1.room_blueprint_id,
+            new_room_number="Hall 101"
+        )
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room.room_number, "Hall 101")
+
+    def test_switch_room_to_existing_session_room(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=self.bp,
+            room_blueprint_id=self.rbp1.room_blueprint_id,
+            target_room_id=self.room2.room_id
+        )
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room, self.room2)
+        self.assertEqual(self.rbp1.total_students, 15)
+
+    def test_switch_room_rejects_smaller_capacity_than_students(self):
+        from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+        with self.assertRaises(BlueprintServiceError) as ctx:
+            BlueprintService.assign_real_room_name(
+                slot_blueprint=self.bp,
+                room_blueprint_id=self.rbp1.room_blueprint_id,
+                target_room_id=self.room_small.room_id
+            )
+        self.assertIn("smaller than the 15 currently assigned students", str(ctx.exception))
+
+    def test_api_blueprint_room_capacity_stepper_endpoint(self):
+        client = Client()
+        url = reverse("exam_allocator:api_blueprint_room_capacity", args=[self.session.session_id])
+        resp = client.post(
+            url,
+            data=json.dumps({
+                "blueprint_id": self.bp.blueprint_id,
+                "room_id": self.room1.room_id,
+                "capacity": 48
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 48)
+
+    def test_api_blueprint_assign_room_name_endpoint(self):
+        client = Client()
+        url = reverse("exam_allocator:api_blueprint_assign_room_name", args=[self.session.session_id])
+        resp = client.post(
+            url,
+            data=json.dumps({
+                "blueprint_id": self.bp.blueprint_id,
+                "room_blueprint_id": self.rbp1.room_blueprint_id,
+                "target_room_id": self.room2.room_id
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room, self.room2)
+
 
 
 
