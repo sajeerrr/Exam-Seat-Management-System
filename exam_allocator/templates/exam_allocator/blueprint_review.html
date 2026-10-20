@@ -309,67 +309,169 @@
         margin: 4px 0;
     }
 
-    /* 3-CARD METRICS SUMMARY */
-    .metrics-summary-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 14px;
-        margin-bottom: 20px;
-    }
-    @media (max-width: 860px) {
-        .metrics-summary-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-    .metric-summary-card {
+    /* COMPACT 1-LINE METRICS BAR */
+    .compact-metrics-bar {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 16px 20px;
+        border-radius: var(--radius-sm);
+        padding: 9px 18px;
+        margin-bottom: 12px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        min-height: 105px;
-    }
-    .metric-card-header {
-        display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 6px;
+        gap: 16px;
+        flex-wrap: wrap;
     }
-    .metric-card-title {
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: #64748b;
+    .compact-metric-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        color: #475569;
     }
-    .metric-card-icon {
+    .compact-metric-icon {
         font-size: 16px;
-        opacity: 0.85;
+        line-height: 1;
     }
-    .metric-main-value {
-        font-size: 26px;
+    .compact-metric-label {
+        font-weight: 700;
+        color: #64748b;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .compact-metric-val {
+        font-size: 15px;
         font-weight: 800;
         color: #0f172a;
-        line-height: 1.1;
-        display: flex;
-        align-items: baseline;
-        gap: 6px;
     }
-    .metric-total-sub {
-        font-size: 14px;
-        font-weight: 500;
-        color: #94a3b8;
+    .compact-metric-sub {
+        font-size: 12.5px;
+        color: #64748b;
     }
-    .metric-subtext {
-        margin-top: 8px;
+    .compact-metric-divider {
+        width: 1px;
+        height: 20px;
+        background: #e2e8f0;
+    }
+    @media (max-width: 860px) {
+        .compact-metric-divider {
+            display: none;
+        }
+    }
+    .compact-progress-track {
+        width: 65px;
+        height: 7px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+        display: inline-block;
+        vertical-align: middle;
+        margin: 0 2px;
+    }
+    .metric-progress-fill {
+        height: 100%;
+        background: #4f46e5;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    /* ROOM QUICK-JUMP NAV BAR */
+    .room-jump-bar-container {
+        position: sticky;
+        top: 0;
+        z-index: 25;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: var(--radius-sm);
+        padding: 8px 12px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+    .room-jump-bar-inner {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 12px;
+        gap: 10px;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: thin;
+        padding-bottom: 2px;
     }
+    .room-jump-bar-inner::-webkit-scrollbar {
+        height: 4px;
+    }
+    .room-jump-bar-inner::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+    }
+    .room-jump-title {
+        font-size: 12px;
+        font-weight: 800;
+        color: #334155;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .room-jump-list {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+    }
+    .room-jump-btn {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .room-jump-btn:hover {
+        background: #eef2ff;
+        border-color: #6366f1;
+        color: #4338ca;
+    }
+    .room-jump-btn.active {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #ffffff;
+        box-shadow: 0 1px 4px rgba(79, 70, 229, 0.35);
+    }
+    .room-jump-btn .jump-btn-count {
+        font-size: 10.5px;
+        padding: 1px 5px;
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.08);
+        color: inherit;
+        font-weight: 600;
+    }
+    .room-jump-btn.active .jump-btn-count {
+        background: rgba(255, 255, 255, 0.25);
+        color: #ffffff;
+    }
+
+    /* ROOM CARD PULSE HIGHLIGHT */
+    @keyframes roomCardPulse {
+        0% { box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.6); }
+        50% { box-shadow: 0 0 0 9px rgba(79, 70, 229, 0.2); }
+        100% { box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08); }
+    }
+    .room-card.room-card-highlighted {
+        animation: roomCardPulse 1.6s ease-out;
+        border-color: #4f46e5 !important;
+    }
+
     .metric-pill {
         display: inline-flex;
         align-items: center;
@@ -393,28 +495,14 @@
         font-size: 12px;
         color: #64748b;
     }
-    .metric-progress-track {
-        flex: 1;
-        height: 6px;
-        background: #f1f5f9;
-        border-radius: 3px;
-        overflow: hidden;
-        border: 1px solid #e2e8f0;
-    }
-    .metric-progress-fill {
-        height: 100%;
-        background: #4f46e5;
-        border-radius: 3px;
-        transition: width 0.3s ease;
-    }
 
     /* ALERTS */
     .alert-box {
-        padding: 12px 16px;
+        padding: 10px 14px;
         border-radius: var(--radius-sm);
-        margin-bottom: 20px;
+        margin-bottom: 12px;
         font-size: 13px;
-        line-height: 1.5;
+        line-height: 1.4;
     }
     .alert-danger {
         background: #fef2f2;
@@ -430,6 +518,12 @@
         background: #ecfdf5;
         border: 1px solid #a7f3d0;
         color: #065f46;
+        padding: 6px 14px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 6px;
     }
 
     /* ROOM ALLOCATION BOARD */
@@ -549,7 +643,7 @@
     }
     .stream-column {
         background: #ffffff;
-        border: 1px dashed #cbd5e1;
+        border: 1px solid #e2e8f0;
         border-radius: var(--radius-sm);
         padding: 12px;
         min-height: 120px;
@@ -558,10 +652,22 @@
         transition: all 0.2s ease;
         position: relative;
     }
+    .stream-column[data-stream="A"] {
+        border-top: 3.5px solid #2563eb;
+        background: linear-gradient(180deg, #f8faff 0%, #ffffff 45px);
+    }
+    .stream-column[data-stream="B"] {
+        border-top: 3.5px solid #059669;
+        background: linear-gradient(180deg, #f6fdf9 0%, #ffffff 45px);
+    }
+    .stream-column[data-stream="C"] {
+        border-top: 3.5px solid #7c3aed;
+        background: linear-gradient(180deg, #faf7ff 0%, #ffffff 45px);
+    }
     .stream-column.drop-target-active {
         border-color: var(--accent);
         border-style: solid;
-        background: #eef2ff;
+        background: #eef2ff !important;
         box-shadow: 0 0 12px rgba(99, 102, 241, 0.25) inset;
     }
     .stream-col-header {
@@ -572,8 +678,37 @@
         font-size: 12px;
         font-weight: 700;
         color: #475569;
+    }
+    .stream-badge {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 6px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .stream-badge-a {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+    .stream-badge-b {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+    .stream-badge-c {
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+    }
+    .stream-sub-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #64748b;
     }
     .stream-col-header .stream-name {
         color: #1e1b4b;
@@ -654,6 +789,26 @@
         cursor: grab;
         opacity: 0.8;
     }
+    .group-dept-badge {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 4px;
+        letter-spacing: 0.3px;
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1px solid #cbd5e1;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .dept-me { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+    .dept-cse, .dept-cs { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .dept-ce { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .dept-eee { background: #fef9c3; color: #854d0e; border-color: #fef08a; }
+    .dept-ece, .dept-ec { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+    .dept-b-arch, .dept-barch { background: #fae8ff; color: #86198f; border-color: #f5d0fe; }
+    .dept-it { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+    .dept-bt { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
     .group-dept-class {
         font-size: 12.5px;
         font-weight: 700;
@@ -1102,6 +1257,11 @@
             <span class="eligible-tag">
                 👥 {{ eligible_students_count }} Students
             </span>
+            {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings and not has_dummy_rooms %}
+            <span class="metric-pill pill-success" style="font-weight: 700; padding: 3px 8px; font-size: 11px;" title="All allocation constraints satisfied">
+                ✓ Valid Blueprint
+            </span>
+            {% endif %}
         </div>
 
         <div class="btn-group">
@@ -1227,68 +1387,66 @@
     </div>
     {% endif %}
 
-    {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings %}
-    <div class="alert-box alert-success">
-        ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
-    </div>
-    {% endif %}
     </div>
 
-    <!-- SIMPLIFIED 3-CARD METRICS PANEL -->
+    <!-- COMPACT 1-LINE METRICS BAR -->
     {% if blueprint %}
-    <div class="metrics-summary-grid">
+    <div class="compact-metrics-bar">
         <!-- 1. STUDENTS SUMMARY -->
-        <div class="metric-summary-card">
-            <div class="metric-card-header">
-                <span class="metric-card-title">Students</span>
-                <span class="metric-card-icon">👥</span>
-            </div>
-            <div class="metric-main-value">
-                <span id="metricAllocatedVal">{{ blueprint.total_allocated_students }}</span>
-                <span class="metric-total-sub">/ {{ blueprint.total_eligible_students }}</span>
-            </div>
-            <div class="metric-subtext">
-                {% if blueprint.unallocated_count > 0 %}
-                <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer;" title="Click to place unallocated students">
-                    ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
-                </span>
-                {% else %}
-                <span class="metric-pill pill-success">✓ 100% Placed</span>
-                <span style="display:none;" id="statUnallocatedCount">0</span>
-                {% endif %}
-            </div>
+        <div class="compact-metric-item">
+            <span class="compact-metric-icon">👥</span>
+            <span class="compact-metric-label">Students:</span>
+            <strong class="compact-metric-val" id="metricAllocatedVal">{{ blueprint.total_allocated_students }}</strong>
+            <span class="compact-metric-sub">/ {{ blueprint.total_eligible_students }}</span>
+            {% if blueprint.unallocated_count > 0 %}
+            <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer; margin-left: 6px;" title="Click to place unallocated students">
+                ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
+            </span>
+            {% else %}
+            <span class="metric-pill pill-success" style="margin-left: 6px;">✓ 100% Placed</span>
+            <span style="display:none;" id="statUnallocatedCount">0</span>
+            {% endif %}
         </div>
+
+        <div class="compact-metric-divider"></div>
 
         <!-- 2. ROOMS SUMMARY -->
-        <div class="metric-summary-card">
-            <div class="metric-card-header">
-                <span class="metric-card-title">Classrooms</span>
-                <span class="metric-card-icon">🏛️</span>
-            </div>
-            <div class="metric-main-value">
-                <span id="metricRoomsUsedVal">{{ blueprint.rooms_used }}</span>
-                <span class="metric-total-sub">Active Rooms</span>
-            </div>
-            <div class="metric-subtext">
-                <span class="metric-info-text">{{ blueprint.total_room_capacity }} total physical seats</span>
-            </div>
+        <div class="compact-metric-item">
+            <span class="compact-metric-icon">🏛️</span>
+            <span class="compact-metric-label">Classrooms:</span>
+            <strong class="compact-metric-val" id="metricRoomsUsedVal">{{ blueprint.rooms_used }}</strong>
+            <span class="compact-metric-sub">Active Rooms</span>
+            <span class="compact-metric-sub" style="margin-left: 4px;">({{ blueprint.total_room_capacity }} seats)</span>
         </div>
 
+        <div class="compact-metric-divider"></div>
+
         <!-- 3. CAPACITY & UTILIZATION SUMMARY -->
-        <div class="metric-summary-card">
-            <div class="metric-card-header">
-                <span class="metric-card-title">Seat Utilization</span>
-                <span class="metric-card-icon">📊</span>
+        <div class="compact-metric-item">
+            <span class="compact-metric-icon">📊</span>
+            <span class="compact-metric-label">Utilization:</span>
+            <strong class="compact-metric-val" id="metricUtilVal">{{ blueprint.room_utilization }}%</strong>
+            <div class="compact-progress-track" title="{{ blueprint.room_utilization }}% utilized">
+                <div class="metric-progress-fill" style="width: {{ blueprint.room_utilization }}%;"></div>
             </div>
-            <div class="metric-main-value">
-                <span id="metricUtilVal">{{ blueprint.room_utilization }}%</span>
-                <span class="metric-total-sub">Full</span>
-            </div>
-            <div class="metric-subtext">
-                <div class="metric-progress-track">
-                    <div class="metric-progress-fill" style="width: {{ blueprint.room_utilization }}%;"></div>
-                </div>
-                <span class="metric-info-text"><strong id="metricRemainingCapVal">{{ blueprint.remaining_capacity }}</strong> seats free</span>
+            <span class="compact-metric-sub">(<strong id="metricRemainingCapVal" style="color: #475569;">{{ blueprint.remaining_capacity }}</strong> seats free)</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ROOM QUICK-JUMP NAV BAR -->
+    {% if rooms_data %}
+    <div class="room-jump-bar-container">
+        <div class="room-jump-bar-inner">
+            <span class="room-jump-title">🏛️ Rooms ({{ rooms_data|length }}):</span>
+            <div class="room-jump-list" id="roomJumpList">
+                <button type="button" class="room-jump-btn active" onclick="jumpToRoom('all', this)">All</button>
+                {% for r in rooms_data %}
+                <button type="button" class="room-jump-btn" id="jumpBtn-{{ r.room_blueprint_id }}" onclick="jumpToRoom('{{ r.room_blueprint_id }}', this)" title="Room {{ r.room_number }} · {{ r.total_students }}/{{ r.capacity }} students">
+                    {% if r.is_dummy %}⚠️ {% endif %}{{ r.room_number }}
+                    <span class="jump-btn-count">{{ r.total_students }}</span>
+                </button>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -1339,7 +1497,10 @@
                 <!-- STREAM A -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="A">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream A</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-a">Stream A</span>
+                            <span class="stream-sub-label">(Col 1 &amp; 4)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_a_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-A">
                             {{ r.stream_a_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1360,8 +1521,9 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
@@ -1405,7 +1567,10 @@
                 <!-- STREAM B -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="B">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream B</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-b">Stream B</span>
+                            <span class="stream-sub-label">(Col 2 &amp; 5)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_b_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-B">
                             {{ r.stream_b_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1426,8 +1591,9 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
@@ -1471,7 +1637,10 @@
                 <!-- STREAM C -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="C">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream C</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-c">Stream C</span>
+                            <span class="stream-sub-label">(Col 3 &amp; 6)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_c_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-C">
                             {{ r.stream_c_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1492,8 +1661,9 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
@@ -2310,13 +2480,76 @@ function updateBoardFromData(data) {
         card.innerHTML = buildRoomCardHTML(r);
     });
 
-
+    // Update Room Quick-Jump Nav Bar
+    if (data.rooms) {
+        updateRoomJumpBar(data.rooms);
+    }
 
     // Rebind Drag and Drop listeners
     initDragAndDrop();
 }
 
 const updateUIWithResult = updateBoardFromData;
+
+// ROOM QUICK-JUMP FUNCTIONALITY
+function jumpToRoom(roomId, btn) {
+    document.querySelectorAll('.room-jump-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    if (roomId === 'all') {
+        document.querySelectorAll('.room-card').forEach(c => c.style.display = '');
+        const first = document.querySelector('.room-card');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        const target = document.getElementById(`roomCard-${roomId}`);
+        if (target) {
+            document.querySelectorAll('.room-card').forEach(c => c.style.display = '');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('room-card-highlighted');
+            setTimeout(() => {
+                target.classList.remove('room-card-highlighted');
+            }, 1800);
+        }
+    }
+}
+
+function updateRoomJumpBar(rooms) {
+    const list = document.getElementById('roomJumpList');
+    if (!list || !rooms) return;
+    let html = `<button type="button" class="room-jump-btn active" onclick="jumpToRoom('all', this)">All</button>`;
+    rooms.forEach(r => {
+        const isDummy = r.is_dummy || (r.room_number && String(r.room_number).startsWith('Dummy Room'));
+        html += `
+        <button type="button" class="room-jump-btn" id="jumpBtn-${r.room_blueprint_id}" onclick="jumpToRoom('${r.room_blueprint_id}', this)" title="Room ${escapeHtml(r.room_number)} · ${r.total_students}/${r.capacity} students">
+            ${isDummy ? '⚠️ ' : ''}${escapeHtml(r.room_number)}
+            <span class="jump-btn-count">${r.total_students}</span>
+        </button>`;
+    });
+    list.innerHTML = html;
+}
+
+function getDeptColorStyle(dept) {
+    if (!dept) return '';
+    const d = dept.toUpperCase().trim();
+    const map = {
+        'ME': 'background: #e0f2fe; color: #0369a1; border-color: #bae6fd;',
+        'CSE': 'background: #e0e7ff; color: #3730a3; border-color: #c7d2fe;',
+        'CS': 'background: #e0e7ff; color: #3730a3; border-color: #c7d2fe;',
+        'CE': 'background: #fef3c7; color: #92400e; border-color: #fde68a;',
+        'EEE': 'background: #fef9c3; color: #854d0e; border-color: #fef08a;',
+        'ECE': 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;',
+        'EC': 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;',
+        'B.ARCH': 'background: #fae8ff; color: #86198f; border-color: #f5d0fe;',
+        'BARCH': 'background: #fae8ff; color: #86198f; border-color: #f5d0fe;',
+        'IT': 'background: #ffedd5; color: #9a3412; border-color: #fed7aa;',
+        'BT': 'background: #f1f5f9; color: #475569; border-color: #cbd5e1;'
+    };
+    if (map[d]) return map[d];
+    let hash = 0;
+    for (let i = 0; i < d.length; i++) hash = d.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash % 360);
+    return `background: hsl(${hue}, 85%, 95%); color: hsl(${hue}, 80%, 25%); border-color: hsl(${hue}, 60%, 80%);`;
+}
 
 function buildRoomCardHTML(r) {
     const streamLimit = r.stream_limit || 15;
@@ -2366,7 +2599,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM A -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="A">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream A</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-a">Stream A</span>
+                        <span class="stream-sub-label">(Col 1 &amp; 4)</span>
+                    </div>
                     <span class="stream-count ${isFullA}" id="streamCount-${r.room_blueprint_id}-A">
                         ${r.stream_a_count} / ${streamLimit} students
                     </span>
@@ -2379,7 +2615,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM B -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="B">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream B</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-b">Stream B</span>
+                        <span class="stream-sub-label">(Col 2 &amp; 5)</span>
+                    </div>
                     <span class="stream-count ${isFullB}" id="streamCount-${r.room_blueprint_id}-B">
                         ${r.stream_b_count} / ${streamLimit} students
                     </span>
@@ -2392,7 +2631,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM C -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="C">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream C</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-c">Stream C</span>
+                        <span class="stream-sub-label">(Col 3 &amp; 6)</span>
+                    </div>
                     <span class="stream-count ${isFullC}" id="streamCount-${r.room_blueprint_id}-C">
                         ${r.stream_c_count} / ${streamLimit} students
                     </span>
@@ -2408,7 +2650,10 @@ function buildRoomCardHTML(r) {
 function buildGroupCardHTML(a, r, stream) {
     const isDraggable = !IS_LOCKED ? 'true' : 'false';
     const displayClass = a.main_class_name || a.class_name || '';
-    const deptClass = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const deptClassFull = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const deptCode = a.department_code || '';
+    const deptBadgeHtml = deptCode ? `<span class="group-dept-badge dept-${escapeHtml(deptCode.toLowerCase())}" style="${getDeptColorStyle(deptCode)}">${escapeHtml(deptCode)}</span>` : '';
+    const classOnly = displayClass || deptCode;
     const semBadge = a.semester ? `<span class="group-sem-badge">S${a.semester}</span>` : '';
     const catPill = (a.subject_category && a.subject_category !== 'NORMAL') 
         ? `<span class="group-category-pill">${a.subject_category}</span>` 
@@ -2430,10 +2675,11 @@ function buildGroupCardHTML(a, r, stream) {
              draggable="true">
             <div class="group-card-top">
                 <span class="group-handle">⠿</span>
-                <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
+                ${deptBadgeHtml}
+                <span class="group-dept-class" title="${escapeHtml(deptClassFull)}">${escapeHtml(classOnly)}</span>
                 <div style="display: flex; align-items: center; gap: 4px;">
                     ${semBadge}
-                    <span class="group-badge-count" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" style="cursor: pointer;" title="Click to view student list">${a.student_count} st</span>
+                    <span class="group-badge-count" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count})" style="cursor: pointer;" title="Click to view student list">${a.student_count} st</span>
                 </div>
             </div>
             <div class="group-subject" title="${a.subject_code} — ${a.subject_name}">
@@ -2444,10 +2690,10 @@ function buildGroupCardHTML(a, r, stream) {
                 <div style="display: flex; align-items: center; gap: 4px;">
                     ${!IS_LOCKED ? `
                     <button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>
-                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">✂️ Split</button>
+                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">✂️ Split</button>
                     <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">✕</button>
                     ` : `
-                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" title="View student roll numbers">👥 Students</button>
+                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count})" title="View student roll numbers">👥 Students</button>
                     `}
                 </div>
             </div>
