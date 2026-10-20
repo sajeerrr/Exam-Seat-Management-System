@@ -1416,10 +1416,6 @@
                        class="action-btn btn-primary-cta">
                         View Seating Plan →
                     </a>
-                    <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
-                       class="action-btn btn-secondary-action" title="Download seating plan CSV for this slot">
-                        📥 Export CSV
-                    </a>
                     <button class="action-btn btn-secondary-action" onclick="generateSeats()" title="Regenerate seating assignments">
                         Regenerate Seats
                     </button>
@@ -1445,10 +1441,6 @@
                     <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
                         + Add Room
                     </button>
-                    <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
-                       class="action-btn btn-secondary-action" title="Download seating plan CSV for this slot">
-                        📥 Export CSV
-                    </a>
                     {% if blueprint.unallocated_count > 0 %}
                     <button class="action-btn btn-warning-action" onclick="openUnallocatedModal()" title="Place unallocated students">
                         ⚠️ Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)

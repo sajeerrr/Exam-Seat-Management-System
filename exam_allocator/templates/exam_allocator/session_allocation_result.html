@@ -2361,10 +2361,6 @@
                 </div>
             </div>
 
-            <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-export-csv" title="Download seating plan CSV for this slot">
-                📥 Export CSV
-            </a>
-
             <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-blueprint" title="Back to Blueprint editor">
                 📐 Edit Blueprint
             </a>
