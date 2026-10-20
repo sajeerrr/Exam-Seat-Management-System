@@ -1051,6 +1051,57 @@
     }
     .modal-title { font-size: 16px; font-weight: 700; }
     .close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+    .btn-modal-danger {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+        box-shadow: 0 3px 12px rgba(239, 68, 68, .25);
+    }
+    .btn-modal-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 18px rgba(239, 68, 68, .4);
+    }
+    .btn-modal-primary {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        border: none;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+        box-shadow: 0 3px 12px rgba(99, 102, 241, .25);
+    }
+    .btn-modal-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 18px rgba(99, 102, 241, .4);
+    }
+    .btn-modal-secondary {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .btn-modal-secondary:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
     .form-control {
@@ -2097,6 +2148,25 @@
 </div>
 
 
+<!-- CONFIRMATION MODAL -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header" style="margin-bottom: 12px;">
+            <div class="modal-title" id="confirmModalTitle" style="display: flex; align-items: center; gap: 8px;">
+                <span id="confirmModalIcon" style="font-size: 18px;">⚠️</span>
+                <span id="confirmModalTitleText">Confirm Action</span>
+            </div>
+            <button type="button" class="close-btn" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div id="confirmModalBody" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 22px; white-space: pre-line;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn-modal-secondary" id="confirmModalCancel" onclick="closeConfirmModal()">Cancel</button>
+            <button type="button" class="btn-modal-danger" id="confirmModalConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 const SESSION_ID = '{{ session.session_id }}';
@@ -2161,6 +2231,88 @@ function showToast(message, type = 'info', duration = 4000) {
         setTimeout(() => toast.remove(), 250);
     }, duration);
 }
+
+// CUSTOM CONFIRMATION MODAL
+function showConfirm(options) {
+    // options: { title, message, confirmText, confirmDanger, onConfirm, onCancel }
+    if (typeof options === 'string') {
+        options = { message: options };
+    }
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        if (!modal) {
+            const confirmed = window.confirm(options.message || 'Are you sure?');
+            if (confirmed && typeof options.onConfirm === 'function') options.onConfirm();
+            else if (!confirmed && typeof options.onCancel === 'function') options.onCancel();
+            resolve(confirmed);
+            return;
+        }
+
+        const titleText = document.getElementById('confirmModalTitleText');
+        const iconEl = document.getElementById('confirmModalIcon');
+        const bodyEl = document.getElementById('confirmModalBody');
+        const btnConfirm = document.getElementById('confirmModalConfirm');
+        const btnCancel = document.getElementById('confirmModalCancel');
+
+        if (titleText) titleText.textContent = options.title || 'Confirm Action';
+        if (bodyEl) bodyEl.textContent = options.message || 'Are you sure you want to proceed?';
+        if (btnConfirm) btnConfirm.textContent = options.confirmText || 'Confirm';
+
+        const isDanger = options.confirmDanger !== false;
+        if (btnConfirm) {
+            btnConfirm.className = isDanger ? 'btn-modal-danger' : 'btn-modal-primary';
+        }
+        if (iconEl) {
+            iconEl.textContent = isDanger ? '⚠️' : 'ℹ️';
+        }
+
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+
+        let resolved = false;
+        function finish(result) {
+            if (resolved) return;
+            resolved = true;
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            if (result && typeof options.onConfirm === 'function') {
+                options.onConfirm();
+            } else if (!result && typeof options.onCancel === 'function') {
+                options.onCancel();
+            }
+            resolve(result);
+        }
+
+        const newConfirm = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+
+        const newCancel = btnCancel.cloneNode(true);
+        btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+        newCancel.addEventListener('click', () => finish(false));
+        newConfirm.addEventListener('click', () => finish(true));
+
+        const closeBtn = modal.querySelector('.close-btn');
+        if (closeBtn) {
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', () => finish(false));
+        }
+    });
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+// In-app fallback override for any accidental window.alert calls
+window.alert = function(msg) {
+    showToast(msg, 'error', 4500);
+};
 
 // DRAG AND DROP INITIALIZATION
 function initDragAndDrop() {
@@ -2803,8 +2955,18 @@ function addDummyRoom(capacity = 45) {
 }
 
 function removeRoomFromBlueprint(roomId, roomNumber) {
-    if (!confirm(`Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`)) return;
+    showConfirm({
+        title: 'Remove Room',
+        message: `Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`,
+        confirmText: 'Remove Room',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveRoom(roomId, roomNumber);
+        }
+    });
+}
 
+function _executeRemoveRoom(roomId, roomNumber) {
     showToast('Removing classroom...', 'info', 2000);
     fetch(`/api/session/${SESSION_ID}/blueprint/room/remove/`, {
         method: 'POST',
@@ -2873,8 +3035,18 @@ function closeManageStudentsModal() {
 }
 
 function removeStudent(assignmentId, rollNumber) {
-    if (!confirm(`Remove student ${rollNumber} from this group?`)) return;
+    showConfirm({
+        title: 'Remove Student',
+        message: `Remove student ${rollNumber} from this group?`,
+        confirmText: 'Remove Student',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveStudent(assignmentId, rollNumber);
+        }
+    });
+}
 
+function _executeRemoveStudent(assignmentId, rollNumber) {
     fetch(`/api/session/${SESSION_ID}/blueprint/student/remove/`, {
         method: 'POST',
         headers: {
@@ -2952,8 +3124,18 @@ function submitAddStudent(e) {
 }
 
 function removeGroup(assignmentId) {
-    if (!confirm('Remove this entire group from the blueprint? Its students will become unallocated.')) return;
+    showConfirm({
+        title: 'Remove Group',
+        message: 'Remove this entire group from the blueprint? Its students will become unallocated.',
+        confirmText: 'Remove Group',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveGroup(assignmentId);
+        }
+    });
+}
 
+function _executeRemoveGroup(assignmentId) {
     showToast('Removing group...', 'info', 2000);
     fetch(`/api/session/${SESSION_ID}/blueprint/assignment/remove/`, {
         method: 'POST',
@@ -3032,7 +3214,7 @@ function submitMove(e) {
     if (mode === 'SWAP') {
         const swapTarget = document.getElementById("swapTargetSelect").value;
         if (!swapTarget) {
-            alert("Please select a group to swap with.");
+            showToast("Please select a group to swap with.", "error");
             btn.disabled = false;
             return;
         }
@@ -3149,86 +3331,102 @@ function submitSplitGroup(e) {
 
 // ALLOCATE, RESET, VALIDATE, FINALIZE ACTIONS
 function allocateDepartments(force) {
-    if (force && !confirm("Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?")) {
-        return;
-    }
-    const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
-    btns.forEach(btn => {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
-    });
+    const runAllocation = () => {
+        const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
+        btns.forEach(btn => {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
+        });
 
-    const overlay = document.getElementById('allocationLoadingOverlay');
-    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
-    const subtext = document.getElementById('allocationLoadingSubtext');
-    if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
-    if (subtext) {
-        subtext.textContent = force 
-            ? 'Recalculating classroom blueprint and balancing stream distributions...' 
-            : 'Generating optimal room blueprint and balancing stream distributions...';
-    }
-    if (overlay) overlay.style.display = 'flex';
+        const overlay = document.getElementById('allocationLoadingOverlay');
+        const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+        const subtext = document.getElementById('allocationLoadingSubtext');
+        if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
+        if (subtext) {
+            subtext.textContent = force 
+                ? 'Recalculating classroom blueprint and balancing stream distributions...' 
+                : 'Generating optimal room blueprint and balancing stream distributions...';
+        }
+        if (overlay) overlay.style.display = 'flex';
 
-    fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({
-            date: CURRENT_DATE,
-            shift: CURRENT_SHIFT,
-            force: force
+        fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                date: CURRENT_DATE,
+                shift: CURRENT_SHIFT,
+                force: force
+            })
         })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                if (overlay) overlay.style.display = 'none';
+                btns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
+                });
+                showToast("Allocation failed: " + (data.error || "Unknown error"), 'error', 5000);
+            }
+        })
+        .catch(err => {
             if (overlay) overlay.style.display = 'none';
             btns.forEach(btn => {
                 btn.disabled = false;
-                btn.textContent = 'Allocate Departments for This Slot';
+                btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
             });
-            alert("Allocation failed: " + (data.error || "Unknown error"));
-        }
-    })
-    .catch(err => {
-        if (overlay) overlay.style.display = 'none';
-        btns.forEach(btn => {
-            btn.disabled = false;
-            btn.textContent = 'Allocate Departments for This Slot';
+            showToast("Request error: " + err, 'error', 5000);
         });
-        alert("Request error: " + err);
-    });
+    };
+
+    if (force) {
+        showConfirm({
+            title: 'Recalculate Blueprint',
+            message: 'Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?',
+            confirmText: 'Recalculate',
+            confirmDanger: true,
+            onConfirm: runAllocation
+        });
+    } else {
+        runAllocation();
+    }
 }
 
 function resetBlueprint() {
-    if (!confirm("Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.")) {
-        return;
-    }
-    fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({
-            blueprint_id: BLUEPRINT_ID,
-            date: CURRENT_DATE,
-            shift: CURRENT_SHIFT
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert("Reset failed: " + (data.error || "Unknown error"));
+    showConfirm({
+        title: 'Reset Slot Blueprint',
+        message: 'Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.',
+        confirmText: 'Reset Blueprint',
+        confirmDanger: true,
+        onConfirm: () => {
+            fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    blueprint_id: BLUEPRINT_ID,
+                    date: CURRENT_DATE,
+                    shift: CURRENT_SHIFT
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    showToast("Reset failed: " + (data.error || "Unknown error"), 'error', 5000);
+                }
+            })
+            .catch(err => showToast("Request error: " + err, 'error', 5000));
         }
-    })
-    .catch(err => alert("Request error: " + err));
+    });
 }
 
 function validateBlueprint() {
@@ -3246,10 +3444,10 @@ function validateBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Validation request failed: " + (data.error || "Unknown error"));
+            showToast("Validation request failed: " + (data.error || "Unknown error"), "error", 5000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 5000));
 }
 
 function finalizeBlueprint() {
@@ -3308,7 +3506,7 @@ function generateSeats() {
     if (!BLUEPRINT_ID) return;
     const dummyBadges = document.querySelectorAll('.badge-dummy-room');
     if (dummyBadges.length > 0) {
-        alert("Cannot generate physical seats: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.");
+        showToast("Cannot generate physical seats: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.", "error", 5000);
         return;
     }
 
@@ -3333,12 +3531,12 @@ function generateSeats() {
             window.location.reload();
         } else {
             if (overlay) overlay.style.display = 'none';
-            alert("Seat generation failed: \n" + (data.error || "Unknown error"));
+            showToast("Seat generation failed: " + (data.error || "Unknown error"), "error", 5000);
         }
     })
     .catch(err => {
         if (overlay) overlay.style.display = 'none';
-        alert("Request error: " + err);
+        showToast("Request error: " + err, "error", 5000);
     });
 }
 
@@ -3548,7 +3746,7 @@ function submitAllocateUnallocatedGroup(e) {
     e.preventDefault();
     const selectedRadio = document.querySelector('input[name="unallocatedGroupSelect"]:checked');
     if (!selectedRadio) {
-        alert('Please select an unallocated department group to allocate.');
+        showToast('Please select an unallocated department group to allocate.', 'error');
         return;
     }
 
@@ -3557,7 +3755,7 @@ function submitAllocateUnallocatedGroup(e) {
     const allowIncrease = document.getElementById('allocAllowCapIncrease').checked;
 
     if (!roomId || !stream) {
-        alert('Please choose both a target classroom and a stream.');
+        showToast('Please choose both a target classroom and a stream.', 'error');
         return;
     }
 
@@ -3612,7 +3810,18 @@ function submitAllocateUnallocatedGroup(e) {
 }
 
 function autoAllocateAllUnallocated() {
-    if (!confirm('Automatically allocate all remaining unallocated students across rooms with available capacity?')) return;
+    showConfirm({
+        title: 'Auto-allocate Students',
+        message: 'Automatically allocate all remaining unallocated students across rooms with available capacity?',
+        confirmText: 'Auto-allocate',
+        confirmDanger: false,
+        onConfirm: () => {
+            _executeAutoAllocateAll();
+        }
+    });
+}
+
+function _executeAutoAllocateAll() {
 
     fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
         method: 'POST',
