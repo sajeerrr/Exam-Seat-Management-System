@@ -1412,19 +1412,6 @@
 
     <!-- VALIDATION ALERTS -->
     <div id="validationAlertsContainer">
-    {% if has_dummy_rooms %}
-    <div class="alert-box alert-warning" id="dummyRoomsAlertBanner" style="border-left: 4px solid #f59e0b; background: #fffbeb; color: #92400e; margin-bottom: 12px;">
-        <div style="display: flex; align-items: flex-start; gap: 10px;">
-            <span style="font-size: 20px; line-height: 1.2;">⚠️</span>
-            <div style="flex: 1;">
-                <strong style="font-size: 14px; color: #92400e;">Placeholder Dummy Room(s) Detected:</strong>
-                <div style="font-size: 13px; margin-top: 3px; color: #b45309;">
-                    This exam slot requires additional physical classroom space. Please click <strong>Assign Real Room Name</strong> on each dummy room card below to specify a real classroom name. Seat generation will be unlocked once all dummy rooms have real classroom names assigned.
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
@@ -1441,7 +1428,7 @@
     </div>
     {% endif %}
 
-    {% if blueprint and blueprint.validation_warnings %}
+    {% if blueprint.validation_warnings or has_dummy_rooms %}
     <div class="alert-box alert-warning" id="blueprintWarningBox">
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
             <div style="display: flex; align-items: flex-start; gap: 10px;">
@@ -1451,6 +1438,10 @@
                     <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
                         {% for w in blueprint.validation_warnings %}
                         <li>{{ w }}</li>
+                        {% empty %}
+                        {% if has_dummy_rooms %}
+                        <li>Placeholder dummy room(s) allocated. Please click 'Assign Real Room Name' on the room card(s) to assign real classroom name(s) before finalizing.</li>
+                        {% endif %}
                         {% endfor %}
                     </ul>
                 </div>
@@ -2591,12 +2582,6 @@ function updateBoardFromData(data) {
 
     // Count remaining dummy placeholder rooms
     const dummyRooms = data.rooms ? data.rooms.filter(r => r.is_dummy || (r.room_number && String(r.room_number).startsWith('Dummy Room'))) : [];
-
-    // Update Dummy Rooms Alert Banner
-    const dummyBanner = document.getElementById('dummyRoomsAlertBanner');
-    if (dummyBanner) {
-        dummyBanner.style.display = (dummyRooms.length > 0) ? 'block' : 'none';
-    }
 
     // Enable/Disable Finalize Button
     const finalizeBtn = document.querySelector('button[onclick="finalizeBlueprint()"]');
