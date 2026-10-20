@@ -939,18 +939,229 @@ def api_allocation_update(request, session_id):
     return JsonResponse({"success": False, "error": f"Unknown action '{action}'"}, status=400)
 
 
+def compress_roll_numbers(rolls):
+    if not rolls:
+        return ""
+
+    import re
+    from collections import Counter
+
+    parsed = []
+    prefixes = []
+    for r in rolls:
+        m = re.match(r'^(.*?)(\d+)$', str(r).strip())
+        if m:
+            prefix, num_str = m.group(1), m.group(2)
+            parsed.append((prefix, int(num_str), str(r).strip()))
+            prefixes.append(prefix)
+        else:
+            parsed.append((None, None, str(r).strip()))
+
+    if not prefixes:
+        return ""
+
+    prefix_counts = Counter(prefixes)
+    dominant_prefix = prefix_counts.most_common(1)[0][0]
+
+    # If numbers for dominant prefix are not strictly increasing, return empty
+    dom_nums = [num for p, num, _ in parsed if p == dominant_prefix and num is not None]
+    if dom_nums != sorted(dom_nums):
+        return ""
+
+    items = []
+    for prefix, num, orig in parsed:
+        if prefix == dominant_prefix and num is not None:
+            items.append(num)
+        else:
+            items.append(orig)
+
+    result_parts = []
+    current_range = []
+
+    for item in items:
+        if isinstance(item, int):
+            if not current_range:
+                current_range.append(item)
+            elif item == current_range[-1] + 1:
+                current_range.append(item)
+            else:
+                if len(current_range) == 1:
+                    result_parts.append(str(current_range[0]))
+                elif len(current_range) >= 2:
+                    result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+                current_range = [item]
+        else:
+            if current_range:
+                if len(current_range) == 1:
+                    result_parts.append(str(current_range[0]))
+                elif len(current_range) >= 2:
+                    result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+                current_range = []
+            result_parts.append(str(item))
+
+    if current_range:
+        if len(current_range) == 1:
+            result_parts.append(str(current_range[0]))
+        elif len(current_range) >= 2:
+            result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+
+    return ",".join(result_parts)
+
+
+def format_branch_code(class_name, dept_code, semester=None, subject_category=None, subject_code=None, subject_name=None, rolls=None):
+    import re
+    # Check if elective / special
+    is_elec = (subject_category in ("ELECTIVE", "MINOR", "HONOURS")) or (
+        subject_code and any(subject_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE"))
+    )
+    if is_elec:
+        clean_name = (subject_name or "").strip()
+        first_word = clean_name.split()[0] if clean_name else ""
+        return f"{subject_code} - {first_word}" if first_word else (subject_code or "ELECTIVE")
+
+    dept = (dept_code or "").strip().upper()
+    dept_map = {
+        'CSE': 'CS', 'COMPUTER SCIENCE': 'CS',
+        'ECE': 'EC', 'ELECTRONICS': 'EC',
+        'EEE': 'EE', 'ELECTRICAL': 'EE',
+        'CHE': 'CH', 'CHEMICAL': 'CH',
+        'B.ARCH': 'AR', 'ARCHITECTURE': 'AR',
+        'CIVIL': 'CE', 'MECHANICAL': 'ME',
+    }
+    short_dept = dept_map.get(dept, dept[:2] if len(dept) >= 2 else dept)
+
+    # Extract sem from class_name or semester
+    sem = str(semester or '')
+    if not sem and class_name:
+        m_sem = re.search(r'[Ss](\d+)', class_name)
+        if m_sem:
+            sem = m_sem.group(1)
+        else:
+            m_year = re.search(r'2[Kk](\d+)', class_name)
+            if m_year:
+                yr = int(m_year.group(1))
+                yr_map = {21: '10', 22: '8', 23: '6', 24: '4', 25: '2'}
+                sem = yr_map.get(yr, '')
+
+    # Extract section (A, B, C)
+    sec = ""
+    if class_name:
+        m_sec = re.search(r'([A-C])$', class_name.strip())
+        if m_sec:
+            sec = m_sec.group(1)
+
+    # If section still not found, check dominant roll prefix: e.g. B23CEA01 -> A, B23CEB01 -> B
+    if not sec and rolls:
+        for r in rolls:
+            m_r = re.match(r'^[A-Za-z]\d{2}[A-Za-z]{2}([A-Ca-c])\d+$', str(r).strip())
+            if m_r:
+                sec = m_r.group(1).upper()
+                break
+
+    return f"{short_dept}{sem}{sec}"
+
+
 def export_allocations_csv(request, session_id):
     """
-    Export current live seating allocation as CSV for this session and slot.
-    Satisfies requirements for official prints and file exports.
+    Export seating allocation CSV for this session and slot.
+    Generates the clean summary seating plan layout (Branch, Count, Classname, Status, 
+    Start Roll Number, End Rollnumber, Comma Separater , Subject).
+    Supports format='detailed' for the student-by-student flat list if needed.
     """
     import csv
+    from collections import Counter, defaultdict
+    from exam_allocator.models import AllocationSession, SlotBlueprint, Allocation, ElectiveStudentRegistration, Exam
+    from exam_allocator.services.engine_adapter import _is_matching_elective_exam
+
     session = get_object_or_404(AllocationSession, pk=session_id)
     date_filter = request.GET.get('date')
     shift_filter = request.GET.get('shift')
+    format_type = request.GET.get('format', 'summary').lower()
 
+    # Detailed student-by-student export fallback
+    if format_type in ('detailed', 'detail', 'students'):
+        allocations = (
+            Allocation.objects.filter(exam__subject__session=session)
+            .select_related(
+                "registration__student",
+                "registration__student__student_class",
+                "registration__student__student_class__department",
+                "exam",
+                "exam__subject",
+                "room",
+            )
+        )
+        if date_filter:
+            allocations = allocations.filter(exam__exam_date=date_filter)
+        if shift_filter:
+            allocations = allocations.filter(exam__session=shift_filter)
+        allocations = allocations.order_by("room__room_number", "bench_number", "seat_number")
+
+        response = HttpResponse(content_type="text/csv")
+        filename = f"seating_detail_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Roll Number", "Student Name", "Department", "Class",
+            "Subject Code", "Subject Name", "Room", "Bench Number",
+            "Seat Position", "Exam Date", "Shift",
+        ])
+        seat_pos_map = {1: "Left (1)", 2: "Middle (2)", 3: "Right (3)"}
+        for a in allocations:
+            st = a.registration.student
+            dept = st.student_class.department.department_code if (st.student_class and st.student_class.department) else ""
+            cls_name = st.student_class.class_name if st.student_class else ""
+            writer.writerow([
+                st.roll_number,
+                st.student_name or st.roll_number,
+                dept,
+                cls_name,
+                a.exam.subject.subject_code,
+                a.exam.subject.subject_name,
+                a.room.room_number,
+                a.bench_number,
+                seat_pos_map.get(a.seat_number, str(a.seat_number)),
+                a.exam.exam_date.strftime("%Y-%m-%d"),
+                a.exam.session,
+            ])
+        return response
+
+    # Default: Clean Summary Layout (Branch, Count, Classname, Status, Start Roll Number, End Rollnumber, Comma Separater , Subject, "")
+    response = HttpResponse(content_type="text/csv")
+    filename = f"seating_plan_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    # Header matching exact specification
+    writer.writerow([
+        "Branch",
+        "Count",
+        "Classname",
+        "Status",
+        "Start Roll Number",
+        "End Rollnumber",
+        "Comma Separater ",
+        "Subject",
+        "",
+    ])
+
+    slot_bp = None
+    if date_filter and shift_filter:
+        slot_bp = SlotBlueprint.objects.filter(session=session, exam_date=date_filter, shift=shift_filter).first()
+    elif date_filter:
+        slot_bp = SlotBlueprint.objects.filter(session=session, exam_date=date_filter).first()
+    else:
+        slot_bp = SlotBlueprint.objects.filter(session=session).first()
+
+    # Query allocations
+    allocations = Allocation.objects.filter(exam__subject__session=session)
+    if date_filter:
+        allocations = allocations.filter(exam__exam_date=date_filter)
+    if shift_filter:
+        allocations = allocations.filter(exam__session=shift_filter)
     allocations = (
-        Allocation.objects.filter(exam__subject__session=session)
+        allocations
         .select_related(
             "registration__student",
             "registration__student__student_class",
@@ -959,52 +1170,167 @@ def export_allocations_csv(request, session_id):
             "exam__subject",
             "room",
         )
+        .order_by("room__room_number", "bench_number", "seat_number")
     )
 
-    if date_filter:
-        allocations = allocations.filter(exam__exam_date=date_filter)
-    if shift_filter:
-        allocations = allocations.filter(exam__session=shift_filter)
+    elective_counters = Counter()
 
-    allocations = allocations.order_by("room__room_number", "bench_number", "seat_number")
+    if allocations.exists():
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related('elective_subject', 'elective_subject__group')
+        elec_map = defaultdict(list)
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
 
-    response = HttpResponse(content_type="text/csv")
-    filename = f"seating_plan_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        # Group allocations by room
+        room_map = defaultdict(list)
+        for a in allocations:
+            room_map[a.room].append(a)
 
-    writer = csv.writer(response)
-    writer.writerow([
-        "Roll Number",
-        "Student Name",
-        "Department",
-        "Class",
-        "Subject Code",
-        "Subject Name",
-        "Room",
-        "Bench Number",
-        "Seat Position",
-        "Exam Date",
-        "Shift",
-    ])
+        if slot_bp:
+            order_map = {rb.room.room_id: rb.room_order for rb in slot_bp.room_blueprints.all()}
+            sorted_rooms = sorted(room_map.keys(), key=lambda r: order_map.get(r.room_id, 999))
+        else:
+            sorted_rooms = sorted(room_map.keys(), key=lambda r: r.room_number)
 
-    seat_pos_map = {1: "Left (1)", 2: "Middle (2)", 3: "Right (3)"}
-    for a in allocations:
-        st = a.registration.student
-        dept = st.student_class.department.department_code if (st.student_class and st.student_class.department) else ""
-        cls_name = st.student_class.class_name if st.student_class else ""
-        writer.writerow([
-            st.roll_number,
-            st.student_name or st.roll_number,
-            dept,
-            cls_name,
-            a.exam.subject.subject_code,
-            a.exam.subject.subject_name,
-            a.room.room_number,
-            a.bench_number,
-            seat_pos_map.get(a.seat_number, str(a.seat_number)),
-            a.exam.exam_date.strftime("%Y-%m-%d"),
-            a.exam.session,
-        ])
+        for room in sorted_rooms:
+            room_allocs = room_map[room]
+            for seat_num, prefix in [(1, 'first'), (2, 'second'), (3, 'last')]:
+                seat_allocs = [a for a in room_allocs if a.seat_number == seat_num]
+                if not seat_allocs:
+                    continue
+                seat_allocs.sort(key=lambda a: a.bench_number)
+
+                groups = []
+                curr_group = []
+                curr_key = None
+
+                for a in seat_allocs:
+                    st = a.registration.student
+                    ex = a.exam
+                    cls = st.student_class
+
+                    subj_code = ex.subject.subject_code
+                    subj_name = ex.subject.subject_name
+                    cat = "NORMAL"
+                    for r in elec_map.get(st.student_id, []):
+                        if _is_matching_elective_exam(ex, r.elective_subject):
+                            subj_code = r.elective_subject.subject_code
+                            subj_name = r.elective_subject.subject_name
+                            cat = r.elective_subject.elective_type or "ELECTIVE"
+                            break
+
+                    key = (cls.class_id if cls else None, subj_code)
+                    if key == curr_key:
+                        curr_group.append((a, st, cls, subj_code, subj_name, cat))
+                    else:
+                        if curr_group:
+                            groups.append(curr_group)
+                        curr_group = [(a, st, cls, subj_code, subj_name, cat)]
+                        curr_key = key
+                if curr_group:
+                    groups.append(curr_group)
+
+                for idx, grp in enumerate(groups):
+                    is_last = (idx == len(groups) - 1)
+                    status = f"{prefix}row" if is_last else f"{prefix}hold"
+
+                    st_first = grp[0][1]
+                    st_last = grp[-1][1]
+                    cls = grp[0][2]
+                    s_code = grp[0][3]
+                    s_name = grp[0][4]
+                    cat = grp[0][5]
+
+                    rolls = [item[1].roll_number for item in grp]
+                    count = len(grp)
+                    start_roll = st_first.roll_number
+                    end_roll = st_last.roll_number
+                    comma_sep = compress_roll_numbers(rolls)
+
+                    branch = format_branch_code(
+                        cls.class_name if cls else "",
+                        cls.department.department_code if (cls and cls.department) else "",
+                        semester=cls.semester if cls else None,
+                        subject_category=cat,
+                        subject_code=s_code,
+                        subject_name=s_name,
+                        rolls=rolls
+                    )
+
+                    if cat in ("ELECTIVE", "MINOR", "HONOURS") or (s_code and any(s_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE"))):
+                        elective_counters[branch] += 1
+                        if elective_counters[branch] > 1:
+                            branch = f"{branch} ({elective_counters[branch]})"
+
+                    subj_title = s_name
+                    if s_code and s_code not in subj_title:
+                        subj_title = f"{subj_title} ({s_code})"
+
+                    writer.writerow([
+                        branch,
+                        count,
+                        room.room_number,
+                        status,
+                        start_roll,
+                        end_roll,
+                        comma_sep,
+                        subj_title,
+                        "",
+                    ])
+
+    elif slot_bp:
+        for rb in slot_bp.room_blueprints.all().order_by('room_order'):
+            room_num = rb.room.room_number
+            stream_map = {'A': [], 'B': [], 'C': []}
+            for sa in rb.stream_assignments.all().order_by('order'):
+                stream_map[sa.stream_name].append(sa)
+
+            for s_name, prefix in [('A', 'first'), ('B', 'second'), ('C', 'last')]:
+                assignments = stream_map[s_name]
+                for idx, sa in enumerate(assignments):
+                    is_last = (idx == len(assignments) - 1)
+                    status = f"{prefix}row" if is_last else f"{prefix}hold"
+
+                    rolls = sa.student_rolls or []
+                    start_roll = rolls[0] if rolls else ""
+                    end_roll = rolls[-1] if rolls else ""
+                    comma_sep = compress_roll_numbers(rolls)
+
+                    is_elec = (sa.subject_category in ("ELECTIVE", "MINOR", "HONOURS")) or any(
+                        sa.subject_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE")
+                    )
+
+                    branch = format_branch_code(
+                        sa.class_name,
+                        sa.department_code,
+                        subject_category="ELECTIVE" if is_elec else "NORMAL",
+                        subject_code=sa.subject_code,
+                        subject_name=sa.subject_name,
+                        rolls=rolls
+                    )
+
+                    if is_elec:
+                        elective_counters[branch] += 1
+                        if elective_counters[branch] > 1:
+                            branch = f"{branch} ({elective_counters[branch]})"
+
+                    subj_title = sa.subject_name
+                    if sa.subject_code and sa.subject_code not in subj_title:
+                        subj_title = f"{subj_title} ({sa.subject_code})"
+
+                    writer.writerow([
+                        branch,
+                        sa.student_count,
+                        room_num,
+                        status,
+                        start_roll,
+                        end_roll,
+                        comma_sep,
+                        subj_title,
+                        "",
+                    ])
 
     return response
 

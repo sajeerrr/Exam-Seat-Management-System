@@ -655,9 +655,15 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         self.assertIn("attachment; filename=", resp["Content-Disposition"])
 
         content = resp.content.decode("utf-8")
-        self.assertIn("Roll Number,Student Name,Department,Class,Subject Code", content)
+        self.assertIn("Branch,Count,Classname,Status,Start Roll Number,End Rollnumber,Comma Separater ,Subject", content)
         self.assertIn(st.roll_number, content)
         self.assertIn(self.room1.room_number, content)
+
+        # Also test detailed fallback
+        resp_detail = client.get(csv_url + "?date=2026-03-16&shift=FN&format=detailed")
+        self.assertEqual(resp_detail.status_code, 200)
+        content_detail = resp_detail.content.decode("utf-8")
+        self.assertIn("Roll Number,Student Name,Department,Class,Subject Code", content_detail)
 
 
 class RoomEditAndCapacityStepperTests(TestCase):
