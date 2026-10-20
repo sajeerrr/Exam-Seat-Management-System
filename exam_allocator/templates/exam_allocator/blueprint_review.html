@@ -315,7 +315,7 @@
         border: 1px solid #e2e8f0;
         border-radius: var(--radius-sm);
         padding: 9px 18px;
-        margin-bottom: 12px;
+        margin-bottom: 20px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
         display: flex;
         align-items: center;
@@ -376,100 +376,6 @@
         background: #4f46e5;
         border-radius: 3px;
         transition: width 0.3s ease;
-    }
-
-    /* ROOM QUICK-JUMP NAV BAR */
-    .room-jump-bar-container {
-        position: sticky;
-        top: 0;
-        z-index: 25;
-        background: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: var(--radius-sm);
-        padding: 8px 12px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    }
-    .room-jump-bar-inner {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        overflow-x: auto;
-        white-space: nowrap;
-        scrollbar-width: thin;
-        padding-bottom: 2px;
-    }
-    .room-jump-bar-inner::-webkit-scrollbar {
-        height: 4px;
-    }
-    .room-jump-bar-inner::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 2px;
-    }
-    .room-jump-title {
-        font-size: 12px;
-        font-weight: 800;
-        color: #334155;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-    .room-jump-list {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        flex-shrink: 0;
-    }
-    .room-jump-btn {
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        color: #334155;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    .room-jump-btn:hover {
-        background: #eef2ff;
-        border-color: #6366f1;
-        color: #4338ca;
-    }
-    .room-jump-btn.active {
-        background: #4f46e5;
-        border-color: #4f46e5;
-        color: #ffffff;
-        box-shadow: 0 1px 4px rgba(79, 70, 229, 0.35);
-    }
-    .room-jump-btn .jump-btn-count {
-        font-size: 10.5px;
-        padding: 1px 5px;
-        border-radius: 10px;
-        background: rgba(0, 0, 0, 0.08);
-        color: inherit;
-        font-weight: 600;
-    }
-    .room-jump-btn.active .jump-btn-count {
-        background: rgba(255, 255, 255, 0.25);
-        color: #ffffff;
-    }
-
-    /* ROOM CARD PULSE HIGHLIGHT */
-    @keyframes roomCardPulse {
-        0% { box-shadow: 0 0 0 5px rgba(79, 70, 229, 0.6); }
-        50% { box-shadow: 0 0 0 9px rgba(79, 70, 229, 0.2); }
-        100% { box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08); }
-    }
-    .room-card.room-card-highlighted {
-        animation: roomCardPulse 1.6s ease-out;
-        border-color: #4f46e5 !important;
     }
 
     .metric-pill {
@@ -1433,26 +1339,6 @@
         </div>
     </div>
     {% endif %}
-
-    <!-- ROOM QUICK-JUMP NAV BAR -->
-    {% if rooms_data %}
-    <div class="room-jump-bar-container">
-        <div class="room-jump-bar-inner">
-            <span class="room-jump-title">🏛️ Rooms ({{ rooms_data|length }}):</span>
-            <div class="room-jump-list" id="roomJumpList">
-                <button type="button" class="room-jump-btn active" onclick="jumpToRoom('all', this)">All</button>
-                {% for r in rooms_data %}
-                <button type="button" class="room-jump-btn" id="jumpBtn-{{ r.room_blueprint_id }}" onclick="jumpToRoom('{{ r.room_blueprint_id }}', this)" title="Room {{ r.room_number }} · {{ r.total_students }}/{{ r.capacity }} students">
-                    {% if r.is_dummy %}⚠️ {% endif %}{{ r.room_number }}
-                    <span class="jump-btn-count">{{ r.total_students }}</span>
-                </button>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-
 
     <!-- MINIMALISTIC ROOM ALLOCATION BOARD -->
     {% if rooms_data %}
@@ -2480,53 +2366,11 @@ function updateBoardFromData(data) {
         card.innerHTML = buildRoomCardHTML(r);
     });
 
-    // Update Room Quick-Jump Nav Bar
-    if (data.rooms) {
-        updateRoomJumpBar(data.rooms);
-    }
-
     // Rebind Drag and Drop listeners
     initDragAndDrop();
 }
 
 const updateUIWithResult = updateBoardFromData;
-
-// ROOM QUICK-JUMP FUNCTIONALITY
-function jumpToRoom(roomId, btn) {
-    document.querySelectorAll('.room-jump-btn').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
-
-    if (roomId === 'all') {
-        document.querySelectorAll('.room-card').forEach(c => c.style.display = '');
-        const first = document.querySelector('.room-card');
-        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-        const target = document.getElementById(`roomCard-${roomId}`);
-        if (target) {
-            document.querySelectorAll('.room-card').forEach(c => c.style.display = '');
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            target.classList.add('room-card-highlighted');
-            setTimeout(() => {
-                target.classList.remove('room-card-highlighted');
-            }, 1800);
-        }
-    }
-}
-
-function updateRoomJumpBar(rooms) {
-    const list = document.getElementById('roomJumpList');
-    if (!list || !rooms) return;
-    let html = `<button type="button" class="room-jump-btn active" onclick="jumpToRoom('all', this)">All</button>`;
-    rooms.forEach(r => {
-        const isDummy = r.is_dummy || (r.room_number && String(r.room_number).startsWith('Dummy Room'));
-        html += `
-        <button type="button" class="room-jump-btn" id="jumpBtn-${r.room_blueprint_id}" onclick="jumpToRoom('${r.room_blueprint_id}', this)" title="Room ${escapeHtml(r.room_number)} · ${r.total_students}/${r.capacity} students">
-            ${isDummy ? '⚠️ ' : ''}${escapeHtml(r.room_number)}
-            <span class="jump-btn-count">${r.total_students}</span>
-        </button>`;
-    });
-    list.innerHTML = html;
-}
 
 function getDeptColorStyle(dept) {
     if (!dept) return '';
