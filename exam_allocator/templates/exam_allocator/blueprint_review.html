@@ -1398,11 +1398,7 @@
             <span class="eligible-tag">
                 {{ eligible_students_count }} Students
             </span>
-            {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings and not has_dummy_rooms %}
-            <span class="metric-pill pill-success" style="font-weight: 700; padding: 3px 8px; font-size: 11px;" title="All allocation constraints satisfied">
-                ✓ Valid Blueprint
-            </span>
-            {% endif %}
+
         </div>
 
         <div class="btn-group">
