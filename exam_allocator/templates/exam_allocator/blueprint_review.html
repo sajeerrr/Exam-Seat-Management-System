@@ -1333,6 +1333,9 @@
                             {% if blueprint.validation_errors or has_dummy_rooms %}disabled title="{% if has_dummy_rooms %}Assign real classroom names to all dummy placeholder room(s) before finalizing{% else %}Fix errors before finalizing{% endif %}"{% endif %}>
                         Finalize Blueprint
                     </button>
+                    <button type="button" class="action-btn btn-secondary-action btn-allocate-slot-trigger" onclick="allocateDepartments(true)" title="Recalculate department blueprint for this slot">
+                        Recalculate Blueprint
+                    </button>
                     <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
                         + Add Room
                     </button>
@@ -1349,9 +1352,6 @@
                         <span>⋮ More</span>
                     </button>
                     <div class="action-dropdown-menu" id="actionDropdownMenu">
-                        <button type="button" class="action-menu-item" onclick="allocateDepartments(true)">
-                            Recalculate Blueprint
-                        </button>
                         <button type="button" class="action-menu-item" onclick="validateBlueprint()">
                             <span>✓</span> Re-validate Rules
                         </button>
