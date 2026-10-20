@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db import transaction, models
 from django.db.models import Prefetch, Case, When, Value
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -749,6 +749,265 @@ def session_allocation_result(request, session_id):
             "missing_data_reason": missing_data_reason,
         },
     )
+
+
+# ── Final Physical Allocation Management & Export ──────────────────────────
+
+@require_POST
+def api_allocation_update(request, session_id):
+    """
+    API to move or swap individual student seat allocations in a room/session.
+    Payload:
+      action: "move" | "swap"
+      # For move:
+      allocation_id: int
+      target_room_id: int (optional, defaults to current room)
+      target_bench_number: int
+      target_seat_number: int (1, 2, or 3)
+      # For swap:
+      source_allocation_id: int
+      target_allocation_id: int
+    """
+    import json
+    session = get_object_or_404(AllocationSession, pk=session_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"success": False, "error": "Invalid JSON body"}, status=400)
+
+    action = data.get("action", "move")
+
+    if action == "swap":
+        source_id = data.get("source_allocation_id")
+        target_id = data.get("target_allocation_id")
+        if not source_id or not target_id:
+            return JsonResponse({"success": False, "error": "Both source and target allocation IDs are required for swap"}, status=400)
+
+        with transaction.atomic():
+            source_alloc = get_object_or_404(Allocation, pk=source_id, exam__subject__session=session)
+            target_alloc = get_object_or_404(Allocation, pk=target_id, exam__subject__session=session)
+
+            s_room = source_alloc.room
+            s_bench = source_alloc.bench_number
+            s_seat = source_alloc.seat_number
+
+            t_room = target_alloc.room
+            t_bench = target_alloc.bench_number
+            t_seat = target_alloc.seat_number
+
+            # Temporarily shift source to avoid unique_exam_room_bench_seat collision
+            source_alloc.bench_number = 999999
+            source_alloc.seat_number = 999999
+            source_alloc.save(update_fields=["bench_number", "seat_number"])
+
+            target_alloc.room = s_room
+            target_alloc.bench_number = s_bench
+            target_alloc.seat_number = s_seat
+            target_alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+            source_alloc.room = t_room
+            source_alloc.bench_number = t_bench
+            source_alloc.seat_number = t_seat
+            source_alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+            s_roll = source_alloc.registration.student.roll_number
+            t_roll = target_alloc.registration.student.roll_number
+
+            return JsonResponse({
+                "success": True,
+                "is_swap": True,
+                "message": f"Successfully swapped {s_roll} and {t_roll}",
+                "source": {
+                    "allocation_id": source_alloc.allocation_id,
+                    "roll_number": s_roll,
+                    "room_id": t_room.room_id,
+                    "room_number": t_room.room_number,
+                    "bench_number": t_bench,
+                    "seat_number": t_seat,
+                },
+                "target": {
+                    "allocation_id": target_alloc.allocation_id,
+                    "roll_number": t_roll,
+                    "room_id": s_room.room_id,
+                    "room_number": s_room.room_number,
+                    "bench_number": s_bench,
+                    "seat_number": s_seat,
+                }
+            })
+
+    elif action == "move":
+        alloc_id = data.get("allocation_id")
+        target_room_id = data.get("target_room_id")
+        target_bench = data.get("target_bench_number")
+        target_seat = data.get("target_seat_number")
+
+        if not alloc_id or target_bench is None or target_seat is None:
+            return JsonResponse({"success": False, "error": "Missing allocation_id, target_bench_number, or target_seat_number"}, status=400)
+
+        with transaction.atomic():
+            alloc = get_object_or_404(Allocation, pk=alloc_id, exam__subject__session=session)
+            if target_room_id:
+                target_room = get_object_or_404(Room, pk=target_room_id, session=session)
+            else:
+                target_room = alloc.room
+
+            target_bench = int(target_bench)
+            target_seat = int(target_seat)
+
+            # Check if an allocation already occupies that target seat in this slot
+            existing = Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=alloc.exam.exam_date,
+                exam__session=alloc.exam.session,
+                room=target_room,
+                bench_number=target_bench,
+                seat_number=target_seat,
+            ).exclude(pk=alloc.pk).first()
+
+            if existing:
+                # Target is occupied -> execute atomic swap!
+                s_room, s_bench, s_seat = alloc.room, alloc.bench_number, alloc.seat_number
+                t_room, t_bench, t_seat = existing.room, existing.bench_number, existing.seat_number
+
+                alloc.bench_number = 999999
+                alloc.seat_number = 999999
+                alloc.save(update_fields=["bench_number", "seat_number"])
+
+                existing.room = s_room
+                existing.bench_number = s_bench
+                existing.seat_number = s_seat
+                existing.save(update_fields=["room", "bench_number", "seat_number"])
+
+                alloc.room = t_room
+                alloc.bench_number = t_bench
+                alloc.seat_number = t_seat
+                alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+                s_roll = alloc.registration.student.roll_number
+                t_roll = existing.registration.student.roll_number
+
+                return JsonResponse({
+                    "success": True,
+                    "is_swap": True,
+                    "message": f"Swapped {s_roll} and {t_roll}",
+                    "source": {
+                        "allocation_id": alloc.allocation_id,
+                        "roll_number": s_roll,
+                        "room_id": alloc.room.room_id,
+                        "room_number": alloc.room.room_number,
+                        "bench_number": alloc.bench_number,
+                        "seat_number": alloc.seat_number,
+                    },
+                    "target": {
+                        "allocation_id": existing.allocation_id,
+                        "roll_number": t_roll,
+                        "room_id": existing.room.room_id,
+                        "room_number": existing.room.room_number,
+                        "bench_number": existing.bench_number,
+                        "seat_number": existing.seat_number,
+                    }
+                })
+            else:
+                # Target seat is empty -> clean move!
+                old_room_num = alloc.room.room_number
+                old_bench = alloc.bench_number
+                old_seat = alloc.seat_number
+
+                alloc.room = target_room
+                alloc.bench_number = target_bench
+                alloc.seat_number = target_seat
+                alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+                roll = alloc.registration.student.roll_number
+                return JsonResponse({
+                    "success": True,
+                    "is_swap": False,
+                    "message": f"Moved {roll} to Room {target_room.room_number}, Bench {target_bench}, Seat {target_seat}",
+                    "allocation_id": alloc.allocation_id,
+                    "roll_number": roll,
+                    "room_id": target_room.room_id,
+                    "room_number": target_room.room_number,
+                    "bench_number": alloc.bench_number,
+                    "seat_number": alloc.seat_number,
+                    "old_position": {
+                        "room_number": old_room_num,
+                        "bench_number": old_bench,
+                        "seat_number": old_seat,
+                    }
+                })
+
+    return JsonResponse({"success": False, "error": f"Unknown action '{action}'"}, status=400)
+
+
+def export_allocations_csv(request, session_id):
+    """
+    Export current live seating allocation as CSV for this session and slot.
+    Satisfies requirements for official prints and file exports.
+    """
+    import csv
+    session = get_object_or_404(AllocationSession, pk=session_id)
+    date_filter = request.GET.get('date')
+    shift_filter = request.GET.get('shift')
+
+    allocations = (
+        Allocation.objects.filter(exam__subject__session=session)
+        .select_related(
+            "registration__student",
+            "registration__student__student_class",
+            "registration__student__student_class__department",
+            "exam",
+            "exam__subject",
+            "room",
+        )
+    )
+
+    if date_filter:
+        allocations = allocations.filter(exam__exam_date=date_filter)
+    if shift_filter:
+        allocations = allocations.filter(exam__session=shift_filter)
+
+    allocations = allocations.order_by("room__room_number", "bench_number", "seat_number")
+
+    response = HttpResponse(content_type="text/csv")
+    filename = f"seating_plan_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Roll Number",
+        "Student Name",
+        "Department",
+        "Class",
+        "Subject Code",
+        "Subject Name",
+        "Room",
+        "Bench Number",
+        "Seat Position",
+        "Exam Date",
+        "Shift",
+    ])
+
+    seat_pos_map = {1: "Left (1)", 2: "Middle (2)", 3: "Right (3)"}
+    for a in allocations:
+        st = a.registration.student
+        dept = st.student_class.department.department_code if (st.student_class and st.student_class.department) else ""
+        cls_name = st.student_class.class_name if st.student_class else ""
+        writer.writerow([
+            st.roll_number,
+            st.student_name or st.roll_number,
+            dept,
+            cls_name,
+            a.exam.subject.subject_code,
+            a.exam.subject.subject_name,
+            a.room.room_number,
+            a.bench_number,
+            seat_pos_map.get(a.seat_number, str(a.seat_number)),
+            a.exam.exam_date.strftime("%Y-%m-%d"),
+            a.exam.session,
+        ])
+
+    return response
+
 
 
 # ── Blueprint Views & APIs (Two-Stage Allocation) ──────────────────────────

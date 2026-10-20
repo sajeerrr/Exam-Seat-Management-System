@@ -9,6 +9,11 @@ from exam_allocator.models import (
     ElectiveGroup,
     ElectiveSubject,
     ElectiveStudentRegistration,
+    Exam,
+    ExamRegistration,
+    Allocation,
+    Room,
+    Subject,
 )
 from exam_allocator.parsers.elective_parser import (
     ElectiveExtractionResult,
@@ -561,6 +566,97 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         self.assertIn("btn-view-department", html)
         self.assertIn("view-department", html)
         self.assertIn("MCA 2 Year", html)
+
+    def test_api_allocation_move_and_swap(self):
+        import json
+        dept = Department.objects.create(session=self.session, department_code="CS", department_name="Computer Science")
+        cls = Class.objects.create(department=dept, class_name="CS-A", semester=4, academic_year="2025-2026")
+        st1 = Student.objects.create(student_class=cls, roll_number="B23CS01", student_name="Alice")
+        st2 = Student.objects.create(student_class=cls, roll_number="B23CS02", student_name="Bob")
+        subj = Subject.objects.create(session=self.session, subject_code="CS201", subject_name="Algorithms", semester=4)
+        exam = Exam.objects.create(
+            subject=subj,
+            exam_date="2026-03-15",
+            session="FN",
+            duration=180,
+        )
+        reg1 = ExamRegistration.objects.create(student=st1, exam=exam)
+        reg2 = ExamRegistration.objects.create(student=st2, exam=exam)
+
+        alloc1 = Allocation.objects.create(exam=exam, registration=reg1, room=self.room1, bench_number=1, seat_number=1)
+        alloc2 = Allocation.objects.create(exam=exam, registration=reg2, room=self.room1, bench_number=1, seat_number=2)
+
+        client = Client()
+        update_url = reverse("exam_allocator:api_allocation_update", args=[self.session.session_id])
+
+        # 1. Move alloc1 to an empty seat (Bench 5, Seat 3)
+        move_resp = client.post(
+            update_url,
+            data=json.dumps({
+                "action": "move",
+                "allocation_id": alloc1.allocation_id,
+                "target_room_id": self.room1.room_id,
+                "target_bench_number": 5,
+                "target_seat_number": 3,
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(move_resp.status_code, 200)
+        data = move_resp.json()
+        self.assertTrue(data["success"])
+        self.assertFalse(data["is_swap"])
+
+        alloc1.refresh_from_db()
+        self.assertEqual(alloc1.bench_number, 5)
+        self.assertEqual(alloc1.seat_number, 3)
+
+        # 2. Swap alloc1 (now at B5, S3) and alloc2 (at B1, S2)
+        swap_resp = client.post(
+            update_url,
+            data=json.dumps({
+                "action": "swap",
+                "source_allocation_id": alloc1.allocation_id,
+                "target_allocation_id": alloc2.allocation_id,
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(swap_resp.status_code, 200)
+        swap_data = swap_resp.json()
+        self.assertTrue(swap_data["success"])
+        self.assertTrue(swap_data["is_swap"])
+
+        alloc1.refresh_from_db()
+        alloc2.refresh_from_db()
+        self.assertEqual(alloc1.bench_number, 1)
+        self.assertEqual(alloc1.seat_number, 2)
+        self.assertEqual(alloc2.bench_number, 5)
+        self.assertEqual(alloc2.seat_number, 3)
+
+    def test_export_allocations_csv(self):
+        dept = Department.objects.create(session=self.session, department_code="EC", department_name="Electronics")
+        cls = Class.objects.create(department=dept, class_name="EC-A", semester=4, academic_year="2025-2026")
+        st = Student.objects.create(student_class=cls, roll_number="B23EC01", student_name="Carol")
+        subj = Subject.objects.create(session=self.session, subject_code="EC201", subject_name="Signals", semester=4)
+        exam = Exam.objects.create(
+            subject=subj,
+            exam_date="2026-03-16",
+            session="FN",
+            duration=180,
+        )
+        reg = ExamRegistration.objects.create(student=st, exam=exam)
+        Allocation.objects.create(exam=exam, registration=reg, room=self.room1, bench_number=2, seat_number=1)
+
+        client = Client()
+        csv_url = reverse("exam_allocator:export_allocations_csv", args=[self.session.session_id])
+        resp = client.get(csv_url + "?date=2026-03-16&shift=FN")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/csv")
+        self.assertIn("attachment; filename=", resp["Content-Disposition"])
+
+        content = resp.content.decode("utf-8")
+        self.assertIn("Roll Number,Student Name,Department,Class,Subject Code", content)
+        self.assertIn(st.roll_number, content)
+        self.assertIn(self.room1.room_number, content)
 
 
 

@@ -130,7 +130,7 @@
         border-radius: 6px;
         border: none;
         background: transparent;
-        color: var(--text-secondary);
+        color: var(--text-secondary) !important;
         font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
@@ -138,15 +138,358 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        white-space: nowrap;
     }
     .view-btn:hover {
-        color: var(--text-primary);
-        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-primary) !important;
+        background: rgba(99, 102, 241, 0.08);
     }
     .view-btn.active {
-        background: var(--accent);
-        color: white;
+        background: var(--accent) !important;
+        color: #ffffff !important;
         box-shadow: 0 2px 8px var(--accent-glow);
+    }
+    .btn-export-csv {
+        background: rgba(16, 185, 129, 0.12) !important;
+        color: #059669 !important;
+        border: 1px solid rgba(16, 185, 129, 0.3) !important;
+    }
+    .btn-export-csv:hover {
+        background: #059669 !important;
+        color: #ffffff !important;
+        border-color: #059669 !important;
+    }
+
+    /* ════════════════ SEAT DRAG & DROP AND EDIT CONTROLS ════════════════ */
+    .seat-cell {
+        position: relative;
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .seat-roll {
+        pointer-events: none;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    .seat-cell:active {
+        cursor: grabbing;
+    }
+    .seat-drag-handle {
+        position: absolute;
+        top: 3px;
+        left: 5px;
+        font-size: 10px;
+        line-height: 1;
+        color: var(--text-muted);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+        cursor: grab;
+        pointer-events: none;
+        letter-spacing: -1px;
+    }
+    .seat-cell:hover .seat-drag-handle {
+        opacity: 0.7;
+    }
+    .seat-edit-btn {
+        position: absolute;
+        top: 3px;
+        right: 5px;
+        font-size: 10px;
+        line-height: 1;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--accent);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+        border-radius: 4px;
+        padding: 2px 4px;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.15s ease;
+        z-index: 5;
+    }
+    .seat-cell:hover .seat-edit-btn {
+        opacity: 1;
+    }
+    .seat-edit-btn:hover {
+        background: var(--accent);
+        color: #ffffff;
+        transform: scale(1.1);
+    }
+    .seat-cell.is-dragging {
+        opacity: 0.35 !important;
+        border: 2px dashed var(--accent) !important;
+        transform: scale(0.96) !important;
+    }
+    .seat-empty {
+        position: relative;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .seat-empty:hover {
+        background: rgba(99, 102, 241, 0.05);
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+    .seat-empty.drag-over {
+        background: rgba(16, 185, 129, 0.15) !important;
+        border: 2px dashed #10b981 !important;
+        transform: scale(1.03) !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+    }
+    .seat-cell.drag-swap-over {
+        background: rgba(99, 102, 241, 0.18) !important;
+        border: 2px dashed #6366f1 !important;
+        transform: scale(1.03) !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25) !important;
+    }
+
+    /* Modals for seat edit */
+    .seat-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    .seat-modal-card {
+        background: var(--bg-card, #ffffff);
+        border: 1px solid var(--border, #e2e8f0);
+        border-radius: 14px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.22);
+        overflow: hidden;
+        animation: modalSlideUp 0.2s ease-out;
+    }
+    @keyframes modalSlideUp {
+        from { transform: translateY(16px); }
+        to { transform: translateY(0); }
+    }
+    .seat-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border, #e2e8f0);
+        background: var(--bg-secondary, #f8fafc);
+    }
+    .seat-modal-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-primary, #0f172a);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .seat-modal-close {
+        background: transparent;
+        border: none;
+        font-size: 16px;
+        color: var(--text-muted, #94a3b8);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: all 0.15s ease;
+    }
+    .seat-modal-close:hover {
+        color: var(--text-primary);
+        background: rgba(0,0,0,0.06);
+    }
+    .seat-modal-body {
+        padding: 20px;
+    }
+    .seat-modal-info-card {
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        border-radius: 10px;
+        padding: 12px 16px;
+        margin-bottom: 18px;
+    }
+    .info-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+    .info-roll {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--accent, #4f46e5);
+    }
+    .info-class {
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(99, 102, 241, 0.12);
+        color: var(--accent, #4f46e5);
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+    .info-name {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 4px;
+    }
+    .info-meta {
+        font-size: 11.5px;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+    }
+    .info-current-seat {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        border-top: 1px dashed rgba(99, 102, 241, 0.2);
+        padding-top: 6px;
+        margin-top: 6px;
+    }
+    .seat-modal-section-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+    }
+    .seat-modal-form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .modal-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .modal-form-group label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary);
+    }
+    .modal-input {
+        padding: 8px 10px;
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: 8px;
+        font-size: 12.5px;
+        background: var(--bg-card, #ffffff);
+        color: var(--text-primary);
+        outline: none;
+        transition: border-color 0.15s ease;
+    }
+    .modal-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .seat-target-status-box {
+        font-size: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+    }
+    .status-empty {
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #059669;
+    }
+    .status-swap {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        color: #d97706;
+    }
+    .seat-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 14px 20px;
+        background: var(--bg-secondary, #f8fafc);
+        border-top: 1px solid var(--border, #e2e8f0);
+    }
+    .btn-modal-cancel {
+        padding: 8px 16px;
+        font-size: 12.5px;
+        font-weight: 600;
+        background: transparent;
+        border: 1px solid var(--border, #cbd5e1);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        cursor: pointer;
+    }
+    .btn-modal-cancel:hover {
+        background: rgba(0,0,0,0.04);
+    }
+    .btn-modal-save {
+        padding: 8px 18px;
+        font-size: 12.5px;
+        font-weight: 600;
+        background: var(--accent);
+        border: none;
+        border-radius: 8px;
+        color: #ffffff;
+        cursor: pointer;
+        box-shadow: 0 2px 8px var(--accent-glow);
+        transition: all 0.15s ease;
+    }
+    .btn-modal-save:hover {
+        opacity: 0.93;
+        transform: translateY(-1px);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+    }
+    .toast-pill {
+        background: #1e1b4b;
+        color: #ffffff;
+        padding: 10px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        pointer-events: auto;
+        animation: toastIn 0.25s ease-out;
+    }
+    .toast-pill.toast-success {
+        background: #065f46;
+        border-left: 4px solid #34d399;
+    }
+    .toast-pill.toast-error {
+        background: #991b1b;
+        border-left: 4px solid #f87171;
+    }
+    @keyframes toastIn {
+        from { transform: translateY(16px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    @media print {
+        .seat-drag-handle, .seat-edit-btn, .btn-export-csv, .seat-modal-backdrop, .toast-container {
+            display: none !important;
+        }
     }
 
     /* ════════════════ TOP ROOMS NAVBAR (FULL SCREEN CLASSROOM VIEW) ════════════════ */
@@ -1856,6 +2199,108 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- ════════════════ SEAT EDIT / REASSIGN MODAL ════════════════ -->
+    <div id="seatEditModal" class="seat-modal-backdrop" style="display: none;" onclick="handleModalBackdropClick(event, 'seatEditModal')">
+        <div class="seat-modal-card">
+            <div class="seat-modal-header">
+                <div class="seat-modal-title">
+                    <span style="font-size: 18px;">✏️</span>
+                    <span>Edit Seat Allocation</span>
+                </div>
+                <button type="button" class="seat-modal-close" onclick="closeSeatEditModal()">✕</button>
+            </div>
+            
+            <div class="seat-modal-body">
+                <div class="seat-modal-info-card">
+                    <div class="info-card-header">
+                        <span class="info-roll" id="modalStudentRoll"></span>
+                        <span class="info-class" id="modalStudentClass"></span>
+                    </div>
+                    <div class="info-name" id="modalStudentName"></div>
+                    <div class="info-meta">
+                        <span id="modalStudentDept"></span> • <span id="modalStudentSubject"></span>
+                    </div>
+                    <div class="info-current-seat" id="modalCurrentSeatLabel"></div>
+                </div>
+
+                <div class="seat-modal-section-title">Reassign / Move Position</div>
+
+                <div class="seat-modal-form-grid">
+                    <div class="modal-form-group">
+                        <label for="modalSelectRoom">Target Room:</label>
+                        <select id="modalSelectRoom" class="modal-input" onchange="handleModalRoomChange()">
+                            {% for r in rooms %}
+                            <option value="{{ r.room_id }}" data-room-num="{{ r.room_number }}" data-benches="{{ r.total_benches }}">
+                                Room {{ r.room_number }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="modalSelectBench">Target Bench:</label>
+                        <select id="modalSelectBench" class="modal-input" onchange="updateTargetSeatStatus()">
+                            <!-- Populated dynamically based on room benches -->
+                        </select>
+                    </div>
+
+                    <div class="modal-form-group">
+                        <label for="modalSelectSeat">Seat Position:</label>
+                        <select id="modalSelectSeat" class="modal-input" onchange="updateTargetSeatStatus()">
+                            <option value="1">Seat 1 (Left / A)</option>
+                            <option value="2">Seat 2 (Middle / B)</option>
+                            <option value="3">Seat 3 (Right / C)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="modalTargetSeatStatus" class="seat-target-status-box status-empty">
+                    <span>⚡ Available Seat — Clean Move</span>
+                </div>
+            </div>
+
+            <div class="seat-modal-footer">
+                <button type="button" class="btn-modal-cancel" onclick="closeSeatEditModal()">Cancel</button>
+                <button type="button" class="btn-modal-save" id="btnSaveSeatEdit" onclick="saveSeatEditModal()">💾 Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ ASSIGN EMPTY SEAT MODAL ════════════════ -->
+    <div id="emptySeatModal" class="seat-modal-backdrop" style="display: none;" onclick="handleModalBackdropClick(event, 'emptySeatModal')">
+        <div class="seat-modal-card">
+            <div class="seat-modal-header">
+                <div class="seat-modal-title">
+                    <span style="font-size: 18px;">🪑</span>
+                    <span>Assign Student to Empty Seat</span>
+                </div>
+                <button type="button" class="seat-modal-close" onclick="closeEmptySeatModal()">✕</button>
+            </div>
+
+            <div class="seat-modal-body">
+                <div class="seat-modal-info-card">
+                    <div class="info-name" id="emptyModalLocation" style="font-size: 14px; font-weight: 700; color: var(--accent);"></div>
+                    <div class="info-meta" style="margin-top: 4px;">Select a student from this session to place into this empty seat.</div>
+                </div>
+
+                <div class="modal-form-group" style="margin-top: 14px;">
+                    <label for="emptyModalStudentPicker">Choose Student to Move Here:</label>
+                    <select id="emptyModalStudentPicker" class="modal-input" style="font-family: 'JetBrains Mono', monospace; font-size: 12px; max-width: 100%;">
+                        <!-- Populated dynamically from all_students -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="seat-modal-footer">
+                <button type="button" class="btn-modal-cancel" onclick="closeEmptySeatModal()">Cancel</button>
+                <button type="button" class="btn-modal-save" onclick="saveEmptySeatAssignment()">Assign Student</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
     {% endif %}
 
     <!-- FOCUSED EXAM SLOT BANNER (SHOWS ONLY SELECTED DATE & SHIFT) -->
@@ -1906,8 +2351,19 @@
                             <span class="print-menu-desc">Official branch-wise seating notice sheet (A4 Portrait)</span>
                         </div>
                     </button>
+                    <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="print-menu-item" style="text-decoration:none; color:inherit;">
+                        <span class="print-menu-icon">📥</span>
+                        <div class="print-menu-text">
+                            <span class="print-menu-title">Download Seating Plan (CSV)</span>
+                            <span class="print-menu-desc">Live seating arrangements spreadsheet for Excel / Sheets</span>
+                        </div>
+                    </a>
                 </div>
             </div>
+
+            <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-export-csv" title="Download seating plan CSV for this slot">
+                📥 Export CSV
+            </a>
 
             <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-blueprint" title="Back to Blueprint editor">
                 📐 Edit Blueprint
@@ -2066,36 +2522,96 @@
                                     
                                     <!-- SEAT 1 (Stream A) -->
                                     {% if bench.seat_1 %}
-                                    <div class="seat-cell seat-cell-s1" data-class="{{ bench.seat_1.class_name }}"
-                                         title="{{ bench.seat_1.student_name }} ({{ bench.seat_1.department }})&#10;{{ bench.seat_1.subject_code }}: {{ bench.seat_1.subject_name }}">
+                                    <div class="seat-cell seat-cell-s1"
+                                         draggable="true"
+                                         data-allocation-id="{{ bench.seat_1.allocation_id }}"
+                                         data-roll="{{ bench.seat_1.roll_number }}"
+                                         data-name="{{ bench.seat_1.student_name }}"
+                                         data-class="{{ bench.seat_1.class_name }}"
+                                         data-dept="{{ bench.seat_1.department }}"
+                                         data-subject-code="{{ bench.seat_1.subject_code }}"
+                                         data-subject-name="{{ bench.seat_1.subject_name }}"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="1"
+                                         title="{{ bench.seat_1.student_name }} ({{ bench.seat_1.department }})&#10;{{ bench.seat_1.subject_code }}: {{ bench.seat_1.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                        <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_1.roll_number }}</div>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty" title="Available Seat">
+                                    <div class="seat-empty"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="1"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 1)&#10;💡 Drop student here or click to assign"
+                                         onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
 
                                     <!-- SEAT 2 (Stream B) -->
                                     {% if bench.seat_2 %}
-                                    <div class="seat-cell seat-cell-s2" data-class="{{ bench.seat_2.class_name }}"
-                                         title="{{ bench.seat_2.student_name }} ({{ bench.seat_2.department }})&#10;{{ bench.seat_2.subject_code }}: {{ bench.seat_2.subject_name }}">
+                                    <div class="seat-cell seat-cell-s2"
+                                         draggable="true"
+                                         data-allocation-id="{{ bench.seat_2.allocation_id }}"
+                                         data-roll="{{ bench.seat_2.roll_number }}"
+                                         data-name="{{ bench.seat_2.student_name }}"
+                                         data-class="{{ bench.seat_2.class_name }}"
+                                         data-dept="{{ bench.seat_2.department }}"
+                                         data-subject-code="{{ bench.seat_2.subject_code }}"
+                                         data-subject-name="{{ bench.seat_2.subject_name }}"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="2"
+                                         title="{{ bench.seat_2.student_name }} ({{ bench.seat_2.department }})&#10;{{ bench.seat_2.subject_code }}: {{ bench.seat_2.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                        <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_2.roll_number }}</div>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty" title="Available Seat">
+                                    <div class="seat-empty"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="2"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 2)&#10;💡 Drop student here or click to assign"
+                                         onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
 
                                     <!-- SEAT 3 (Stream C) -->
                                     {% if bench.seat_3 %}
-                                    <div class="seat-cell seat-cell-s3" data-class="{{ bench.seat_3.class_name }}"
-                                         title="{{ bench.seat_3.student_name }} ({{ bench.seat_3.department }})&#10;{{ bench.seat_3.subject_code }}: {{ bench.seat_3.subject_name }}">
+                                    <div class="seat-cell seat-cell-s3"
+                                         draggable="true"
+                                         data-allocation-id="{{ bench.seat_3.allocation_id }}"
+                                         data-roll="{{ bench.seat_3.roll_number }}"
+                                         data-name="{{ bench.seat_3.student_name }}"
+                                         data-class="{{ bench.seat_3.class_name }}"
+                                         data-dept="{{ bench.seat_3.department }}"
+                                         data-subject-code="{{ bench.seat_3.subject_code }}"
+                                         data-subject-name="{{ bench.seat_3.subject_name }}"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="3"
+                                         title="{{ bench.seat_3.student_name }} ({{ bench.seat_3.department }})&#10;{{ bench.seat_3.subject_code }}: {{ bench.seat_3.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                        <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_3.roll_number }}</div>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
                                     </div>
                                     {% else %}
-                                    <div class="seat-empty" title="Available Seat">
+                                    <div class="seat-empty"
+                                         data-room-id="{{ r.room_id }}"
+                                         data-room-number="{{ r.room_number }}"
+                                         data-bench-number="{{ bench.bench_number }}"
+                                         data-seat-number="3"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 3)&#10;💡 Drop student here or click to assign"
+                                         onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
                                     {% endif %}
@@ -2162,7 +2678,7 @@
                         <tr>
                             <th style="width: 18%; text-align: center;">Branch</th>
                             <th style="width: 28%; text-align: center;">Subject</th>
-                            <th style="width: 14%; text-align: center;">Class</th>
+                            <th style="width: 14%; text-align: center;">Room</th>
                             <th style="width: 40%; text-align: center;">Roll Number of Candidates</th>
                         </tr>
                     </thead>
@@ -2921,5 +3437,530 @@ document.addEventListener('DOMContentLoaded', function() {
         switchView(initialView);
     }
 });
+
+// ════════════════ DRAG & DROP & SEAT REARRANGEMENT LOGIC ════════════════
+const SESSION_ID = {{ session.session_id }};
+const UPDATE_ALLOCATION_URL = "{% url 'exam_allocator:api_allocation_update' session.session_id %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+const ALL_ROOMS_META = [
+    {% for r in rooms %}
+    { id: {{ r.room_id }}, number: "{{ r.room_number }}", totalBenches: {{ r.total_benches }} },
+    {% endfor %}
+];
+
+let activeModalSource = null;
+let activeEmptySeatTarget = null;
+let draggedSeatData = null;
+let draggedSeatElement = null;
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast-pill toast-${type}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠️'}</span><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
+function handleModalBackdropClick(e, modalId) {
+    if (e.target.id === modalId) {
+        if (modalId === 'seatEditModal') closeSeatEditModal();
+        if (modalId === 'emptySeatModal') closeEmptySeatModal();
+    }
+}
+
+function makeSeatCellInteractive(cell) {
+    cell.setAttribute('draggable', 'true');
+    cell.ondragstart = handleSeatDragStart;
+    cell.ondragend = handleSeatDragEnd;
+    cell.ondragover = handleSeatDragOver;
+    cell.ondragleave = handleSeatDragLeave;
+    cell.ondrop = handleSeatDrop;
+}
+
+function makeEmptySeatInteractive(empty) {
+    empty.removeAttribute('draggable');
+    empty.ondragstart = null;
+    empty.ondragend = null;
+    empty.ondragover = handleSeatDragOver;
+    empty.ondragleave = handleSeatDragLeave;
+    empty.ondrop = handleSeatDrop;
+    empty.onclick = function() { openEmptySeatModal(this); };
+}
+
+function initSeatDragAndDrop() {
+    document.querySelectorAll('.seat-cell').forEach(makeSeatCellInteractive);
+    document.querySelectorAll('.seat-empty').forEach(makeEmptySeatInteractive);
+}
+
+function handleSeatDragStart(e) {
+    const cell = e.currentTarget || e.target.closest('.seat-cell');
+    if (!cell) return;
+    draggedSeatData = {
+        allocationId: cell.dataset.allocationId,
+        roll: cell.dataset.roll,
+        name: cell.dataset.name,
+        className: cell.dataset.class,
+        dept: cell.dataset.dept,
+        subjectCode: cell.dataset.subjectCode,
+        subjectName: cell.dataset.subjectName,
+        roomId: cell.dataset.roomId,
+        roomNumber: cell.dataset.roomNumber,
+        benchNumber: cell.dataset.benchNumber,
+        seatNumber: cell.dataset.seatNumber,
+        title: cell.getAttribute('title') || '',
+        classModifier: cell.classList.contains('seat-cell-s1') ? 'seat-cell-s1' : (cell.classList.contains('seat-cell-s2') ? 'seat-cell-s2' : 'seat-cell-s3')
+    };
+    draggedSeatElement = cell;
+    cell.classList.add('is-dragging');
+    if (e.dataTransfer) {
+        e.dataTransfer.setData('text/plain', JSON.stringify(draggedSeatData));
+        e.dataTransfer.effectAllowed = 'move';
+    }
+}
+
+function handleSeatDragEnd(e) {
+    document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+    document.querySelectorAll('.drag-over, .drag-swap-over').forEach(el => el.classList.remove('drag-over', 'drag-swap-over'));
+    setTimeout(() => {
+        draggedSeatData = null;
+        draggedSeatElement = null;
+    }, 50);
+}
+
+function handleSeatDragOver(e) {
+    e.preventDefault();
+    if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+    }
+    const target = e.currentTarget || e.target.closest('.seat-cell, .seat-empty');
+    if (!target || target === draggedSeatElement) return;
+
+    if (target.classList.contains('seat-empty')) {
+        target.classList.add('drag-over');
+    } else if (target.classList.contains('seat-cell')) {
+        target.classList.add('drag-swap-over');
+    }
+}
+
+function handleSeatDragLeave(e) {
+    const target = e.currentTarget || e.target.closest('.seat-cell, .seat-empty');
+    if (target) {
+        target.classList.remove('drag-over', 'drag-swap-over');
+    }
+}
+
+async function handleSeatDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const target = e.currentTarget || e.target.closest('.seat-cell, .seat-empty');
+    if (!target) return;
+    target.classList.remove('drag-over', 'drag-swap-over');
+
+    // Capture source element and data IMMEDIATELY
+    const srcEl = draggedSeatElement;
+    let src = draggedSeatData;
+
+    if (!src && e.dataTransfer) {
+        try {
+            src = JSON.parse(e.dataTransfer.getData('text/plain'));
+        } catch(err) {}
+    }
+
+    if (!src || !srcEl || target === srcEl) return;
+
+    // Clear dragging visual class
+    srcEl.classList.remove('is-dragging');
+
+    const isTargetEmpty = target.classList.contains('seat-empty');
+
+    if (isTargetEmpty) {
+        // ── MOVE TO EMPTY SEAT ──
+        const targetRoomId = target.dataset.roomId;
+        const targetRoomNum = target.dataset.roomNumber;
+        const targetBench = target.dataset.benchNumber;
+        const targetSeat = target.dataset.seatNumber;
+
+        const originalSrcBench = src.benchNumber;
+        const originalSrcSeat = src.seatNumber;
+
+        // 1. Instantly transform target empty seat into occupied seat
+        const seatClass = targetSeat == '1' ? 'seat-cell-s1' : (targetSeat == '2' ? 'seat-cell-s2' : 'seat-cell-s3');
+        target.className = `seat-cell ${seatClass}`;
+        target.dataset.allocationId = src.allocationId;
+        target.dataset.roll = src.roll;
+        target.dataset.name = src.name;
+        target.dataset.class = src.className;
+        target.dataset.dept = src.dept;
+        target.dataset.subjectCode = src.subjectCode;
+        target.dataset.subjectName = src.subjectName;
+        target.dataset.roomId = targetRoomId;
+        target.dataset.roomNumber = targetRoomNum;
+        target.dataset.benchNumber = targetBench;
+        target.dataset.seatNumber = targetSeat;
+        target.title = `${src.name} (${src.dept})
+${src.subjectCode}: ${src.subjectName}
+💡 Drag to arrange or click to edit`;
+        target.innerHTML = `
+            <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
+            <div class="seat-roll">${src.roll}</div>
+            <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
+        `;
+        makeSeatCellInteractive(target);
+
+        // 2. Instantly transform source occupied seat into clean empty seat
+        srcEl.className = 'seat-empty';
+        delete srcEl.dataset.allocationId;
+        delete srcEl.dataset.roll;
+        delete srcEl.dataset.name;
+        delete srcEl.dataset.class;
+        delete srcEl.dataset.dept;
+        delete srcEl.dataset.subjectCode;
+        delete srcEl.dataset.subjectName;
+        srcEl.dataset.benchNumber = originalSrcBench;
+        srcEl.dataset.seatNumber = originalSrcSeat;
+        srcEl.title = `Available Seat (Bench ${originalSrcBench}, Seat ${originalSrcSeat})
+💡 Drop student here or click to assign`;
+        srcEl.innerHTML = `<span class="seat-empty-label">—</span>`;
+        makeEmptySeatInteractive(srcEl);
+
+        // 3. Send AJAX call to backend
+        try {
+            const resp = await fetch(UPDATE_ALLOCATION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    action: 'move',
+                    allocation_id: src.allocationId,
+                    target_room_id: targetRoomId,
+                    target_bench_number: targetBench,
+                    target_seat_number: targetSeat
+                })
+            });
+            const result = await resp.json();
+            if (!result.success) {
+                showToast(result.error || 'Failed to move seat allocation', 'error');
+                setTimeout(() => window.location.reload(), 1000);
+                return;
+            }
+            showToast(`Moved ${src.roll} to Room ${targetRoomNum}, Bench ${targetBench}, Seat ${targetSeat}`);
+        } catch (err) {
+            console.error(err);
+            showToast('Server communication error', 'error');
+            setTimeout(() => window.location.reload(), 1000);
+        }
+
+    } else {
+        // ── SWAP WITH OCCUPIED SEAT ──
+        const targetAllocId = target.dataset.allocationId;
+        const targetRoll = target.dataset.roll;
+        const targetName = target.dataset.name;
+        const targetClass = target.dataset.class;
+        const targetDept = target.dataset.dept;
+        const targetSubjCode = target.dataset.subjectCode;
+        const targetSubjName = target.dataset.subjectName;
+
+        // 1. Instantly swap dataset attributes & text
+        target.dataset.allocationId = src.allocationId;
+        target.dataset.roll = src.roll;
+        target.dataset.name = src.name;
+        target.dataset.class = src.className;
+        target.dataset.dept = src.dept;
+        target.dataset.subjectCode = src.subjectCode;
+        target.dataset.subjectName = src.subjectName;
+        target.title = `${src.name} (${src.dept})
+${src.subjectCode}: ${src.subjectName}
+💡 Drag to arrange or click to edit`;
+        const targetRollEl = target.querySelector('.seat-roll');
+        if (targetRollEl) targetRollEl.textContent = src.roll;
+
+        srcEl.dataset.allocationId = targetAllocId;
+        srcEl.dataset.roll = targetRoll;
+        srcEl.dataset.name = targetName;
+        srcEl.dataset.class = targetClass;
+        srcEl.dataset.dept = targetDept;
+        srcEl.dataset.subjectCode = targetSubjCode;
+        srcEl.dataset.subjectName = targetSubjName;
+        srcEl.title = `${targetName} (${targetDept})
+${targetSubjCode}: ${targetSubjName}
+💡 Drag to arrange or click to edit`;
+        const srcRollEl = srcEl.querySelector('.seat-roll');
+        if (srcRollEl) srcRollEl.textContent = targetRoll;
+
+        // 2. Send AJAX call to backend
+        try {
+            const resp = await fetch(UPDATE_ALLOCATION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    action: 'swap',
+                    source_allocation_id: src.allocationId,
+                    target_allocation_id: targetAllocId
+                })
+            });
+            const result = await resp.json();
+            if (!result.success) {
+                showToast(result.error || 'Failed to swap seat allocations', 'error');
+                setTimeout(() => window.location.reload(), 1000);
+                return;
+            }
+            showToast(`Swapped ${src.roll} and ${targetRoll}`);
+        } catch (err) {
+            console.error(err);
+            showToast('Server communication error', 'error');
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    }
+}
+
+// ════════════════ SEAT EDIT MODAL ════════════════
+function openSeatEditModal(event, btnEl) {
+    if (event) event.stopPropagation();
+    const cell = btnEl.closest('.seat-cell');
+    if (!cell) return;
+
+    activeModalSource = {
+        element: cell,
+        allocationId: cell.dataset.allocationId,
+        roll: cell.dataset.roll,
+        name: cell.dataset.name,
+        className: cell.dataset.class,
+        dept: cell.dataset.dept,
+        subjectCode: cell.dataset.subjectCode,
+        subjectName: cell.dataset.subjectName,
+        roomId: cell.dataset.roomId,
+        roomNumber: cell.dataset.roomNumber,
+        benchNumber: cell.dataset.benchNumber,
+        seatNumber: cell.dataset.seatNumber
+    };
+
+    document.getElementById('modalStudentRoll').textContent = activeModalSource.roll;
+    document.getElementById('modalStudentClass').textContent = activeModalSource.className || 'Class';
+    document.getElementById('modalStudentName').textContent = activeModalSource.name || activeModalSource.roll;
+    document.getElementById('modalStudentDept').textContent = activeModalSource.dept || 'Department';
+    document.getElementById('modalStudentSubject').textContent = `${activeModalSource.subjectCode}: ${activeModalSource.subjectName}`;
+    document.getElementById('modalCurrentSeatLabel').textContent = `Current Location: Room ${activeModalSource.roomNumber}, Bench ${activeModalSource.benchNumber}, Seat ${activeModalSource.seatNumber}`;
+
+    // Set room dropdown
+    const roomSelect = document.getElementById('modalSelectRoom');
+    roomSelect.value = activeModalSource.roomId;
+
+    handleModalRoomChange();
+
+    // Set bench and seat to current
+    const benchSelect = document.getElementById('modalSelectBench');
+    benchSelect.value = activeModalSource.benchNumber;
+
+    const seatSelect = document.getElementById('modalSelectSeat');
+    seatSelect.value = activeModalSource.seatNumber;
+
+    updateTargetSeatStatus();
+
+    document.getElementById('seatEditModal').style.display = 'flex';
+}
+
+function closeSeatEditModal() {
+    document.getElementById('seatEditModal').style.display = 'none';
+    activeModalSource = null;
+}
+
+function handleModalRoomChange() {
+    const roomSelect = document.getElementById('modalSelectRoom');
+    const selectedOption = roomSelect.options[roomSelect.selectedIndex];
+    const totalBenches = parseInt(selectedOption.getAttribute('data-benches') || '15', 10);
+
+    const benchSelect = document.getElementById('modalSelectBench');
+    benchSelect.innerHTML = '';
+    for (let b = 1; b <= totalBenches; b++) {
+        const opt = document.createElement('option');
+        opt.value = b;
+        opt.textContent = `Bench ${b}`;
+        benchSelect.appendChild(opt);
+    }
+    updateTargetSeatStatus();
+}
+
+function updateTargetSeatStatus() {
+    if (!activeModalSource) return;
+    const roomSelect = document.getElementById('modalSelectRoom');
+    const selectedRoomNum = roomSelect.options[roomSelect.selectedIndex].getAttribute('data-room-num');
+    const selectedBench = document.getElementById('modalSelectBench').value;
+    const selectedSeat = document.getElementById('modalSelectSeat').value;
+
+    const statusBox = document.getElementById('modalTargetSeatStatus');
+
+    // Check if same as current
+    if (selectedRoomNum == activeModalSource.roomNumber &&
+        selectedBench == activeModalSource.benchNumber &&
+        selectedSeat == activeModalSource.seatNumber) {
+        statusBox.className = 'seat-target-status-box';
+        statusBox.style.background = 'rgba(100, 116, 139, 0.1)';
+        statusBox.style.color = 'var(--text-secondary)';
+        statusBox.innerHTML = '<span>ℹ️ Current Assigned Seat</span>';
+        return;
+    }
+
+    // Check if target seat is currently occupied in DOM
+    const roomBlock = document.getElementById('room-block-' + selectedRoomNum);
+    let targetOccupantRoll = null;
+    if (roomBlock) {
+        const occupied = roomBlock.querySelector(`.seat-cell[data-bench-number="${selectedBench}"][data-seat-number="${selectedSeat}"]`);
+        if (occupied) {
+            targetOccupantRoll = occupied.dataset.roll;
+        }
+    }
+
+    if (targetOccupantRoll) {
+        statusBox.className = 'seat-target-status-box status-swap';
+        statusBox.style.background = '';
+        statusBox.style.color = '';
+        statusBox.innerHTML = `<span>⚠️ Occupied by <strong>${targetOccupantRoll}</strong> — Will Swap Positions</span>`;
+    } else {
+        statusBox.className = 'seat-target-status-box status-empty';
+        statusBox.style.background = '';
+        statusBox.style.color = '';
+        statusBox.innerHTML = '<span>⚡ Available Empty Seat — Clean Move</span>';
+    }
+}
+
+async function saveSeatEditModal() {
+    if (!activeModalSource) return;
+    const roomSelect = document.getElementById('modalSelectRoom');
+    const targetRoomId = roomSelect.value;
+    const targetRoomNum = roomSelect.options[roomSelect.selectedIndex].getAttribute('data-room-num');
+    const targetBench = document.getElementById('modalSelectBench').value;
+    const targetSeat = document.getElementById('modalSelectSeat').value;
+
+    const saveBtn = document.getElementById('btnSaveSeatEdit');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+        const resp = await fetch(UPDATE_ALLOCATION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                action: 'move',
+                allocation_id: activeModalSource.allocationId,
+                target_room_id: targetRoomId,
+                target_bench_number: targetBench,
+                target_seat_number: targetSeat
+            })
+        });
+        const result = await resp.json();
+        if (!result.success) {
+            showToast(result.error || 'Failed to update seat', 'error');
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Changes';
+            return;
+        }
+
+        closeSeatEditModal();
+        showToast(result.message || 'Seat updated successfully');
+        // Reload to render complete recalculated arrangement or sync DOM
+        setTimeout(() => {
+            window.location.reload();
+        }, 600);
+    } catch (err) {
+        console.error(err);
+        showToast('Error saving seat allocation', 'error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save Changes';
+    }
+}
+
+// ════════════════ EMPTY SEAT MODAL ════════════════
+function openEmptySeatModal(emptyEl) {
+    activeEmptySeatTarget = {
+        element: emptyEl,
+        roomId: emptyEl.dataset.roomId,
+        roomNumber: emptyEl.dataset.roomNumber,
+        benchNumber: emptyEl.dataset.benchNumber,
+        seatNumber: emptyEl.dataset.seatNumber
+    };
+
+    document.getElementById('emptyModalLocation').textContent =
+        `Room ${activeEmptySeatTarget.roomNumber} — Bench ${activeEmptySeatTarget.benchNumber}, Seat ${activeEmptySeatTarget.seatNumber}`;
+
+    const picker = document.getElementById('emptyModalStudentPicker');
+    picker.innerHTML = '';
+
+    // Collect all students from active classroom or session
+    const allCells = document.querySelectorAll('.seat-cell');
+    allCells.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.dataset.allocationId;
+        opt.textContent = `${c.dataset.roll} - ${c.dataset.name} (${c.dataset.class}) [Room ${c.dataset.roomNumber}, B${c.dataset.benchNumber}]`;
+        picker.appendChild(opt);
+    });
+
+    document.getElementById('emptySeatModal').style.display = 'flex';
+}
+
+function closeEmptySeatModal() {
+    document.getElementById('emptySeatModal').style.display = 'none';
+    activeEmptySeatTarget = null;
+}
+
+async function saveEmptySeatAssignment() {
+    if (!activeEmptySeatTarget) return;
+    const picker = document.getElementById('emptyModalStudentPicker');
+    const allocId = picker.value;
+    if (!allocId) return;
+
+    try {
+        const resp = await fetch(UPDATE_ALLOCATION_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                action: 'move',
+                allocation_id: allocId,
+                target_room_id: activeEmptySeatTarget.roomId,
+                target_bench_number: activeEmptySeatTarget.benchNumber,
+                target_seat_number: activeEmptySeatTarget.seatNumber
+            })
+        });
+        const result = await resp.json();
+        if (!result.success) {
+            showToast(result.error || 'Failed to assign seat', 'error');
+            return;
+        }
+
+        closeEmptySeatModal();
+        showToast(result.message || 'Student assigned to seat successfully');
+        setTimeout(() => {
+            window.location.reload();
+        }, 600);
+    } catch (err) {
+        console.error(err);
+        showToast('Error assigning student', 'error');
+    }
+}
+
+// Initialize Drag and Drop on DOM Ready
+document.addEventListener('DOMContentLoaded', function() {
+    initSeatDragAndDrop();
+});
+
 </script>
 {% endblock %}
