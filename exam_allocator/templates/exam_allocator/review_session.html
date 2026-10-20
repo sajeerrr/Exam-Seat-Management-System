@@ -1809,7 +1809,9 @@
 
     /* ── TABS ───────────────────────────────── */
     function switchTab(name) {
-        sessionStorage.setItem('reviewActiveTab', name);
+        if (history.replaceState) {
+            history.replaceState(null, '', '#' + name);
+        }
         ['dept', 'tt', 'rooms', 'electives'].forEach(t => {
             const tabEl = document.getElementById('tab-' + t);
             const panelEl = document.getElementById('panel-' + t);
@@ -1817,11 +1819,18 @@
             if (panelEl) panelEl.classList.toggle('active', t === name);
         });
     }
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        const active = sessionStorage.getItem('reviewActiveTab');
-        if (active) switchTab(active);
-    });
+
+    // Clean up any stale sessionStorage key so it never hijacks dashboard navigation
+    try { sessionStorage.removeItem('reviewActiveTab'); } catch(e) {}
+
+    // Check URL hash if user explicitly navigated to or reloaded on a specific tab (e.g. #electives)
+    (function initTabFromHash() {
+        const validTabs = ['dept', 'tt', 'rooms', 'electives'];
+        const hash = (location.hash || '').replace('#', '').trim();
+        if (validTabs.includes(hash) && hash !== 'dept') {
+            switchTab(hash);
+        }
+    })();
 
     function toggleElectivePanel(id, rowEl) {
         const p = document.getElementById('sp-' + id);
