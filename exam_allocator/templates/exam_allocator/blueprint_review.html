@@ -1268,7 +1268,12 @@
     {% endif %}
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
-        <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+            <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
+                🔄 Auto-Resolve &amp; Recalculate
+            </button>
+        </div>
         <ul style="margin: 6px 0 0 18px; padding: 0;">
             {% for err in blueprint.validation_errors %}
             <li>{{ err }}</li>
@@ -2264,7 +2269,12 @@ function updateBoardFromData(data) {
         if (data.errors && data.errors.length) {
             alertsHtml += `
             <div class="alert-box alert-danger">
-                <strong>⚠️ Allocation Hard Constraint Errors (${data.errors.length}):</strong>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                    <strong>⚠️ Allocation Hard Constraint Errors (${data.errors.length}):</strong>
+                    <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
+                        🔄 Auto-Resolve &amp; Recalculate
+                    </button>
+                </div>
                 <ul style="margin: 6px 0 0 18px; padding: 0;">
                     ${data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
                 </ul>
