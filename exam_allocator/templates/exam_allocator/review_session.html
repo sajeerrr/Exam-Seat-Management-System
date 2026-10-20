@@ -1033,6 +1033,47 @@
         box-shadow: 0 2px 6px rgba(245, 158, 11, 0.2);
     }
 
+    .missing-roll-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.2;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .badge-missing {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        border-radius: 4px;
+        padding: 2px 7px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.2;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .badge-warn-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        line-height: 1;
+        position: relative;
+        top: -1px;
+        flex-shrink: 0;
+    }
+
 </style>
 {% endblock %}
 
@@ -1110,8 +1151,9 @@
             <div class="panel-toolbar-title" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span>Departments &amp; Classes ({{ departments.count }} depts)</span>
                 {% if missing_roll_count > 0 %}
-                <span style="font-size:12px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:3px 10px; border-radius:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
-                    ⚠️ {{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)
+                <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
+                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span>{{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)</span>
                 </span>
                 {% endif %}
             </div>
@@ -1128,8 +1170,8 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
                     {% if dept.missing_roll_count > 0 %}
-                    <span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
-                        ⚠️ {{ dept.missing_roll_count }} missing roll
+                    <span class="missing-roll-badge">
+                        <span class="badge-warn-icon">⚠️</span> {{ dept.missing_roll_count }} missing roll
                     </span>
                     {% endif %}
                     <span class="sec-card-meta">{{ dept.classes.count }} class{{ dept.classes.count|pluralize:"es" }}</span>
@@ -1143,8 +1185,8 @@
                         <span class="class-name">{{ cls.class_name }}</span>
                         <div style="display:flex; align-items:center; gap:10px;">
                             {% if cls.missing_roll_count > 0 %}
-                            <span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; padding:2px 7px; border-radius:8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
-                                ⚠️ {{ cls.missing_roll_count }} missing roll
+                            <span class="missing-roll-badge">
+                                <span class="badge-warn-icon">⚠️</span> {{ cls.missing_roll_count }} missing roll
                             </span>
                             {% endif %}
                             <span class="class-count">{{ cls.students.count }} students</span>
@@ -1752,8 +1794,9 @@
         if (missingRolls > 0) {
             html += `
             <div style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <span>⚠️ Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                    <span>Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                 </div>
                 <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
             </div>`;
@@ -1769,7 +1812,7 @@
             const hasRoll = s.roll_number && s.roll_number.trim();
             const rollDisplay = hasRoll 
                 ? `<span style="font-weight:600">${s.roll_number}</span>`
-                : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;" title="No roll number in source file — left blank">⚠️ Missing Roll No</span>`;
+                : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
 
             html += `<tr id="stud-row-${s.id}">
             <td style="color:var(--text-muted)">${i + 1}</td>
@@ -1860,7 +1903,7 @@
                         const hasRoll = data.roll_number && data.roll_number.trim();
                         row.cells[2].innerHTML = hasRoll
                             ? `<span style="font-weight:600">${data.roll_number}</span>`
-                            : `<span class="badge-missing" style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:4px; font-size:11px; font-weight:600;">⚠️ Missing Roll No</span>`;
+                            : `<span class="badge-missing"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
                         row.cells[3].textContent = data.uni_reg_no || '—';
                         row.cells[4].textContent = data.student_name;
                         row.cells[5].textContent = data.gender || '—';
