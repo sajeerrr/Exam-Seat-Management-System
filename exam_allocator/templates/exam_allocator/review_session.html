@@ -44,17 +44,26 @@
         color: inherit;
     }
 
-    /* NAV */
-    .top-nav {
+    /* ══════════════════════════════════════════════════════════════════════
+       EXECUTIVE PAGE HEADER
+       ══════════════════════════════════════════════════════════════════════ */
+    .page-header {
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: space-between;
-        margin-bottom: 24px;
+        margin-bottom: 28px;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 16px;
+        animation: fu .35s ease both;
     }
 
-    .breadcrumb {
+    .header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .breadcrumb-trail {
         display: flex;
         align-items: center;
         gap: 7px;
@@ -62,22 +71,132 @@
         color: var(--text-muted);
     }
 
-    .breadcrumb a {
+    .breadcrumb-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         color: var(--text-muted);
-        transition: color .2s;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color .18s ease;
     }
 
-    .breadcrumb a:hover {
-        color: var(--accent-light);
+    .breadcrumb-link:hover {
+        color: var(--accent);
     }
 
-    .breadcrumb .sep {
-        opacity: .4;
+    .breadcrumb-slash {
+        opacity: 0.4;
+        font-size: 12px;
     }
 
-    .breadcrumb .cur {
+    .breadcrumb-current {
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .header-title-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .page-title {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
         color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .header-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        background: rgba(16, 185, 129, 0.08);
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        color: #059669;
+        font-size: 11.5px;
         font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+
+    .status-pulse-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+        animation: headerPulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    @keyframes headerPulse {
+        0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+        70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-header-import {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 16px;
+        background: #ffffff;
+        color: var(--text-primary);
+        border: 1px solid rgba(203, 213, 225, 0.85);
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: all .2s ease;
+    }
+
+    .btn-header-import:hover {
+        background: #f8fafc;
+        border-color: var(--accent-light);
+        color: var(--accent);
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+        transform: translateY(-1px);
+    }
+
+    .btn-header-allocate {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 20px;
+        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .btn-header-allocate:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        filter: brightness(1.05);
+    }
+
+    .btn-header-allocate:active {
+        transform: translateY(0) scale(0.98);
     }
 
     /* HERO */
@@ -171,53 +290,80 @@
     /* STATS BAND */
     .stats-band {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 16px;
         margin-bottom: 28px;
         animation: fu .45s ease .05s both;
     }
 
     .stat-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        padding: 18px;
-        backdrop-filter: blur(8px);
-        transition: all .2s ease;
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+        transition: all .22s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }
 
     .stat-card:hover {
-        border-color: var(--border-hover);
-        background: var(--bg-card-hover);
+        border-color: rgba(99, 102, 241, 0.35);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
     }
 
-    .stat-num {
-        font-size: 30px;
-        font-weight: 800;
-        letter-spacing: -1px;
-        background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 3px;
+    .stat-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
     }
 
     .stat-lbl {
-        font-size: 11px;
-        color: var(--text-muted);
-        font-weight: 600;
+        font-size: 11.5px;
+        color: var(--text-secondary);
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: .05em;
     }
 
+    .stat-icon-wrap {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .icon-depts { background: rgba(99, 102, 241, 0.1); color: #4f46e5; }
+    .icon-students { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+    .icon-rooms { background: rgba(16, 185, 129, 0.1); color: #059669; }
+    .icon-days { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
+    .icon-electives { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+
+    .stat-num {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: var(--text-primary);
+        line-height: 1.1;
+        margin-bottom: 4px;
+    }
+
+    .stat-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+
     /* TABS */
-    .tabs-row {
+    .tabs-bar {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         margin-bottom: 24px;
-        flex-wrap: wrap;
-        gap: 12px;
         animation: fu .45s ease .08s both;
     }
 
@@ -228,35 +374,6 @@
         padding: 5px;
         border-radius: 12px;
         width: fit-content;
-    }
-
-    .btn-allocate-tab {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 9px 20px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
-        color: #ffffff;
-        font-family: inherit;
-        font-size: 13.5px;
-        font-weight: 700;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-        cursor: pointer;
-        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        user-select: none;
-        white-space: nowrap;
-    }
-
-    .btn-allocate-tab:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-        filter: brightness(1.05);
-    }
-
-    .btn-allocate-tab:active {
-        transform: translateY(0) scale(0.98);
     }
 
     .tab-btn {
@@ -944,9 +1061,52 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 32px;
-        flex-wrap: wrap;
+        margin-top: 36px;
+        padding-top: 24px;
+        border-top: 1px solid rgba(226, 232, 240, 0.8);
         gap: 12px;
+    }
+
+    .btn-bottom-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 9px 18px;
+        background: #ffffff;
+        color: var(--text-secondary);
+        border: 1px solid rgba(203, 213, 225, 0.85);
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all .2s ease;
+    }
+
+    .btn-bottom-back:hover {
+        background: #f8fafc;
+        color: var(--accent);
+        border-color: var(--accent-light);
+    }
+
+    .btn-bottom-allocate {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        transition: all .2s ease;
+    }
+
+    .btn-bottom-allocate:hover {
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        transform: translateY(-1px);
     }
 
     .btn-sec {
@@ -1164,22 +1324,40 @@
 {% block content %}
 <div class="pw">
 
-    <!-- BREADCRUMB & TOP ACTIONS -->
-    <nav class="top-nav">
-        <div class="breadcrumb">
-            <a href="{% url 'exam_allocator:session_list' %}">All Sessions</a>
-            <span class="sep">›</span>
-            <span class="cur">Dashboard ({{ session.name }})</span>
+    <!-- PAGE HEADER -->
+    <header class="page-header">
+        <div class="header-left">
+            <nav class="breadcrumb-trail">
+                <a href="{% url 'exam_allocator:session_list' %}" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>All Sessions</span>
+                </a>
+                <span class="breadcrumb-slash">/</span>
+                <span class="breadcrumb-current">{{ session.name }}</span>
+            </nav>
+            <div class="header-title-row">
+                <h1 class="page-title">{{ session.name }}</h1>
+                <span class="header-status-badge">
+                    <span class="status-pulse-dot"></span>
+                    <span>Ready for Allocation</span>
+                </span>
+            </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <a href="{% url 'exam_allocator:session_list' %}" class="btn-sec"
-                style="font-size:12.5px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-                <span style="font-size:13px;">←</span> All Sessions
+
+        <div class="header-actions">
+            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-header-import">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                <span>Import Files</span>
             </a>
-            <a href="{% url 'exam_allocator:import_data' session.session_id %}" class="btn-sec"
-                style="font-size:12.5px; padding:8px 16px; text-decoration:none;">Import Files</a>
+            <form id="form-proceed-allocation" method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn-header-allocate" id="btn-goto-allocate" onclick="handleAllocationSubmit(this)">
+                    <span>Proceed to Allocation</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+            </form>
         </div>
-    </nav>
+    </header>
 
     <!-- MESSAGES -->
     {% if messages %}
@@ -1191,45 +1369,71 @@
     <!-- STATS BAND -->
     <div class="stats-band">
         <div class="stat-card">
+            <div class="stat-card-top">
+                <span class="stat-lbl">Departments</span>
+                <span class="stat-icon-wrap icon-depts">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line><line x1="9" y1="6" x2="9" y2="6.01"></line><line x1="15" y1="6" x2="15" y2="6.01"></line><line x1="9" y1="10" x2="9" y2="10.01"></line><line x1="15" y1="10" x2="15" y2="10.01"></line><line x1="9" y1="14" x2="9" y2="14.01"></line><line x1="15" y1="14" x2="15" y2="14.01"></line><line x1="9" y1="18" x2="9" y2="18.01"></line><line x1="15" y1="18" x2="15" y2="18.01"></line></svg>
+                </span>
+            </div>
             <div class="stat-num">{{ departments_count }}</div>
-            <div class="stat-lbl">Departments</div>
+            <div class="stat-sub">Academic departments</div>
         </div>
+
         <div class="stat-card">
+            <div class="stat-card-top">
+                <span class="stat-lbl">Students</span>
+                <span class="stat-icon-wrap icon-students">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+            </div>
             <div class="stat-num" id="stat-students-count">{{ students_count }}</div>
-            <div class="stat-lbl">Students</div>
+            <div class="stat-sub">Registered students</div>
         </div>
+
         <div class="stat-card">
+            <div class="stat-card-top">
+                <span class="stat-lbl">Rooms</span>
+                <span class="stat-icon-wrap icon-rooms">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </span>
+            </div>
             <div class="stat-num">{{ rooms_count }}</div>
-            <div class="stat-lbl">Rooms</div>
+            <div class="stat-sub">Available classrooms</div>
         </div>
+
         <div class="stat-card">
+            <div class="stat-card-top">
+                <span class="stat-lbl">Exam Days</span>
+                <span class="stat-icon-wrap icon-days">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </span>
+            </div>
             <div class="stat-num">{{ exam_days_count }}</div>
-            <div class="stat-lbl">Exam Days</div>
+            <div class="stat-sub">Timetable duration</div>
         </div>
+
         {% if elective_students_count %}
         <div class="stat-card">
+            <div class="stat-card-top">
+                <span class="stat-lbl">Elective Students</span>
+                <span class="stat-icon-wrap icon-electives">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </span>
+            </div>
             <div class="stat-num">{{ elective_students_count }}</div>
-            <div class="stat-lbl">Elective Students</div>
+            <div class="stat-sub">Special subjects</div>
         </div>
         {% endif %}
     </div>
 
-    <!-- TABS ROW WITH ALLOCATION ACTION -->
-    <div class="tabs-row">
+    <!-- TABS -->
+    <div class="tabs-bar">
         <div class="tabs">
             <button class="tab-btn active" id="tab-dept" onclick="switchTab('dept')">Departments &amp; Students</button>
             <button class="tab-btn" id="tab-tt" onclick="switchTab('tt')">Timetable</button>
             <button class="tab-btn" id="tab-rooms" onclick="switchTab('rooms')">Classrooms</button>
             <button class="tab-btn" id="tab-electives" onclick="switchTab('electives')">Electives</button>
         </div>
-
-        <form id="form-proceed-allocation" method="post" action="{% url 'exam_allocator:generate_session_allocation' session.session_id %}" style="display:inline-block; margin:0; padding:0;">
-            {% csrf_token %}
-            <button type="submit" class="btn-allocate-tab" id="btn-goto-allocate" onclick="handleAllocationSubmit(this)">
-                <span>Proceed to Allocation</span>
-                <span style="font-size:16px; font-weight:800; line-height:1;">›</span>
-            </button>
-        </form>
     </div>
 
     <!-- ══ PANEL: DEPARTMENTS ══════════════════════════════════════════════ -->
@@ -1605,9 +1809,15 @@
 
     <!-- BOTTOM BAR -->
     <div class="bottom-bar">
-        <a href="{% url 'exam_allocator:session_list' %}" class="btn-pill-back" style="margin-right: 12px;">← All Sessions</a>
+        <a href="{% url 'exam_allocator:session_list' %}" class="btn-bottom-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>All Sessions</span>
+        </a>
         <div style="flex-grow: 1;"></div>
-        <button type="button" class="btn-prim" id="btn-goto-allocate-bottom" onclick="handleAllocationSubmit(this)">Proceed to Allocation ›</button>
+        <button type="button" class="btn-bottom-allocate" id="btn-goto-allocate-bottom" onclick="handleAllocationSubmit(this)">
+            <span>Proceed to Allocation</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
     </div>
 
 </div><!-- .pw -->
@@ -1858,19 +2068,17 @@
     };
 
     function handleAllocationSubmit(btn) {
-        if (btn) {
-            btn.innerHTML = '<span>Allocating Seats…</span>';
-            btn.style.pointerEvents = 'none';
-        }
         const topBtn = document.getElementById('btn-goto-allocate');
         const bottomBtn = document.getElementById('btn-goto-allocate-bottom');
         if (topBtn) {
             topBtn.innerHTML = '<span>Allocating Seats…</span>';
             topBtn.style.pointerEvents = 'none';
+            topBtn.style.opacity = '0.85';
         }
         if (bottomBtn) {
-            bottomBtn.innerHTML = 'Allocating Seats…';
+            bottomBtn.innerHTML = '<span>Allocating Seats…</span>';
             bottomBtn.style.pointerEvents = 'none';
+            bottomBtn.style.opacity = '0.85';
         }
         const form = document.getElementById('form-proceed-allocation');
         if (form) form.submit();
