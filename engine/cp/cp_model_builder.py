@@ -110,6 +110,14 @@ class CPModelBuilder:
             # Sum of department presence vars <= max departments normal (3)
             model.Add(sum(dept_room_vars[(r_idx, dept)] for dept in all_departments) <= AllocationLimits.MAX_DEPARTMENTS_NORMAL)
 
+        # Dynamic room occupancy calculation (~25 to 30 students per room target)
+        total_remaining = sum(g.remaining_count for g in groups)
+        min_rooms_needed = max(1, (total_remaining + 44) // 45) if total_remaining > 0 else 1
+        avg_per_room = total_remaining // min_rooms_needed if min_rooms_needed > 0 else 0
+        dynamic_min = min(AllocationLimits.MIN_ROOM_STUDENTS, avg_per_room) if total_remaining > 0 else 0
+
+        underfilled_room_vars = []
+
         # Soft Objectives
         objective_terms = []
 
@@ -157,6 +165,23 @@ class CPModelBuilder:
             # Link room utilization to actual assignments
             model.Add(room_util == sum(assign[(g_idx, r_idx, s_idx)] for g_idx in range(num_groups) for s_idx in range(3)))
 
+            # Room is used if room_util > 0
+            room_used = model.NewBoolVar(f"room_{r_idx}_used")
+            model.Add(room_util > 0).OnlyEnforceIf(room_used)
+            model.Add(room_util == 0).OnlyEnforceIf(room_used.Not())
+
+            # Penalty for using rooms to encourage consolidation
+            objective_terms.append(room_used * (-CPSolverConfig.ROOM_USAGE_PENALTY))
+
+            # Dynamic room occupancy: ensure rooms receive at least dynamic_min students (~25-30)
+            if dynamic_min > 0:
+                is_underfilled = model.NewBoolVar(f"room_{r_idx}_is_underfilled")
+                model.AddImplication(is_underfilled, room_used)
+                model.Add(room_util < dynamic_min).OnlyEnforceIf(is_underfilled)
+                model.Add(room_util >= dynamic_min).OnlyEnforceIf([room_used, is_underfilled.Not()])
+                underfilled_room_vars.append(is_underfilled)
+                objective_terms.append(is_underfilled * (-CPSolverConfig.UNDERFILLED_ROOM_PENALTY))
+
             # Link stream occupancy to actual assignments (stream is occupied if >0 students)
             model.Add(sum(assign[(g_idx, r_idx, 0)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_a_occupied)
             model.Add(sum(assign[(g_idx, r_idx, 0)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_a_occupied.Not())
@@ -165,48 +190,57 @@ class CPModelBuilder:
             model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) > 0).OnlyEnforceIf(stream_c_occupied)
             model.Add(sum(assign[(g_idx, r_idx, 2)] for g_idx in range(num_groups)) == 0).OnlyEnforceIf(stream_c_occupied.Not())
 
-            # ABC constraints: each stream has exactly one department and all three are different
-            # We'll approximate this by checking if each stream has students from exactly one group
-            # For proper ABC, we need: each stream has students, and the departments are all different
+        # Department room consolidation penalty (strongly penalize spreading each department across rooms)
+        for dept in all_departments:
+            for r_idx in range(num_rooms):
+                objective_terms.append(dept_room_vars[(r_idx, dept)] * (-CPSolverConfig.CONSOLIDATION_PENALTY))
 
-            # For each stream, create variables indicating if it's "pure" (students from exactly one department)
-            stream_a_pure = model.NewBoolVar(f"room_{r_idx}_stream_a_pure")
-            stream_b_pure = model.NewBoolVar(f"room_{r_idx}_stream_b_pure")
-            stream_c_pure = model.NewBoolVar(f"room_{r_idx}_stream_c_pure")
+        # Stream purity: reward streams that contain at most 1 department
+        for r_idx in range(num_rooms):
+            for s_idx in range(3):
+                d_in_s_vars = []
+                for dept in all_departments:
+                    d_s = model.NewBoolVar(f"dept_{dept}_r{r_idx}_s{s_idx}")
+                    dept_group_indices = [g_idx for g_idx, g in enumerate(groups) if g.department == dept]
+                    dept_stu = sum(assign[(g_idx, r_idx, s_idx)] for g_idx in dept_group_indices)
+                    model.Add(dept_stu > 0).OnlyEnforceIf(d_s)
+                    model.Add(dept_stu == 0).OnlyEnforceIf(d_s.Not())
+                    d_in_s_vars.append(d_s)
 
-            # A stream is pure if: either empty, or all students are from same department
-            # We'll use a simplification: if stream has students, check if they could be from same department
-            # For now, we'll reward based on stream occupancy and utilization, and rely on hyper-heuristic for ABC/ABA
-            # But let's implement a basic version:
+                is_pure_stream = model.NewBoolVar(f"room_{r_idx}_stream_{s_idx}_pure")
+                model.Add(sum(d_in_s_vars) <= 1).OnlyEnforceIf(is_pure_stream)
+                model.Add(sum(d_in_s_vars) > 1).OnlyEnforceIf(is_pure_stream.Not())
+                objective_terms.append(is_pure_stream * CPSolverConfig.STREAM_PURITY_BONUS)
 
-            # Count distinct departments in each stream (approximation)
-            # Instead, let's reward based on having students in all three streams (potential for ABC)
-            # and then let the hyper-heuristic optimize for actual ABC/ABA patterns
+            # True ABC reward: room has exactly 3 distinct departments AND all 3 streams occupied
+            has_3_depts = model.NewBoolVar(f"room_{r_idx}_has_3_depts")
+            model.Add(sum(dept_room_vars[(r_idx, dept)] for dept in all_departments) == 3).OnlyEnforceIf(has_3_depts)
+            model.Add(sum(dept_room_vars[(r_idx, dept)] for dept in all_departments) != 3).OnlyEnforceIf(has_3_depts.Not())
 
-            # For now, we'll use the existing approach but with better weights from config
+            is_true_abc = model.NewBoolVar(f"room_{r_idx}_is_true_abc")
+            model.Add(is_true_abc == 1).OnlyEnforceIf([has_3_depts, stream_a_occupied, stream_b_occupied, stream_c_occupied])
+            model.Add(is_true_abc == 0).OnlyEnforceIf(is_true_abc.Not())
+            objective_terms.append(is_true_abc * CPSolverConfig.TRUE_ABC_BONUS)
 
-            # ABC reward: high weight for rooms with potential to be ABC (all 3 streams occupied)
+            # Potential ABC & ABA fallback rewards
             potential_abc = model.NewBoolVar(f"room_{r_idx}_potential_abc")
             model.Add(potential_abc == 1).OnlyEnforceIf([stream_a_occupied, stream_b_occupied, stream_c_occupied])
             model.Add(potential_abc == 0).OnlyEnforceIf(potential_abc.Not())
 
-            # ABA reward: rooms where A and C are occupied (potential for ABA)
             potential_aba = model.NewBoolVar(f"room_{r_idx}_potential_aba")
             model.Add(potential_aba == 1).OnlyEnforceIf([stream_a_occupied, stream_c_occupied])
             model.Add(potential_aba == 0).OnlyEnforceIf(potential_aba.Not())
 
-            # Add to objective terms with proper weighting
             objective_terms.append(potential_abc * CPSolverConfig.ABC_BONUS)
             objective_terms.append(potential_aba * CPSolverConfig.ABA_BONUS)
             objective_terms.append(stream_occupancy * CPSolverConfig.STREAM_OCCUPANCY_BONUS)
             objective_terms.append(room_util * CPSolverConfig.UTILIZATION_BONUS)
-            # Penalty for using too many rooms (encourage consolidation)
-            # We'll add a small penalty per room used - but this needs to be handled differently
-            # For now, we'll rely on stream occupancy and utilization
 
-        # Add fragmentation penalty: extra rooms per department beyond the first
-        # We'll compute this in the objective indirectly by penalizing department spread
-        # For now, we'll add a placeholder - this is complex to do purely in CP-SAT
-        # We'll rely on the hyper-heuristic and LNS to handle fragmentation
+        # Dynamic room occupancy constraint: allow at most 1 underfilled room across all active rooms
+        if underfilled_room_vars and total_remaining >= AllocationLimits.MIN_ROOM_STUDENTS:
+            model.Add(sum(underfilled_room_vars) <= 1)
+
+        if objective_terms:
+            model.Maximize(sum(objective_terms))
 
         return model, assign

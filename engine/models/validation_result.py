@@ -13,9 +13,11 @@ class ValidationResult:
     minor_adjacency_violations: int = 0
     honours_adjacency_violations: int = 0
     max_departments_per_room: int = 0
+    max_subjects_per_room: int = 0
     missing_students: int = 0
     duplicate_students: int = 0
     capacity_violations: int = 0
+    underfilled_rooms: int = 0
 
     def add_error(self, message: str):
         self.success = False
@@ -32,9 +34,11 @@ class ValidationResult:
             f"Minor subject adjacency violations: {self.minor_adjacency_violations}\n"
             f"Honours subject adjacency violations: {self.honours_adjacency_violations}\n"
             f"Maximum departments per room: {self.max_departments_per_room}\n"
+            f"Maximum subjects per room: {self.max_subjects_per_room}\n"
             f"Missing students: {self.missing_students}\n"
             f"Duplicate students: {self.duplicate_students}\n"
             f"Capacity violations: {self.capacity_violations}\n"
+            f"Underfilled rooms: {self.underfilled_rooms}\n"
             f"Status: {'PASSED' if self.success else 'FAILED'}\n"
             "=============================================================="
         )

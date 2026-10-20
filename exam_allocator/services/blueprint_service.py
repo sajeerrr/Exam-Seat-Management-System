@@ -14,11 +14,12 @@ from engine.config import AllocationLimits
 from engine.context.allocation_context import AllocationContext
 from engine.models.classroom import Classroom as EngineClassroom
 from engine.models.remaining_pool import RemainingPool
-from engine.models.room_allocation import RoomAllocation
+from engine.models.room_allocation import RoomAllocation, subject_conflict_key
 
 from exam_allocator.models import (
     Allocation,
     AllocationSession,
+    Class,
     Exam,
     ExamRegistration,
     Room,
@@ -31,6 +32,7 @@ from exam_allocator.models import (
 from exam_allocator.services.engine_adapter import (
     django_room_to_engine_classroom,
     get_engine_students,
+    get_engine_students_for_exams,
 )
 from exam_allocator.services.registration_service import create_exam_registrations
 from exam_allocator.services.session_allocation_service import (
@@ -87,29 +89,43 @@ def format_merged_class_names(class_names: List[str]) -> str:
     return ", ".join(distinct)
 
 
-def get_semester_for_assignment(session, subject_code: str, class_name: str = "") -> Optional[int]:
+def get_semester_for_assignment(
+    session,
+    subject_code: str,
+    class_name: str = "",
+    subj_sem_map: Optional[dict] = None,
+    class_sem_map: Optional[dict] = None,
+) -> Optional[int]:
     """Resolve semester count from Subject or Class or subject code."""
-    if subject_code:
-        subj = Subject.objects.filter(session=session, subject_code__iexact=subject_code.strip()).first()
-        if subj and subj.semester:
-            return subj.semester
-
-        elec = ElectiveSubject.objects.filter(group__session=session, subject_code__iexact=subject_code.strip()).first()
-        if elec and hasattr(elec, "semester") and elec.semester:
-            return elec.semester
+    code_clean = (subject_code or "").strip().upper()
+    if code_clean:
+        if subj_sem_map is not None:
+            sem = subj_sem_map.get(code_clean)
+            if sem:
+                return sem
+        else:
+            subj = Subject.objects.filter(session=session, subject_code__iexact=code_clean).first()
+            if subj and subj.semester:
+                return subj.semester
 
         # Infer semester from common subject code formats like "22ECT801" -> 8, "23ARS403" -> 4
-        m = re.search(r"[A-Za-z]+([1-8])\d{2}", str(subject_code))
+        m = re.search(r"[A-Za-z]+([1-8])\d{2}", code_clean)
         if m:
             try:
                 return int(m.group(1))
             except ValueError:
                 pass
 
-    if class_name:
-        cls_obj = Class.objects.filter(department__session=session, class_name__iexact=class_name.strip()).first()
-        if cls_obj and cls_obj.semester:
-            return cls_obj.semester
+    cls_clean = (class_name or "").strip().upper()
+    if cls_clean:
+        if class_sem_map is not None:
+            sem = class_sem_map.get(cls_clean)
+            if sem:
+                return sem
+        else:
+            cls_obj = Class.objects.filter(department__session=session, class_name__iexact=cls_clean).first()
+            if cls_obj and cls_obj.semester:
+                return cls_obj.semester
 
     return None
 
@@ -204,9 +220,7 @@ class BlueprintService:
                 create_exam_registrations(ex)
 
         # Collect engine students
-        engine_students = []
-        for ex in exams:
-            engine_students.extend(get_engine_students(ex))
+        engine_students = get_engine_students_for_exams(exams, session=session)
 
         if not engine_students:
             raise BlueprintServiceError(
@@ -220,11 +234,54 @@ class BlueprintService:
                 f"Could not build allocation groups for {exam_date} {shift}."
             )
 
-        rooms = list(Room.objects.filter(session=session).order_by("room_number"))
-        if not rooms:
-            raise BlueprintServiceError(
-                f"No classrooms available in session {session.name}."
-            )
+        # Sort rooms so real physical classrooms come first, dummy rooms strictly last
+        raw_rooms = list(Room.objects.filter(session=session))
+        real_rooms = [r for r in raw_rooms if not r.is_dummy_room]
+        dummy_rooms = [r for r in raw_rooms if r.is_dummy_room]
+        real_rooms.sort(key=lambda r: r.room_number)
+        dummy_rooms.sort(key=lambda r: r.room_number)
+        rooms = real_rooms + dummy_rooms
+
+        # Calculate if we need dummy rooms upfront
+        total_student_count = len(engine_students)
+        existing_capacity = sum(r.capacity for r in rooms) if rooms else 0
+        deficit = max(0, total_student_count - existing_capacity)
+
+        if deficit > 0:
+            dummy_count_needed = (deficit + 44) // 45
+            for i in range(1, dummy_count_needed + 1):
+                d_name = f"Dummy Room {i}"
+                d_room, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=d_name,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                if d_room not in dummy_rooms:
+                    dummy_rooms.append(d_room)
+
+        if not real_rooms and not dummy_rooms:
+            dummy_count_needed = max(1, (total_student_count + 44) // 45)
+            for i in range(1, dummy_count_needed + 1):
+                d_name = f"Dummy Room {i}"
+                d_room, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=d_name,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                dummy_rooms.append(d_room)
+
+        dummy_rooms.sort(key=lambda r: r.room_number)
+        rooms = real_rooms + dummy_rooms
 
         room_allocations = [
             RoomAllocation(classroom=django_room_to_engine_classroom(r))
@@ -238,11 +295,53 @@ class BlueprintService:
         )
 
         # Execute ConstrainedBestFitAllocator (Stage A ONLY - no SeatGenerator)
+        from engine.allocators.constrained_best_fit_allocator import ConstrainedBestFitAllocator
         allocator = ConstrainedBestFitAllocator()
         from engine.adaptive.invariant import AbcInvariant
         capacity = context.room_allocations[0].classroom.column_capacity if context.room_allocations else 15
         context.abc_invariant = AbcInvariant(context, stream_capacity=capacity)
-        context = allocator.execute(context)
+        context = allocator.execute(context, allow_unallocated=True)
+
+        # If any students remain unallocated due to constraints, add overflow dummy rooms and allocate
+        unalloc_rem = sum(g.remaining_count for g in context.groups)
+        max_overflow_attempts = 5
+        overflow_attempt = 0
+        while unalloc_rem > 0 and overflow_attempt < max_overflow_attempts:
+            overflow_attempt += 1
+            extra_dummies = max(1, (unalloc_rem + 44) // 45)
+            curr_dummy_nums = [
+                int(r.room_number.replace("Dummy Room ", ""))
+                for r in rooms
+                if r.room_number.startswith("Dummy Room ") and r.room_number.replace("Dummy Room ", "").isdigit()
+            ]
+            curr_max = max(curr_dummy_nums) if curr_dummy_nums else 0
+            for idx in range(1, extra_dummies + 1):
+                extra_dname = f"Dummy Room {curr_max + idx}"
+                extra_droom, _ = Room.objects.get_or_create(
+                    session=session,
+                    room_number=extra_dname,
+                    defaults={
+                        "capacity": 45,
+                        "benches": 15,
+                        "building": "Unassigned",
+                        "is_dummy": True,
+                    },
+                )
+                if extra_droom not in rooms:
+                    rooms.append(extra_droom)
+                extra_ra = RoomAllocation(classroom=django_room_to_engine_classroom(extra_droom))
+                context.room_allocations.append(extra_ra)
+
+            context = allocator.execute(context, allow_unallocated=(overflow_attempt < max_overflow_attempts))
+            unalloc_rem = sum(g.remaining_count for g in context.groups)
+
+        # Maximize pure ABC rooms by converting ABA pairs (normal sessions only)
+        if not any(g.is_special_subject for g in context.groups):
+            from engine.adaptive.aba_to_abc_optimizer import ABAToABCOptimizer
+            context = ABAToABCOptimizer().optimize(context)
+
+        # Balance stream occupancy within rooms (e.g. tail rooms and underfilled rooms)
+        allocator._balance_room_streams(context)
 
         # Persist Blueprint transactionally
         with transaction.atomic():
@@ -255,9 +354,19 @@ class BlueprintService:
             slot_blueprint.room_blueprints.all().delete()
 
             room_lookup = {r.room_number: r for r in rooms}
+            # Order real rooms first (order_idx = 1..N), then dummy rooms strictly last (N+1..end)
+            real_ra = [
+                ra for ra in context.room_allocations
+                if ra.classroom.room_no in room_lookup and not room_lookup[ra.classroom.room_no].is_dummy_room
+            ]
+            dummy_ra = [
+                ra for ra in context.room_allocations
+                if ra.classroom.room_no in room_lookup and room_lookup[ra.classroom.room_no].is_dummy_room
+            ]
+            ordered_ra = real_ra + dummy_ra
             order_idx = 1
 
-            for ra in context.room_allocations:
+            for ra in ordered_ra:
                 total_in_room = sum(len(ra.streams[s].students) for s in ["A", "B", "C"])
                 if total_in_room == 0:
                     continue
@@ -351,6 +460,9 @@ class BlueprintService:
             slot_blueprint.version = 1
             slot_blueprint.save()
 
+            # Clean up any orphaned dummy rooms in this session with no blueprint assignments
+            Room.objects.filter(session=session, is_dummy=True, slot_blueprints__isnull=True).delete()
+
         return slot_blueprint
 
     @classmethod
@@ -373,9 +485,7 @@ class BlueprintService:
             )
 
         # Expected eligible engine students
-        expected_students = []
-        for ex in exams:
-            expected_students.extend(get_engine_students(ex))
+        expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         expected_rolls = {
             (getattr(s, "roll_no", None) or getattr(s, "register_no", "")).strip()
@@ -461,7 +571,8 @@ class BlueprintService:
                     room_depts.add(sa.department_code)
                     dept_room_map[sa.department_code].add(rb.room.room_number)
                 if sa.subject_code:
-                    stream_subjects[sa.stream_name].add(sa.subject_code.strip().upper())
+                    key = subject_conflict_key(sa.subject_code, sa.department_code)
+                    stream_subjects[sa.stream_name].add(key)
 
             # Stream capacity check
             stream_cap = math.ceil(rb.capacity / 3) if rb.capacity else (rb.room.benches or 15)
@@ -480,11 +591,34 @@ class BlueprintService:
                     f"{total_room_students} > {rb.capacity}."
                 )
 
-            # Department limit check (<= 4 departments per room)
-            if len(room_depts) > AllocationLimits.MAX_DEPARTMENTS_PER_ROOM:
+            # Department limit check (<= 4 departments per room normally, up to 5 in extreme situations)
+            max_ext = getattr(AllocationLimits, "MAX_DEPARTMENTS_EXTREME", 5)
+            max_norm = getattr(AllocationLimits, "MAX_DEPARTMENTS_PER_ROOM", 4)
+            if len(room_depts) > max_ext:
                 errors.append(
                     f"Room {rb.room.room_number} contains {len(room_depts)} departments "
-                    f"(limit is {AllocationLimits.MAX_DEPARTMENTS_PER_ROOM}): {', '.join(sorted(room_depts))}."
+                    f"(limit is {max_ext}): {', '.join(sorted(room_depts))}."
+                )
+            elif len(room_depts) > max_norm:
+                warnings.append(
+                    f"Room {rb.room.room_number} has {len(room_depts)} departments (extreme situation consolidation): {', '.join(sorted(room_depts))}."
+                )
+
+            # Subject limit check (<= 4 subjects per room normally, up to 5 in extreme situations)
+            room_subjects = set()
+            for s_subjs in stream_subjects.values():
+                room_subjects.update(s_subjs)
+
+            max_subj_ext = getattr(AllocationLimits, "MAX_SUBJECTS_EXTREME", 5)
+            max_subj_norm = getattr(AllocationLimits, "MAX_SUBJECTS_PER_ROOM", 4)
+            if len(room_subjects) > max_subj_ext:
+                errors.append(
+                    f"Room {rb.room.room_number} contains {len(room_subjects)} subjects "
+                    f"(limit is {max_subj_ext}): {', '.join(sorted(room_subjects))}."
+                )
+            elif len(room_subjects) > max_subj_norm:
+                warnings.append(
+                    f"Room {rb.room.room_number} has {len(room_subjects)} subjects (extreme situation consolidation): {', '.join(sorted(room_subjects))}."
                 )
 
             # ── 3. Special Subject Feasibility ──────────────────────────────
@@ -492,6 +626,7 @@ class BlueprintService:
             # would cause immediate horizontal adjacency conflicts on benches!
             overlap_ab = stream_subjects["A"].intersection(stream_subjects["B"])
             overlap_bc = stream_subjects["B"].intersection(stream_subjects["C"])
+            overlap_ac = stream_subjects["A"].intersection(stream_subjects["C"])
             if overlap_ab:
                 errors.append(
                     f"Room {rb.room.room_number} has same subject code in adjacent Streams A and B: "
@@ -502,19 +637,28 @@ class BlueprintService:
                     f"Room {rb.room.room_number} has same subject code in adjacent Streams B and C: "
                     f"{', '.join(sorted(overlap_bc))}."
                 )
-
-            # Check if ABA is used when ABC was possible
-            if rb.pattern == "ABA" and len(room_depts) >= 3:
-                warnings.append(
-                    f"Room {rb.room.room_number} is configured as ABA despite having 3+ departments available."
+            special_subjs_in_room = {
+                subject_conflict_key(sa.subject_code, sa.department_code)
+                for sa in rb.stream_assignments.all()
+                if (sa.subject_category or "").upper() in ("ELECTIVE", "MINOR", "HONOURS")
+            }
+            special_overlap_ac = overlap_ac.intersection(special_subjs_in_room)
+            if special_overlap_ac:
+                errors.append(
+                    f"Room {rb.room.room_number} has same elective/special subject code in Streams A and C: "
+                    f"{', '.join(sorted(special_overlap_ac))}."
                 )
+
+        # Check if there are unassigned dummy placeholder rooms
+        dummy_rooms = [rb.room.room_number for rb in room_blueprints if rb.room.is_dummy_room]
+        if dummy_rooms:
+            names = ", ".join(f"'{name}'" for name in dummy_rooms)
+            warnings.append(
+                f"Placeholder dummy room(s) allocated: {names}. Please assign real classroom name(s) before finalizing."
+            )
 
         # Department scattering metric: sum of (rooms_count - 1) for depts spanning multiple rooms
         dept_scattering = sum(max(0, len(rms) - 1) for rms in dept_room_map.values())
-        if dept_scattering > 8:
-            warnings.append(
-                f"High department scattering detected ({dept_scattering} split instances across rooms)."
-            )
 
         room_utilization = (
             round((total_allocated / total_room_cap) * 100, 1) if total_room_cap > 0 else 0.0
@@ -523,6 +667,21 @@ class BlueprintService:
             warnings.append(
                 f"Low room utilization ({room_utilization}%). Consider consolidating into fewer classrooms."
             )
+
+        # Dynamic room occupancy check (target ~25 to 30 students per room)
+        min_rooms_needed = max(1, (len(expected_rolls) + 44) // 45) if expected_rolls else 1
+        avg_per_room = len(expected_rolls) // min_rooms_needed if min_rooms_needed > 0 else 0
+        dynamic_min = min(AllocationLimits.MIN_ROOM_STUDENTS, avg_per_room) if expected_rolls else 0
+
+        underfilled_rooms = [
+            rb for rb in room_blueprints
+            if rb.total_students > 0 and rb.total_students < dynamic_min
+        ]
+        if len(underfilled_rooms) > 1 or (len(underfilled_rooms) == 1 and rooms_used > min_rooms_needed):
+            for rb in underfilled_rooms:
+                warnings.append(
+                    f"Room {rb.room.room_number} has only {rb.total_students} students (dynamic target minimum is {dynamic_min}–30 students)."
+                )
 
         pattern_summary = ", ".join(f"{k}: {v}" for k, v in sorted(patterns_count.items()))
 
@@ -559,6 +718,20 @@ class BlueprintService:
         return is_valid, errors, warnings, stats
 
     @classmethod
+    def maximize_blueprint_abc_rooms(cls, slot_blueprint: SlotBlueprint) -> SlotBlueprint:
+        """
+        Re-allocates and optimizes the slot blueprint using the ABA-to-ABC pair optimizer
+        to maximize pure ABC room configurations while strictly preserving all capacity,
+        adjacency, and student eligibility constraints.
+        """
+        return cls.allocate_departments_for_slot(
+            session=slot_blueprint.session,
+            exam_date=slot_blueprint.exam_date,
+            shift=slot_blueprint.shift,
+            force_reallocate=True,
+        )
+
+    @classmethod
     def consolidate_slot_assignments(cls, slot_blueprint: SlotBlueprint) -> bool:
         """
         Consolidates any duplicate StreamBlueprintAssignment records in the same room and stream
@@ -568,11 +741,16 @@ class BlueprintService:
         """
         changed = False
         with transaction.atomic():
-            for rb in slot_blueprint.room_blueprints.all():
+            room_blueprints = list(
+                slot_blueprint.room_blueprints.prefetch_related("stream_assignments").all()
+            )
+            for rb in room_blueprints:
                 rb_changed = False
+                all_assignments = list(rb.stream_assignments.all())
                 for stream_name in ["A", "B", "C"]:
-                    assignments = list(
-                        rb.stream_assignments.filter(stream_name=stream_name).order_by("order", "assignment_id")
+                    assignments = sorted(
+                        [sa for sa in all_assignments if sa.stream_name == stream_name],
+                        key=lambda x: (x.order or 0, x.assignment_id or 0),
                     )
                     seen_keys = {}
                     for sa in assignments:
@@ -624,6 +802,16 @@ class BlueprintService:
         elective_map = dict(
             ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name")
         )
+        subj_sem_map = {
+            code.strip().upper(): sem
+            for code, sem in Subject.objects.filter(session=session).values_list("subject_code", "semester")
+            if sem
+        }
+        class_sem_map = {
+            cname.strip().upper(): sem
+            for cname, sem in Class.objects.filter(department__session=session).values_list("class_name", "semester")
+            if sem
+        }
 
         rbs = (
             slot_blueprint.room_blueprints.all()
@@ -646,7 +834,13 @@ class BlueprintService:
                     or ""
                 )
                 main_cls = strip_section_suffix(sa.class_name)
-                sem = get_semester_for_assignment(session, sa.subject_code, sa.class_name)
+                sem = get_semester_for_assignment(
+                    session,
+                    sa.subject_code,
+                    sa.class_name,
+                    subj_sem_map=subj_sem_map,
+                    class_sem_map=class_sem_map,
+                )
                 assign_data = {
                     "assignment_id": sa.assignment_id,
                     "stream_name": sa.stream_name,
@@ -668,6 +862,7 @@ class BlueprintService:
                 "room_blueprint_id": rb.room_blueprint_id,
                 "room_id": rb.room.room_id,
                 "room_number": rb.room.room_number,
+                "is_dummy": rb.room.is_dummy_room,
                 "room_order": rb.room_order,
                 "pattern": rb.pattern,
                 "capacity": rb.capacity,
@@ -799,12 +994,19 @@ class BlueprintService:
             # Run backend validation
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
 
-            if not is_valid and reject_invalid:
+            hard_errors = [
+                e for e in errors
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
+            ]
+
+            if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Proposed edit violated hard constraints and was rejected. Previous valid state preserved.",
                 }
@@ -817,7 +1019,8 @@ class BlueprintService:
             transaction.savepoint_commit(sid)
 
             return {
-                "success": is_valid,
+                "success": True,
+                "is_valid": is_valid,
                 "rejected": False,
                 "errors": errors,
                 "warnings": warnings,
@@ -880,12 +1083,19 @@ class BlueprintService:
 
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
 
-            if not is_valid and reject_invalid:
+            hard_errors = [
+                e for e in errors
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
+            ]
+
+            if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Proposed swap violated hard constraints and was rejected. Previous valid state preserved.",
                 }
@@ -897,7 +1107,8 @@ class BlueprintService:
             transaction.savepoint_commit(sid)
 
             return {
-                "success": is_valid,
+                "success": True,
+                "is_valid": is_valid,
                 "rejected": False,
                 "errors": errors,
                 "warnings": warnings,
@@ -985,9 +1196,7 @@ class BlueprintService:
             exams = cls.get_slot_exams(
                 slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
             )
-            expected_students = []
-            for ex in exams:
-                expected_students.extend(get_engine_students(ex))
+            expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
             target_student = None
             for s in expected_students:
@@ -1291,14 +1500,16 @@ class BlueprintService:
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
             hard_errors = [
                 e for e in errors
-                if "exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower()
+                if ("exceeds" in e.lower() or "overflow" in e.lower() or "capacity" in e.lower() or "adjacent" in e.lower() or "same" in e.lower() or "limit is" in e.lower())
+                and "unassigned placeholder" not in e.lower()
+                and not e.startswith("Placeholder dummy room(s) allocated")
             ]
             if hard_errors and reject_invalid:
                 transaction.savepoint_rollback(sid)
                 return {
                     "success": False,
                     "rejected": True,
-                    "errors": errors,
+                    "errors": hard_errors,
                     "warnings": warnings,
                     "message": "Splitting this group violated seating constraints and was rejected.",
                 }
@@ -1415,6 +1626,191 @@ class BlueprintService:
             }
 
     @classmethod
+    def add_dummy_room_to_blueprint(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        capacity: int = 45,
+    ) -> Dict[str, Any]:
+        """
+        Create and append a new dummy placeholder room to the blueprint.
+        Ensures a unique 'Dummy Room N' name within the session.
+        """
+        with transaction.atomic():
+            session = slot_blueprint.session
+
+            existing_dummy_numbers = []
+            for r in Room.objects.filter(session=session):
+                if r.is_dummy_room:
+                    parts = str(r.room_number).strip().split()
+                    if len(parts) >= 3 and parts[-1].isdigit():
+                        existing_dummy_numbers.append(int(parts[-1]))
+                    elif len(parts) == 2 and parts[1].isdigit():
+                        existing_dummy_numbers.append(int(parts[1]))
+
+            for rb in slot_blueprint.room_blueprints.all():
+                parts = str(rb.room.room_number).strip().split()
+                if len(parts) >= 2 and parts[-1].isdigit():
+                    existing_dummy_numbers.append(int(parts[-1]))
+
+            next_num = max(existing_dummy_numbers, default=0) + 1
+            room_name = f"Dummy Room {next_num}"
+
+            while RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room__room_number=room_name).exists():
+                next_num += 1
+                room_name = f"Dummy Room {next_num}"
+
+            dummy_room, _ = Room.objects.get_or_create(
+                session=session,
+                room_number=room_name,
+                defaults={
+                    "capacity": capacity,
+                    "benches": math.ceil(capacity / 3),
+                    "building": "Unassigned",
+                    "is_dummy": True,
+                },
+            )
+
+            next_order = (slot_blueprint.room_blueprints.aggregate(models.Max("room_order"))["room_order__max"] or 0) + 1
+            rb = RoomBlueprint.objects.create(
+                slot_blueprint=slot_blueprint,
+                room=dummy_room,
+                capacity=dummy_room.capacity,
+                room_order=next_order,
+                pattern="EMPTY",
+                unused_capacity=dummy_room.capacity,
+            )
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+                "added_room_blueprint_id": rb.room_blueprint_id,
+                "added_room_number": dummy_room.room_number,
+            }
+
+    @classmethod
+    def assign_real_room_name(
+        cls,
+        slot_blueprint: SlotBlueprint,
+        room_blueprint_id: int,
+        new_room_number: Optional[str] = None,
+        target_room_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Assigns a real classroom to a dummy room blueprint:
+        - If target_room_id is provided: swaps room_blueprint.room to that existing Room.
+        - If new_room_number is provided: renames the dummy room to new_room_number and clears is_dummy.
+        """
+        with transaction.atomic():
+            rb = RoomBlueprint.objects.select_related("room").get(
+                room_blueprint_id=room_blueprint_id,
+                slot_blueprint=slot_blueprint,
+            )
+            old_room = rb.room
+
+            if target_room_id:
+                target_room = Room.objects.get(
+                    room_id=target_room_id,
+                    session=slot_blueprint.session,
+                )
+                if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=target_room).exclude(room_blueprint_id=room_blueprint_id).exists():
+                    raise BlueprintServiceError(
+                        f"Room '{target_room.room_number}' is already assigned in this blueprint."
+                    )
+                rb.room = target_room
+                rb.capacity = target_room.capacity
+                rb.unused_capacity = max(0, target_room.capacity - rb.total_students)
+                rb.save()
+
+                if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exists():
+                    old_room.delete()
+
+            elif new_room_number:
+                clean_name = str(new_room_number).strip()
+                if not clean_name:
+                    raise BlueprintServiceError("Room name cannot be empty.")
+
+                if clean_name.lower().startswith("dummy room"):
+                    raise BlueprintServiceError("Please provide a real classroom name, not a dummy placeholder.")
+
+                # Check if a room with this name already exists in this session
+                existing = Room.objects.filter(session=slot_blueprint.session, room_number__iexact=clean_name).first()
+                if existing:
+                    if RoomBlueprint.objects.filter(slot_blueprint=slot_blueprint, room=existing).exclude(room_blueprint_id=room_blueprint_id).exists():
+                        raise BlueprintServiceError(
+                            f"Room '{clean_name}' is already assigned to another room card in this blueprint."
+                        )
+                    rb.room = existing
+                    rb.capacity = existing.capacity
+                    rb.unused_capacity = max(0, existing.capacity - rb.total_students)
+                    rb.save()
+                    if old_room.is_dummy_room and old_room != existing and not RoomBlueprint.objects.filter(room=old_room).exists():
+                        old_room.delete()
+                else:
+                    # Rename the current room object if it is only used in this room blueprint
+                    if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exclude(room_blueprint_id=room_blueprint_id).exists():
+                        old_room.room_number = clean_name
+                        old_room.building = "Main Campus" if old_room.building == "Unassigned" else old_room.building
+                        old_room.is_dummy = False
+                        old_room.save()
+                        rb.room = old_room
+                        rb.save()
+                    else:
+                        new_room = Room.objects.create(
+                            session=slot_blueprint.session,
+                            room_number=clean_name,
+                            capacity=rb.capacity or 45,
+                            benches=math.ceil((rb.capacity or 45) / 3),
+                            building="Main Campus",
+                            is_dummy=False,
+                        )
+                        rb.room = new_room
+                        rb.save()
+                        if old_room.is_dummy_room and not RoomBlueprint.objects.filter(room=old_room).exists():
+                            old_room.delete()
+
+            else:
+                raise BlueprintServiceError("Either new_room_number or target_room_id is required.")
+
+            # Invalidate physical seats
+            exams = cls.get_slot_exams(
+                slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
+            )
+            Allocation.objects.filter(exam__in=exams).delete()
+
+            is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
+            slot_blueprint.status = (
+                SlotBlueprint.Status.VALIDATED if is_valid else SlotBlueprint.Status.NEEDS_REVIEW
+            )
+            slot_blueprint.save()
+
+            return {
+                "success": True,
+                "is_valid": is_valid,
+                "errors": errors,
+                "warnings": warnings,
+                "stats": stats,
+                "blueprint_status": slot_blueprint.status,
+                "rooms": cls.serialize_slot_rooms(slot_blueprint),
+            }
+
+    @classmethod
     def remove_room_from_blueprint(
         cls,
         slot_blueprint: SlotBlueprint,
@@ -1465,9 +1861,7 @@ class BlueprintService:
         exams = cls.get_slot_exams(
             slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
         )
-        expected_students = []
-        for ex in exams:
-            expected_students.extend(get_engine_students(ex))
+        expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         allocated_rolls = set()
         for sa in StreamBlueprintAssignment.objects.filter(
@@ -1752,6 +2146,13 @@ class BlueprintService:
         Blocks finalization if any hard constraint fails.
         """
         with transaction.atomic():
+            dummy_rbs = [rb for rb in slot_blueprint.room_blueprints.all() if rb.room.is_dummy_room]
+            if dummy_rbs:
+                names = ", ".join(f"'{rb.room.room_number}'" for rb in dummy_rbs)
+                raise BlueprintValidationError(
+                    f"Blueprint finalization blocked: {len(dummy_rbs)} room(s) ({names}) are unassigned dummy placeholders. Please assign real classroom names before finalizing."
+                )
+
             is_valid, errors, warnings, stats = cls.validate_blueprint(slot_blueprint)
             if not is_valid:
                 raise BlueprintValidationError(
@@ -1797,6 +2198,14 @@ class BlueprintService:
                 f"Cannot generate seats: Blueprint must be FINALIZED first (current status: {slot_blueprint.status})."
             )
 
+        # Pre-seating guard: all rooms must have real physical room names
+        dummy_rbs = [rb for rb in slot_blueprint.room_blueprints.all() if rb.room.is_dummy_room]
+        if dummy_rbs:
+            names = ", ".join(f"'{rb.room.room_number}'" for rb in dummy_rbs)
+            raise BlueprintServiceError(
+                f"Cannot generate physical seats: {len(dummy_rbs)} room(s) ({names}) are unassigned dummy placeholders. Please assign real classroom names before generating physical seats."
+            )
+
 
         exams = cls.get_slot_exams(
             slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
@@ -1805,9 +2214,7 @@ class BlueprintService:
             raise BlueprintServiceError("No examinations found for this slot.")
 
         # Map eligible engine students by roll number
-        slot_students = []
-        for ex in exams:
-            slot_students.extend(get_engine_students(ex))
+        slot_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         student_by_roll = {}
         for s in slot_students:

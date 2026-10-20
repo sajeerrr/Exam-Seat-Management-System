@@ -10,6 +10,7 @@ from exam_allocator.models import (
 )
 
 from exam_allocator.services.engine_adapter import (
+    django_registration_to_engine_student,
     django_room_to_engine_classroom,
     get_engine_students,
 )
@@ -67,7 +68,7 @@ def _get_session_rooms(session):
     return list(rooms)
 
 
-def _get_slot_students(exams):
+def _get_slot_students(exams, session=None):
     """
     Return all registered engine students grouped by:
 
@@ -76,19 +77,42 @@ def _get_slot_students(exams):
     Every exam in the same date/session therefore participates
     in the same allocation problem.
     """
+    if not exams:
+        return defaultdict(list)
+
+    if session is None and exams:
+        session = getattr(exams[0].subject, "session", None)
+
+    elec_map = defaultdict(list)
+    if session:
+        from exam_allocator.models import ElectiveStudentRegistration
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related("elective_subject", "elective_subject__group")
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
 
     slot_students = defaultdict(list)
 
-    for exam in exams:
-
-        students = get_engine_students(exam)
-
-        key = (
-            exam.exam_date,
-            exam.session,
+    registrations = (
+        ExamRegistration.objects.filter(exam__in=exams)
+        .select_related(
+            "student",
+            "student__student_class",
+            "student__student_class__department",
+            "exam",
+            "exam__subject",
         )
+        .order_by("exam_id", "student__roll_number")
+    )
 
-        slot_students[key].extend(students)
+    for registration in registrations:
+        engine_stu = django_registration_to_engine_student(registration, elec_map=elec_map)
+        key = (
+            registration.exam.exam_date,
+            registration.exam.session,
+        )
+        slot_students[key].append(engine_stu)
 
     return slot_students
 
@@ -331,6 +355,44 @@ def save_session_seat_plan(
             adj_c = s_num + dc
             if adj_c < 1 or adj_c > 3:
                 continue
+
+            # Column seating (vertical adjacency dc == 0) within a stream is valid
+            # when horizontally buffered by an adjacent stream with different department/subject
+            if dc == 0:
+                is_buffered = False
+                if s_num in (1, 3):  # Stream A (1) or Stream C (3) buffered by Stream B (2)
+                    b_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 2
+                    ]
+                    if b_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in b_students
+                    ):
+                        is_buffered = True
+                elif s_num == 2:  # Stream B (2) buffered by Stream A (1) or Stream C (3)
+                    a_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 1
+                    ]
+                    c_students = [
+                        s for (r, b, c), s in room_seat_map.items()
+                        if r == r_no and c == 3
+                    ]
+                    buff_a = a_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in a_students
+                    )
+                    buff_c = c_students and not any(
+                        getattr(s, "normalized_subject_code", str(s.subject_code).strip().upper()) == s_code
+                        for s in c_students
+                    )
+                    if buff_a or buff_c:
+                        is_buffered = True
+
+                if is_buffered:
+                    continue
+
             for db in (-1, 0, 1):
                 if dc == 0 and db == 0:
                     continue
@@ -391,7 +453,7 @@ def run_session_allocation(session):
     if not rooms:
         raise SessionAllocationError("This session contains no classrooms.")
 
-    slot_students = _get_slot_students(exams)
+    slot_students = _get_slot_students(exams, session=session)
 
     all_allocations = []
 

@@ -1,9 +1,10 @@
 import math
-from collections import defaultdict
+import re
+from collections import defaultdict, Counter
 from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
-from django.db import transaction
-from django.db.models import Prefetch
+from django.db import transaction, models
+from django.db.models import Prefetch, Case, When, Value
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -26,6 +27,8 @@ from .models import (
     ElectiveGroup,
     ElectiveSubject,
     ElectiveStudentRegistration,
+    SlotBlueprint,
+    RoomBlueprint,
 )
 from .services.allocation_workflow import (
     AllocationWorkflowError,
@@ -56,6 +59,59 @@ from .services.registration_service import (
 
 
 
+
+
+_ROLL_NUM_PATTERN = re.compile(r'^(.*?)(\d+)$')
+
+def format_rolls_for_room(rolls, class_rolls):
+    """
+    Format a list of student roll numbers in a room into clean consecutive ranges,
+    matching official college seating arrangement notices:
+    e.g. '01-08', '10-24', '25-29, 31', 'B22CSA56, 01-08', '1-2, 4-16'
+    """
+    if not rolls:
+        return ""
+
+    matches = [_ROLL_NUM_PATTERN.match(r) for r in class_rolls if _ROLL_NUM_PATTERN.match(r)]
+    dominant_prefix = ""
+    if matches:
+        prefix_counts = Counter(m.group(1) for m in matches)
+        dominant_prefix, count = prefix_counts.most_common(1)[0]
+        if count < len(class_rolls) * 0.35:
+            dominant_prefix = ""
+
+    irregulars = []
+    regular_nums = []
+
+    for r in rolls:
+        m = _ROLL_NUM_PATTERN.match(r)
+        if dominant_prefix and m and m.group(1) == dominant_prefix:
+            regular_nums.append((int(m.group(2)), m.group(2)))
+        elif not dominant_prefix and m and not m.group(1):
+            regular_nums.append((int(m.group(2)), m.group(2)))
+        else:
+            irregulars.append(r)
+
+    regular_nums.sort(key=lambda x: x[0])
+    ranges = []
+    if regular_nums:
+        start_num, start_str = regular_nums[0]
+        prev_num = start_num
+        prev_str = start_str
+        for num, raw_str in regular_nums[1:]:
+            if num == prev_num + 1:
+                prev_num = num
+                prev_str = raw_str
+            else:
+                ranges.append(start_str if start_num == prev_num else f"{start_str}-{prev_str}")
+                start_num = num
+                start_str = raw_str
+                prev_num = num
+                prev_str = raw_str
+        ranges.append(start_str if start_num == prev_num else f"{start_str}-{prev_str}")
+
+    parts = irregulars + ranges
+    return ", ".join(parts)
 
 
 @ensure_csrf_cookie
@@ -107,6 +163,9 @@ def delete_session(request, session_id):
 
             # 1. Allocations — must go before Rooms are deleted
             Allocation.objects.filter(exam_id__in=exam_ids).delete()
+
+            # Slot blueprints & Room blueprints for this session
+            SlotBlueprint.objects.filter(session=session).delete()
 
             # 2. ExamRegistrations
             ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
@@ -380,7 +439,6 @@ def session_allocation_result(request, session_id):
         # Pre-cache elective registrations for fast in-memory resolution
         from exam_allocator.models import ElectiveStudentRegistration
         from exam_allocator.services.engine_adapter import _is_matching_elective_exam
-        from collections import defaultdict
 
         elec_regs = ElectiveStudentRegistration.objects.filter(
             elective_subject__group__session=session
@@ -567,6 +625,110 @@ def session_allocation_result(request, session_id):
 
     all_slot_classes = sorted(list(set(r['class_name'] for r in all_slot_students if r['class_name'])))
 
+    # Build Department / Class Wise Allocations Breakdown
+    dept_class_groups = defaultdict(list)
+    for st in all_slot_students:
+        grp_name = st['class_name'] if st['class_name'] else st['department']
+        group_key = (st['department'], grp_name)
+        dept_class_groups[group_key].append(st)
+
+    PASTEL_COLORS = [
+        "#dbeafe",  # Pastel Blue
+        "#dcfce7",  # Pastel Light Green
+        "#ffe4e6",  # Pastel Rose / Salmon
+        "#cffafe",  # Pastel Sky Blue / Cyan
+        "#ffedd5",  # Pastel Peach / Amber
+        "#f3e8ff",  # Pastel Lavender / Purple
+        "#fef9c3",  # Pastel Soft Yellow
+        "#e0e7ff",  # Pastel Periwinkle
+    ]
+
+    department_allocations = []
+    all_dept_codes = set()
+
+    for (dept_code, class_name), st_list in dept_class_groups.items():
+        all_dept_codes.add(dept_code)
+        all_class_rolls = [s['roll_number'] for s in st_list]
+
+        subjects_map = {}
+        for s in st_list:
+            if s['subject_code'] not in subjects_map:
+                subjects_map[s['subject_code']] = s['subject_name']
+        subjects_list = [{'code': code, 'name': name} for code, name in sorted(subjects_map.items())]
+
+        if subjects_list:
+            subject_display = ", ".join(f"{s['name']} ({s['code']})" if s['code'] else s['name'] for s in subjects_list)
+        else:
+            subject_display = "—"
+
+        # Group students by room
+        room_groups = defaultdict(list)
+        for s in st_list:
+            room_groups[s['room_number']].append(s)
+
+        rooms_breakdown = []
+        for r_num, r_students in room_groups.items():
+            r_students.sort(key=lambda x: (x['bench_number'], x['seat_number']))
+            roll_sorted = sorted(r_students, key=lambda x: x['roll_number'])
+            roll_start = roll_sorted[0]['roll_number'] if roll_sorted else ""
+            roll_end = roll_sorted[-1]['roll_number'] if roll_sorted else ""
+            roll_range_display = f"{roll_start} – {roll_end}" if roll_start != roll_end else roll_start
+
+            room_rolls = [s['roll_number'] for s in r_students]
+            compact_rolls = format_rolls_for_room(room_rolls, all_class_rolls)
+
+            benches_used = sorted(list(set(x['bench_number'] for x in r_students)))
+            if benches_used:
+                if len(benches_used) == 1:
+                    bench_display = f"Bench {benches_used[0]}"
+                elif benches_used[-1] - benches_used[0] == len(benches_used) - 1:
+                    bench_display = f"Benches {benches_used[0]}–{benches_used[-1]}"
+                else:
+                    bench_display = f"Benches {', '.join(str(b) for b in benches_used)}"
+            else:
+                bench_display = ""
+
+            streams_used = sorted(list(set(x['stream_letter'] for x in r_students)))
+            streams_display = f"Stream {', '.join(streams_used)}" if streams_used else ""
+
+            rooms_breakdown.append({
+                'room_number': r_num,
+                'student_count': len(r_students),
+                'compact_rolls': compact_rolls,
+                'roll_start': roll_start,
+                'roll_end': roll_end,
+                'roll_range_display': roll_range_display,
+                'bench_range': bench_display,
+                'stream': streams_display,
+                'students': r_students,
+            })
+
+        rooms_breakdown.sort(key=lambda x: try_int(x['room_number']))
+        st_list_sorted = sorted(st_list, key=lambda x: (x['roll_number'], x['room_number']))
+
+        department_allocations.append({
+            'department_code': dept_code,
+            'branch_name': class_name,
+            'class_name': class_name,
+            'clean_class_name': BlueprintService.strip_section_suffix(class_name) if class_name else dept_code,
+            'subject_display': subject_display,
+            'total_students': len(st_list),
+            'subjects': subjects_list,
+            'rooms_breakdown': rooms_breakdown,
+            'first_room': rooms_breakdown[0] if rooms_breakdown else None,
+            'subsequent_rooms': rooms_breakdown[1:] if len(rooms_breakdown) > 1 else [],
+            'rowspan': len(rooms_breakdown),
+            'rooms_list_str': ", ".join(f"Room {rb['room_number']} ({rb['student_count']})" for rb in rooms_breakdown),
+            'all_students': st_list_sorted,
+        })
+
+    department_allocations.sort(key=lambda x: (x['department_code'], x['class_name']))
+    for idx, d in enumerate(department_allocations):
+        d['color'] = PASTEL_COLORS[idx % len(PASTEL_COLORS)]
+
+    all_dept_list = sorted(list(all_dept_codes))
+    active_view = request.GET.get('view', 'room-cards')
+
     return render(
         request,
         "exam_allocator/session_allocation_result.html",
@@ -581,6 +743,9 @@ def session_allocation_result(request, session_id):
             "all_classes": all_slot_classes if selected_slot else [],
             "total_slot_students": len(all_slot_students) if selected_slot else 0,
             "all_students": all_slot_students if selected_slot else [],
+            "department_allocations": department_allocations,
+            "all_departments": all_dept_list,
+            "active_view": active_view,
             "missing_data_reason": missing_data_reason,
         },
     )
@@ -693,7 +858,9 @@ def blueprint_review(request, session_id):
     has_physical_seats = False
     eligible_students_count = 0
     diagnostic_message = ""
-    all_rooms = list(Room.objects.filter(session=session).order_by("room_number"))
+    all_rooms = list(
+        Room.objects.filter(session=session).order_by("is_dummy", "room_number")
+    )
 
     if selected_slot:
         blueprint = selected_slot.get("blueprint")
@@ -733,15 +900,25 @@ def blueprint_review(request, session_id):
 
         if blueprint:
             BlueprintService.consolidate_slot_assignments(blueprint)
-            from exam_allocator.models import Subject, ElectiveSubject
+            from exam_allocator.models import Subject, ElectiveSubject, Class
             subject_map = dict(Subject.objects.filter(session=session).values_list("subject_code", "subject_name"))
             elective_map = dict(ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name"))
+            subj_sem_map = {
+                code.strip().upper(): sem
+                for code, sem in Subject.objects.filter(session=session).values_list("subject_code", "semester")
+                if sem
+            }
+            class_sem_map = {
+                cname.strip().upper(): sem
+                for cname, sem in Class.objects.filter(department__session=session).values_list("class_name", "semester")
+                if sem
+            }
 
             rbs = (
                 blueprint.room_blueprints.all()
                 .select_related("room")
                 .prefetch_related("stream_assignments")
-                .order_by("room_order")
+                .order_by("room__is_dummy", "room_order", "room__room_number")
             )
             for rb in rbs:
                 assignments_by_stream = {"A": [], "B": [], "C": []}
@@ -752,7 +929,13 @@ def blueprint_review(request, session_id):
                     if not sa.subject_name:
                         sa.subject_name = subject_map.get(sa.subject_code) or elective_map.get(sa.subject_code) or ""
                     sa.main_class_name = BlueprintService.strip_section_suffix(sa.class_name)
-                    sa.semester = BlueprintService.get_semester_for_assignment(session, sa.subject_code, sa.class_name)
+                    sa.semester = BlueprintService.get_semester_for_assignment(
+                        session,
+                        sa.subject_code,
+                        sa.class_name,
+                        subj_sem_map=subj_sem_map,
+                        class_sem_map=class_sem_map,
+                    )
                     assignments_by_stream[sa.stream_name].append(sa)
                     stream_totals[sa.stream_name] += sa.student_count
 
@@ -761,6 +944,7 @@ def blueprint_review(request, session_id):
                     "room_blueprint_id": rb.room_blueprint_id,
                     "room": rb.room,
                     "room_number": rb.room.room_number,
+                    "is_dummy": rb.room.is_dummy_room,
                     "room_order": rb.room_order,
                     "pattern": rb.pattern,
                     "capacity": rb.capacity,
@@ -784,6 +968,8 @@ def blueprint_review(request, session_id):
             assigned_room_ids = set(rb.room_id for rb in blueprint.room_blueprints.all())
             unassigned_rooms = [r for r in all_rooms if r.room_id not in assigned_room_ids]
 
+    has_dummy_rooms = any(r.get("is_dummy") for r in rooms_data)
+
     return render(
         request,
         "exam_allocator/blueprint_review.html",
@@ -794,6 +980,7 @@ def blueprint_review(request, session_id):
             "blueprint": blueprint,
             "rooms_data": rooms_data,
             "has_physical_seats": has_physical_seats,
+            "has_dummy_rooms": has_dummy_rooms,
             "available_rooms": all_rooms,
             "unassigned_rooms": unassigned_rooms,
             "unallocated_students": unallocated_students,
@@ -1333,6 +1520,76 @@ def api_blueprint_room_add(request, session_id):
         return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
 
 
+def api_blueprint_dummy_room_add(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    capacity = int(data.get("capacity", 45))
+
+    if not blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id is required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.add_dummy_room_to_blueprint(
+            slot_blueprint=blueprint,
+            capacity=capacity,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
+def api_blueprint_assign_room_name(request, session_id):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
+
+    import json
+    from exam_allocator.models import SlotBlueprint
+    from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except Exception:
+        data = request.POST
+
+    blueprint_id = data.get("blueprint_id")
+    room_blueprint_id = data.get("room_blueprint_id")
+    new_room_number = data.get("new_room_number")
+    target_room_id = data.get("target_room_id")
+
+    if not blueprint_id or not room_blueprint_id:
+        return JsonResponse({"success": False, "error": "blueprint_id and room_blueprint_id are required."}, status=400)
+
+    blueprint = get_object_or_404(SlotBlueprint, blueprint_id=blueprint_id, session_id=session_id)
+
+    try:
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=blueprint,
+            room_blueprint_id=int(room_blueprint_id),
+            new_room_number=str(new_room_number).strip() if new_room_number else None,
+            target_room_id=int(target_room_id) if target_room_id else None,
+        )
+        return JsonResponse(res)
+    except BlueprintServiceError as exc:
+        return JsonResponse({"success": False, "error": str(exc)}, status=400)
+    except Exception as exc:
+        return JsonResponse({"success": False, "error": f"Internal error: {exc}"}, status=500)
+
+
 def api_blueprint_room_remove(request, session_id):
     if request.method != "POST":
         return JsonResponse({"success": False, "error": "Only POST allowed."}, status=405)
@@ -1705,21 +1962,6 @@ def upload_file(request, session_id):
                         if stats.get("students_count", 0) == 0:
                             raise ValueError("No valid elective records were saved to the database.")
 
-                        warning_count = len(result.issues)
-                        msg = (
-                            f"File: {record.original_filename}\n"
-                            f"Status: Success\n"
-                            f"Departments: {stats.get('departments_count', 0)}\n"
-                            f"Elective Groups: {stats.get('groups_count', 0)}\n"
-                            f"Subjects: {stats.get('subjects_count', 0)}\n"
-                            f"Students: {stats.get('students_count', 0)}\n"
-                            f"Duplicates Skipped: {stats.get('duplicates_count', 0)}\n"
-                            f"Unresolved: {stats.get('unresolved_count', 0)}\n"
-                            f"Warnings: {warning_count}\n"
-                            f"Errors: 0"
-                        )
-                        messages.success(request, msg)
-
                     # -----------------------------------------------------
                     # Mark upload as successfully processed
                     # -----------------------------------------------------
@@ -1745,16 +1987,10 @@ def upload_file(request, session_id):
                             "error_log",
                         ]
                     )
-                    if current_kind == UploadedFile.FileKind.ELECTIVE_LIST:
-                        messages.error(
-                            request,
-                            f"File: {record.original_filename}\nStatus: Failed\nErrors: 1\nDetails: {exc}",
-                        )
-                    else:
-                        messages.error(
-                            request,
-                            f"Import failed for {uploaded.name}: {exc}",
-                        )
+                    messages.error(
+                        request,
+                        f"Import failed for {uploaded.name}: {exc}",
+                    )
                     error_occurred = True
 
             if current_kind != UploadedFile.FileKind.ELECTIVE_LIST and (not error_occurred or len(uploaded_files) > 1):
@@ -1829,6 +2065,26 @@ def review_session(request, session_id):
     students_count = Student.objects.filter(
         student_class__department__session=session
     ).count()
+
+    missing_roll_classes = []
+    missing_roll_count = 0
+    for dept in departments:
+        dept_missing = 0
+        for cls in dept.classes.all():
+            cls_missing = sum(1 for s in cls.students.all() if not s.roll_number or not s.roll_number.strip())
+            cls.missing_roll_count = cls_missing
+            dept_missing += cls_missing
+            if cls_missing > 0:
+                missing_roll_classes.append({
+                    "class_id": cls.class_id,
+                    "class_name": cls.class_name,
+                    "dept_code": dept.department_code,
+                    "dept_name": dept.department_name,
+                    "missing_count": cls_missing,
+                })
+        dept.missing_roll_count = dept_missing
+        missing_roll_count += dept_missing
+
     rooms = Room.objects.filter(session=session).order_by("room_number")
     rooms_count = rooms.count()
 
@@ -1918,6 +2174,8 @@ def review_session(request, session_id):
             "departments": departments,
             "departments_count": departments_count,
             "students_count": students_count,
+            "missing_roll_count": missing_roll_count,
+            "missing_roll_classes": missing_roll_classes,
             "rooms": rooms,
             "rooms_count": rooms_count,
             "timetable_days": timetable_days,
@@ -1940,7 +2198,14 @@ def review_session(request, session_id):
 def api_class_students(request, class_id):
     cls = get_object_or_404(Class, class_id=class_id)
     students = list(
-        cls.students.all().order_by("roll_number").values(
+        cls.students.all()
+        .order_by(
+            models.Case(models.When(roll_number="", then=models.Value(1)), default=models.Value(0)),
+            "roll_number",
+            "admission_no",
+            "student_name",
+        )
+        .values(
             "student_id", "roll_number", "student_name", "admission_no", "uni_reg_no", "gender"
         )
     )
@@ -1963,6 +2228,28 @@ def api_class_students(request, class_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 import json
+from django.db.models import Q
+
+
+def _get_student_stats_payload(cls):
+    dept = cls.department
+    session = dept.session
+    missing_q = Q(roll_number="") | Q(roll_number__isnull=True) | Q(roll_number__regex=r"^\s*$")
+    cls_missing = Student.objects.filter(student_class=cls).filter(missing_q).count()
+    dept_missing = Student.objects.filter(student_class__department=dept).filter(missing_q).count()
+    total_missing = Student.objects.filter(student_class__department__session=session).filter(missing_q).count()
+    cls_students = Student.objects.filter(student_class=cls).count()
+    total_students = Student.objects.filter(student_class__department__session=session).count()
+    return {
+        "class_id": cls.class_id,
+        "department_id": dept.department_id,
+        "class_missing_count": cls_missing,
+        "dept_missing_count": dept_missing,
+        "total_missing_count": total_missing,
+        "class_students_count": cls_students,
+        "total_students_count": total_students,
+    }
+
 
 @require_POST
 def api_edit_student(request, student_id):
@@ -1975,12 +2262,13 @@ def api_edit_student(request, student_id):
         reg = body.get("uni_reg_no", "").strip()
         gender = body.get("gender", "").strip()
         
-        if not roll or not name:
-            return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+        if not name:
+            return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-        # Check uniqueness within class (excluding self)
+        # Check uniqueness within class (excluding self) only if roll number is provided
         if (
-            Student.objects.filter(student_class=student.student_class, roll_number=roll)
+            roll
+            and Student.objects.filter(student_class=student.student_class, roll_number__iexact=roll)
             .exclude(pk=student_id)
             .exists()
         ):
@@ -1992,14 +2280,19 @@ def api_edit_student(request, student_id):
         student.uni_reg_no = reg
         student.gender = gender
         student.save(update_fields=["roll_number", "student_name", "admission_no", "uni_reg_no", "gender"])
-        return JsonResponse({
+        
+        stats = _get_student_stats_payload(student.student_class)
+        res = {
             "success": True, 
+            "student_id": student.student_id,
             "roll_number": student.roll_number, 
             "student_name": student.student_name,
             "admission_no": student.admission_no,
             "uni_reg_no": student.uni_reg_no,
             "gender": student.gender
-        })
+        }
+        res.update(stats)
+        return JsonResponse(res)
     except Exception as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=500)
 
@@ -2083,7 +2376,9 @@ def api_delete_room(request, room_id):
                 {"success": False, "error": "Cannot delete a room that has existing seat allocations."},
                 status=400,
             )
-        room.delete()
+        with transaction.atomic():
+            RoomBlueprint.objects.filter(room=room).delete()
+            room.delete()
         return JsonResponse({"success": True})
     except Exception as exc:
         return JsonResponse({"success": False, "error": str(exc)}, status=500)
@@ -2137,6 +2432,7 @@ def api_clear_timetable(request, session_id):
     with transaction.atomic():
         exam_ids = list(Exam.objects.filter(subject__session=session).values_list("exam_id", flat=True))
         Allocation.objects.filter(exam_id__in=exam_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
         ExamRegistration.objects.filter(exam_id__in=exam_ids).delete()
         ExamTarget.objects.filter(exam_id__in=exam_ids).delete()
         Exam.objects.filter(pk__in=exam_ids).delete()
@@ -2151,6 +2447,7 @@ def api_clear_students(request, session_id):
         class_ids = list(Class.objects.filter(department__session=session).values_list("class_id", flat=True))
         student_ids = list(Student.objects.filter(student_class_id__in=class_ids).values_list("student_id", flat=True))
         Allocation.objects.filter(registration__student_id__in=student_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
         ExamRegistration.objects.filter(student_id__in=student_ids).delete()
         Student.objects.filter(pk__in=student_ids).delete()
         Class.objects.filter(pk__in=class_ids).delete()
@@ -2164,8 +2461,9 @@ def api_clear_rooms(request, session_id):
     session = get_object_or_404(AllocationSession, session_id=session_id)
     with transaction.atomic():
         room_ids = list(Room.objects.filter(session=session).values_list("room_id", flat=True))
-        if Allocation.objects.filter(room_id__in=room_ids).exists():
-            return JsonResponse({"success": False, "error": "Cannot delete rooms because seat allocations exist."}, status=400)
+        Allocation.objects.filter(room_id__in=room_ids).delete()
+        SlotBlueprint.objects.filter(session=session).delete()
+        RoomBlueprint.objects.filter(room_id__in=room_ids).delete()
         Room.objects.filter(pk__in=room_ids).delete()
         UploadedFile.objects.filter(session=session, file_kind=UploadedFile.FileKind.CLASSROOM_LIST).delete()
     return JsonResponse({"success": True})
@@ -2404,12 +2702,16 @@ def api_add_exam(request, session_id):
 @require_POST
 def api_delete_student(request, student_id):
     student = get_object_or_404(Student, student_id=student_id)
+    cls = student.student_class
     with transaction.atomic():
         Allocation.objects.filter(registration__student=student).delete()
         student.exam_registrations.all().delete()
         student.elective_registrations.all().delete()
         student.delete()
-    return JsonResponse({"success": True})
+    stats = _get_student_stats_payload(cls)
+    res = {"success": True}
+    res.update(stats)
+    return JsonResponse(res)
 
 
 @require_POST
@@ -2421,10 +2723,10 @@ def api_add_class_student(request, class_id):
     adm = body.get("admission_no", "").strip()
     reg = body.get("uni_reg_no", "").strip()
     gender = body.get("gender", "").strip()
-    if not roll or not name:
-        return JsonResponse({"success": False, "error": "Roll number and name are required."}, status=400)
+    if not name:
+        return JsonResponse({"success": False, "error": "Student name is required."}, status=400)
 
-    if Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
+    if roll and Student.objects.filter(student_class=cls, roll_number__iexact=roll).exists():
         return JsonResponse({"success": False, "error": f"Student with roll '{roll}' already exists in this class."}, status=400)
 
     student = Student.objects.create(
@@ -2435,7 +2737,8 @@ def api_add_class_student(request, class_id):
         uni_reg_no=reg,
         gender=gender,
     )
-    return JsonResponse({
+    stats = _get_student_stats_payload(cls)
+    res = {
         "success": True,
         "student_id": student.student_id,
         "roll_number": student.roll_number,
@@ -2443,7 +2746,9 @@ def api_add_class_student(request, class_id):
         "admission_no": student.admission_no,
         "uni_reg_no": student.uni_reg_no,
         "gender": student.gender,
-    })
+    }
+    res.update(stats)
+    return JsonResponse(res)
 
 
 @require_POST

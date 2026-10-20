@@ -84,7 +84,7 @@ class Student(models.Model):
     student_class = models.ForeignKey(
         Class, on_delete=models.PROTECT, related_name="students"
     )
-    roll_number = models.CharField(max_length=50)
+    roll_number = models.CharField(max_length=50, blank=True)
     student_name = models.CharField(max_length=150)
     
     admission_no = models.CharField(max_length=50, blank=True)
@@ -96,6 +96,7 @@ class Student(models.Model):
             models.UniqueConstraint(
                 fields=["student_class", "roll_number"],
                 name="unique_roll_number_per_class",
+                condition=~models.Q(roll_number=""),
             )
         ]
 
@@ -164,6 +165,7 @@ class Room(models.Model):
     capacity = models.PositiveIntegerField()
     benches = models.PositiveIntegerField()
     building = models.CharField(max_length=100)
+    is_dummy = models.BooleanField(default=False)
 
     class Meta:
         constraints = [
@@ -172,6 +174,10 @@ class Room(models.Model):
                 name="unique_room_per_session",
             )
         ]
+
+    @property
+    def is_dummy_room(self) -> bool:
+        return bool(self.is_dummy or str(self.room_number).strip().startswith("Dummy Room"))
 
     def __str__(self):
         return self.room_number
@@ -352,7 +358,7 @@ class ElectiveStudentRegistration(models.Model):
         null=True,
         blank=True,
     )
-    roll_number = models.CharField(max_length=50)
+    roll_number = models.CharField(max_length=50, blank=True)
     student_name = models.CharField(max_length=150)
     department = models.CharField(max_length=50, blank=True, default="")
     class_name = models.CharField(max_length=100, blank=True, default="")
@@ -432,7 +438,7 @@ class RoomBlueprint(models.Model):
     )
     room = models.ForeignKey(
         Room,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name="slot_blueprints",
     )
     room_order = models.PositiveIntegerField(default=0)
@@ -443,7 +449,7 @@ class RoomBlueprint(models.Model):
     department_count = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ["room_order", "room__room_number"]
+        ordering = ["room__is_dummy", "room_order", "room__room_number"]
         constraints = [
             models.UniqueConstraint(
                 fields=["slot_blueprint", "room"],

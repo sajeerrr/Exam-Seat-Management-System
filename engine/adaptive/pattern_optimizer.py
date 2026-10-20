@@ -158,8 +158,13 @@ class PatternEvaluator:
             len(left_room.departments) <= 4
             and len(right_room.departments) <= 4
         )
+        subjs_count_valid = (
+            len(left_room.subjects) <= 4
+            and len(right_room.subjects) <= 4
+        )
         valid = (
             depts_valid
+            and subjs_count_valid
             and self._room_subjects_valid(left_room)
             and self._room_subjects_valid(right_room)
             and self._department_fragmentation(context) <= before_fragments
@@ -203,6 +208,17 @@ class PatternEvaluator:
             return False
         if subjects["B"].intersection(subjects["C"]):
             return False
+
+        if len(room.departments) > 1:
+            depts = {
+                stream_name: room.get_stream(stream_name).departments
+                for stream_name in STREAMS
+            }
+            if depts["A"].intersection(depts["B"]):
+                return False
+            if depts["B"].intersection(depts["C"]):
+                return False
+
         return True
 
     def _department_fragmentation(self, context):
@@ -225,6 +241,10 @@ class PatternEvaluator:
             right_column.students,
             left_column.students,
         )
+        if hasattr(left_column, 'invalidate_cache'):
+            left_column.invalidate_cache()
+        if hasattr(right_column, 'invalidate_cache'):
+            right_column.invalidate_cache()
 
 
 class StreamPatternOptimizer:

@@ -98,6 +98,9 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                                 name = str(r[col_map["name"]] or "").replace("\n", " ").strip() if col_map["name"] < len(r) else ""
                                 gender = str(r[col_map["gender"]] or "").strip() if col_map["gender"] < len(r) else ""
 
+                                if not roll:
+                                    issues.append(f"Student '{name}' (Sl {c_sl}): Missing roll number (left blank).")
+
                                 table_students.append(
                                     StudentRecord(
                                         sl_no=c_sl,
@@ -210,6 +213,8 @@ def parse_student_pdf(pdf_path: str) -> StudentExtractionResult:
                     uni_reg_no = lines[i+2]
                     name = lines[i+3]
                     gender = lines[i+4]
+
+                    issues.append(f"Student '{name}' (Sl {sl_no}): Missing roll number (left blank).")
 
                     students.append(
                         StudentRecord(

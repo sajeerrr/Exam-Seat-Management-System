@@ -27,6 +27,34 @@
         flex-wrap: wrap;
         gap: 12px;
     }
+    .btn-top-nav {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 13px;
+        background: #ffffff;
+        color: var(--text-primary);
+        border: 1px solid rgba(203, 213, 225, 0.85);
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-decoration: none;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: all .2s ease;
+    }
+    .btn-top-nav:hover {
+        background: #f8fafc;
+        border-color: var(--accent-light);
+        color: var(--accent);
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+        transform: translateY(-1px);
+    }
+    .compact-metric-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #6366f1;
+    }
     .nav-breadcrumb {
         display: flex;
         align-items: center;
@@ -41,72 +69,90 @@
 
     /* SLOT SELECTOR */
     .slot-bar {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: var(--radius);
-        padding: 12px 18px;
-        margin-bottom: 20px;
+        padding: 10px 16px;
+        margin-bottom: 18px;
         display: flex;
         align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
+        gap: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
     .slot-lbl {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
         display: flex;
         align-items: center;
         gap: 6px;
     }
+    .slot-pills-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        flex: 1;
+    }
     .slot-pill {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 14px;
+        gap: 7px;
+        padding: 5px 12px;
         border-radius: 20px;
-        background: rgba(99,102,241,0.05);
-        border: 1px solid rgba(99,102,241,0.15);
-        color: var(--text-secondary);
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #475569;
         font-size: 12px;
         font-weight: 600;
         text-decoration: none;
-        transition: all 0.2s;
+        transition: all 0.15s ease;
     }
     .slot-pill:hover {
-        background: rgba(99,102,241,0.12);
-        border-color: rgba(99,102,241,0.3);
-        color: var(--text-primary);
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #0f172a;
     }
     .slot-pill.active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: white;
-        box-shadow: 0 4px 12px var(--accent-glow);
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
     }
-    .slot-pill-badge {
-        font-size: 10px;
-        font-weight: 700;
-        padding: 1px 6px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.15);
+    .slot-status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
     }
-    .slot-pill.active .slot-pill-badge {
-        background: rgba(0, 0, 0, 0.25);
+    .dot-SEATS_GENERATED { background: #10b981; }
+    .dot-FINALIZED { background: #6366f1; }
+    .dot-VALIDATED, .dot-READY_FOR_REVIEW { background: #06b6d4; }
+    .dot-DRAFT, .dot-NEEDS_REVIEW { background: #f59e0b; }
+    .dot-INVALID, .dot-REGEN_NEEDED { background: #ef4444; }
+    .dot-NOT_ALLOCATED { background: #94a3b8; }
+    .slot-pill.active .slot-status-dot {
+        border: 1.5px solid #ffffff;
+        box-shadow: 0 0 4px rgba(255, 255, 255, 0.6);
     }
 
     /* ACTION BAR */
     .action-bar {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: var(--radius);
-        padding: 16px 20px;
+        padding: 14px 20px;
         margin-bottom: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
         gap: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
     }
     .stage-status-group {
         display: flex;
@@ -114,10 +160,16 @@
         gap: 12px;
         flex-wrap: wrap;
     }
+    .slot-title-text {
+        font-weight: 800;
+        font-size: 16px;
+        color: #0f172a;
+        letter-spacing: -0.2px;
+    }
     .stage-badge {
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 700;
-        padding: 4px 12px;
+        padding: 4px 10px;
         border-radius: 20px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -129,58 +181,74 @@
     .stage-READY_FOR_REVIEW { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
     .stage-VALIDATED { background: #d1fae5; color: #047857; border: 1px solid #6ee7b7; }
     .stage-FINALIZED { background: #e0e7ff; color: #3730a3; border: 1px solid #a5b4fc; }
-    .stage-SEATS_GENERATED { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+    .stage-SEATS_GENERATED { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
     .stage-REGEN_NEEDED { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
 
     .eligible-tag {
         font-size: 12px;
         font-weight: 600;
-        color: var(--text-secondary);
-        background: rgba(255, 255, 255, 0.05);
+        color: #64748b;
+        background: #f8fafc;
         padding: 4px 10px;
         border-radius: 6px;
-        border: 1px solid var(--border);
+        border: 1px solid #e2e8f0;
     }
 
     .btn-group {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         flex-wrap: wrap;
     }
     .action-btn {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 8px 16px;
+        padding: 7px 14px;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.15s ease;
         border: 1px solid transparent;
         text-decoration: none;
+        white-space: nowrap;
     }
     .action-btn:disabled {
-        opacity: 0.4;
+        opacity: 0.45;
         cursor: not-allowed;
     }
+    .btn-primary-cta {
+        background: #4f46e5 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        padding: 8px 18px !important;
+        font-size: 13px !important;
+        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.28) !important;
+        border: 1px solid #4f46e5 !important;
+    }
+    .btn-primary-cta:hover:not(:disabled) {
+        background: #4338ca !important;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+        transform: translateY(-1px);
+    }
     .btn-primary-action {
-        background: var(--accent);
+        background: #4f46e5;
         color: white;
     }
     .btn-primary-action:hover:not(:disabled) {
-        background: var(--accent-light);
-        box-shadow: 0 4px 12px var(--accent-glow);
+        background: #4338ca;
+        box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
     }
     .btn-secondary-action {
-        background: rgba(255, 255, 255, 0.05);
-        border-color: var(--border);
-        color: var(--text-primary);
+        background: #ffffff;
+        border-color: #cbd5e1;
+        color: #334155;
     }
     .btn-secondary-action:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: var(--border-hover);
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
     }
     .btn-success-action {
         background: #059669;
@@ -189,49 +257,230 @@
     .btn-success-action:hover:not(:disabled) {
         background: #10b981;
     }
+    .btn-warning-action {
+        background: #fffbeb;
+        border-color: #fde68a;
+        color: #b45309;
+        font-weight: 700;
+    }
+    .btn-warning-action:hover:not(:disabled) {
+        background: #fef3c7;
+        border-color: #fcd34d;
+        color: #92400e;
+    }
     .btn-danger-action {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: rgba(239, 68, 68, 0.3);
-        color: #fca5a5;
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #b91c1c;
     }
     .btn-danger-action:hover:not(:disabled) {
-        background: rgba(239, 68, 68, 0.2);
+        background: #fee2e2;
     }
 
-    /* STATS CHIPS */
-    .stats-panel {
+    /* ACTION DROPDOWN */
+    .action-dropdown-wrap {
+        position: relative;
+        display: inline-block;
+    }
+    .action-dropdown-menu {
+        display: none;
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        min-width: 210px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
+        padding: 6px;
+        z-index: 1000;
+        animation: fadeInMenu 0.12s ease-out;
+    }
+    .action-dropdown-menu.show {
+        display: block;
+    }
+    @keyframes fadeInMenu {
+        from { opacity: 0; transform: translateY(-3px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .action-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        color: #334155;
+        font-family: inherit;
+        font-size: 12.5px;
+        font-weight: 500;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.15s ease;
+    }
+    .action-menu-item:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+    .action-menu-item.danger {
+        color: #dc2626;
+    }
+    .action-menu-item.danger:hover {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+    .action-menu-divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 4px 0;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       INDIVIDUAL METRIC WINDOWS / CARDS
+       ══════════════════════════════════════════════════════════════════════ */
+    .metrics-cards-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
         margin-bottom: 20px;
     }
-    .stat-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
+
+    .metric-card-window {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: var(--radius-sm);
-        padding: 12px 14px;
-        text-align: center;
+        padding: 10px 16px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .stat-val {
-        font-size: 18px;
+
+    .metric-card-window:hover {
+        border-color: rgba(99, 102, 241, 0.35);
+        box-shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.1), 0 2px 4px rgba(15, 23, 42, 0.03);
+        transform: translateY(-1px);
+    }
+
+    .metric-window-body {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #475569;
+        flex-wrap: wrap;
+    }
+
+    .metric-window-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .metric-window-icon.icon-students {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+    }
+
+    .metric-window-icon.icon-rooms {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    .metric-window-icon.icon-util {
+        background: rgba(139, 92, 246, 0.1);
+        color: #7c3aed;
+    }
+
+    .metric-window-label {
         font-weight: 700;
-        color: var(--text-primary);
-    }
-    .stat-lbl {
-        font-size: 11px;
-        font-weight: 600;
+        color: #64748b;
+        font-size: 11.5px;
         text-transform: uppercase;
-        color: var(--text-muted);
-        margin-top: 4px;
+        letter-spacing: 0.4px;
+    }
+
+    .metric-window-val {
+        font-size: 15px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+
+    .metric-window-sub {
+        font-size: 12.5px;
+        color: #64748b;
+    }
+
+    .metric-window-right {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 992px) {
+        .metrics-cards-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+    }
+
+    .compact-progress-track {
+        width: 65px;
+        height: 7px;
+        background: #f1f5f9;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+        display: inline-block;
+        vertical-align: middle;
+        margin: 0 2px;
+    }
+    .metric-progress-fill {
+        height: 100%;
+        background: #4f46e5;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    .metric-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+    .pill-success {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .pill-warning {
+        background: #fffbeb;
+        color: #b45309;
+        border: 1px solid #fde68a;
+    }
+    .metric-info-text {
+        font-size: 12px;
+        color: #64748b;
     }
 
     /* ALERTS */
     .alert-box {
-        padding: 12px 16px;
+        padding: 10px 14px;
         border-radius: var(--radius-sm);
-        margin-bottom: 20px;
+        margin-bottom: 12px;
         font-size: 13px;
-        line-height: 1.5;
+        line-height: 1.4;
     }
     .alert-danger {
         background: #fef2f2;
@@ -247,6 +496,12 @@
         background: #ecfdf5;
         border: 1px solid #a7f3d0;
         color: #065f46;
+        padding: 6px 14px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 6px;
     }
 
     /* ROOM ALLOCATION BOARD */
@@ -311,6 +566,32 @@
         color: #7e22ce;
         border-color: #e9d5ff;
     }
+    .btn-assign-room {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 6px;
+        border: 1px solid #d97706;
+        background: #fffbeb;
+        color: #b45309;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        line-height: 1.3;
+    }
+    .btn-assign-room:hover {
+        background: #d97706;
+        color: #ffffff;
+        border-color: #b45309;
+        box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+        transform: translateY(-1px);
+    }
+    .btn-assign-room:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(217, 119, 6, 0.2);
+    }
     .room-meta-right {
         display: flex;
         align-items: center;
@@ -366,7 +647,7 @@
     }
     .stream-column {
         background: #ffffff;
-        border: 1px dashed #cbd5e1;
+        border: 1px solid #e2e8f0;
         border-radius: var(--radius-sm);
         padding: 12px;
         min-height: 120px;
@@ -375,10 +656,22 @@
         transition: all 0.2s ease;
         position: relative;
     }
+    .stream-column[data-stream="A"] {
+        border-top: 3.5px solid #2563eb;
+        background: linear-gradient(180deg, #f8faff 0%, #ffffff 45px);
+    }
+    .stream-column[data-stream="B"] {
+        border-top: 3.5px solid #059669;
+        background: linear-gradient(180deg, #f6fdf9 0%, #ffffff 45px);
+    }
+    .stream-column[data-stream="C"] {
+        border-top: 3.5px solid #7c3aed;
+        background: linear-gradient(180deg, #faf7ff 0%, #ffffff 45px);
+    }
     .stream-column.drop-target-active {
         border-color: var(--accent);
         border-style: solid;
-        background: #eef2ff;
+        background: #eef2ff !important;
         box-shadow: 0 0 12px rgba(99, 102, 241, 0.25) inset;
     }
     .stream-col-header {
@@ -389,8 +682,37 @@
         font-size: 12px;
         font-weight: 700;
         color: #475569;
+    }
+    .stream-badge {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 6px;
+        letter-spacing: 0.4px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .stream-badge-a {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+    .stream-badge-b {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+    .stream-badge-c {
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+    }
+    .stream-sub-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #64748b;
     }
     .stream-col-header .stream-name {
         color: #1e1b4b;
@@ -471,6 +793,26 @@
         cursor: grab;
         opacity: 0.8;
     }
+    .group-dept-badge {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 4px;
+        letter-spacing: 0.3px;
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1px solid #cbd5e1;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .dept-me { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+    .dept-cse, .dept-cs { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .dept-ce { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .dept-eee { background: #fef9c3; color: #854d0e; border-color: #fef08a; }
+    .dept-ece, .dept-ec { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+    .dept-b-arch, .dept-barch { background: #fae8ff; color: #86198f; border-color: #f5d0fe; }
+    .dept-it { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+    .dept-bt { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
     .group-dept-class {
         font-size: 12.5px;
         font-weight: 700;
@@ -715,6 +1057,9 @@
         z-index: 1000;
         backdrop-filter: blur(4px);
     }
+    .modal-overlay.active {
+        display: flex !important;
+    }
     .modal-card {
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -732,6 +1077,57 @@
     }
     .modal-title { font-size: 16px; font-weight: 700; }
     .close-btn { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+    .btn-modal-danger {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+        box-shadow: 0 3px 12px rgba(239, 68, 68, .25);
+    }
+    .btn-modal-danger:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 18px rgba(239, 68, 68, .4);
+    }
+    .btn-modal-primary {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-light));
+        border: none;
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+        box-shadow: 0 3px 12px rgba(99, 102, 241, .25);
+    }
+    .btn-modal-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 18px rgba(99, 102, 241, .4);
+    }
+    .btn-modal-secondary {
+        padding: 9px 18px;
+        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all .2s;
+    }
+    .btn-modal-secondary:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #0f172a;
+    }
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
     .form-control {
@@ -743,6 +1139,31 @@
         color: var(--text-primary);
         font-family: inherit;
         font-size: 13px;
+    }
+    .add-dummy-room-tab-card {
+        border: 2px dashed rgba(99, 102, 241, 0.45);
+        border-radius: var(--radius);
+        padding: 18px 24px;
+        text-align: center;
+        cursor: pointer;
+        background: rgba(99, 102, 241, 0.04);
+        transition: all 0.2s ease;
+        margin-top: 18px;
+        margin-bottom: 24px;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+    .add-dummy-room-tab-card:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: #6366f1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+    }
+    .add-dummy-room-tab-card:active {
+        transform: translateY(0);
     }
 
     /* ALLOCATION LOADING ANIMATION */
@@ -854,26 +1275,32 @@
             <span class="sep">/</span>
             <span class="current">Department Blueprint</span>
         </div>
-        <div>
-            {% if has_physical_seats and selected_slot %}
-            <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="action-btn btn-secondary-action">
-                🪑 View Seating Results →
+        <div class="top-nav-actions" style="display: flex; align-items: center; gap: 8px;">
+            <a href="{% url 'exam_allocator:session_list' %}" class="btn-top-nav" title="All Sessions">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>All Sessions</span>
             </a>
-            {% endif %}
+            <a href="{% url 'exam_allocator:review_session' session.session_id %}" class="btn-top-nav" title="Review Session Data">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Data Page</span>
+            </a>
         </div>
     </nav>
 
     <!-- EXAM SLOT SELECTOR -->
     {% if slots %}
     <div class="slot-bar">
-        <span class="slot-lbl">📅 Select Exam Slot:</span>
-        {% for slot in slots %}
-        <a href="?date={{ slot.date|date:'Y-m-d' }}&shift={{ slot.shift }}"
-           class="slot-pill {% if selected_slot and selected_slot.date == slot.date and selected_slot.shift == slot.shift %}active{% endif %}">
-            <span>{{ slot.date|date:"d M Y" }} ({{ slot.shift }})</span>
-            <span class="slot-pill-badge">{{ slot.status_label }}</span>
-        </a>
-        {% endfor %}
+        <span class="slot-lbl">Exam Slots:</span>
+        <div class="slot-pills-wrap">
+            {% for slot in slots %}
+            <a href="?date={{ slot.date|date:'Y-m-d' }}&shift={{ slot.shift }}"
+               class="slot-pill {% if selected_slot and selected_slot.date == slot.date and selected_slot.shift == slot.shift %}active{% endif %}"
+               title="{{ slot.date|date:'d M Y' }} ({{ slot.shift }}) — {{ slot.status_label }} ({{ slot.eligible_count }} students)">
+                <span class="slot-status-dot dot-{{ slot.status_key }}"></span>
+                <span>{{ slot.date|date:"d M" }} · {{ slot.shift }}</span>
+            </a>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 
@@ -886,62 +1313,91 @@
     <!-- ACTION / STATUS BAR -->
     <div class="action-bar">
         <div class="stage-status-group">
-            <span style="font-weight: 700; font-size: 15px;">
-                {{ selected_slot.date|date:"d-m-Y" }} ({{ selected_slot.shift }})
+            <span class="slot-title-text">
+                {{ selected_slot.date|date:"d M Y" }} · {% if selected_slot.shift == 'AN' %}Afternoon (AN){% else %}Forenoon (FN){% endif %}
             </span>
             <span class="stage-badge stage-{{ selected_slot.status_key }}">
-                {{ selected_slot.status_label }}{% if blueprint %} (v{{ blueprint.version }}){% endif %}
+                {{ selected_slot.status_label }}
             </span>
             <span class="eligible-tag">
-                👥 {{ eligible_students_count }} Eligible Students
+                {{ eligible_students_count }} Students
             </span>
+            {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings and not has_dummy_rooms %}
+            <span class="metric-pill pill-success" style="font-weight: 700; padding: 3px 8px; font-size: 11px;" title="All allocation constraints satisfied">
+                ✓ Valid Blueprint
+            </span>
+            {% endif %}
         </div>
 
         <div class="btn-group">
             {% if not blueprint %}
-            <button class="action-btn btn-primary-action btn-allocate-slot-trigger" id="btn-allocate-slot" onclick="allocateDepartments(false)">
-                Allocate Departments for This Slot
-            </button>
+                <button class="action-btn btn-primary-cta btn-allocate-slot-trigger" id="btn-allocate-slot" onclick="allocateDepartments(false)">
+                    Auto-Allocate Departments
+                </button>
             {% else %}
-                <button class="action-btn btn-secondary-action" onclick="validateBlueprint()">
-                    ✓ Validate Blueprint
-                </button>
-                <button class="action-btn btn-secondary-action" onclick="allocateDepartments(true)" title="Recalculate blueprint from scratch">
-                    🔄 Recalculate Allocation
-                </button>
-                <button class="action-btn btn-danger-action" onclick="resetBlueprint()" title="Reset and delete blueprint for this slot">
-                    🗑️ Reset and Reallocate
-                </button>
-                <button class="action-btn btn-secondary-action" onclick="openUnallocatedModal()" title="View and allocate unallocated or deleted students">
-                    📋 Allocate Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
-                </button>
-                <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
-                    ➕ Add Classroom
-                </button>
-
-                {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
-                <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()">
-                    🔓 Edit / Unfinalize
-                </button>
+                {% if blueprint.status == "SEATS_GENERATED" %}
+                    <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
+                       class="action-btn btn-primary-cta">
+                        View Seating Plan →
+                    </a>
+                    <button class="action-btn btn-secondary-action" onclick="generateSeats()" title="Regenerate seating assignments">
+                        Regenerate Seats
+                    </button>
+                    <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()" title="Unlock blueprint to edit room assignments">
+                        Edit Blueprint
+                    </button>
+                {% elif blueprint.status == "FINALIZED" %}
+                    <button class="action-btn btn-primary-cta" onclick="generateSeats()"
+                            {% if has_dummy_rooms %}disabled title="Assign real classroom names to all dummy rooms before generating seats"{% endif %}>
+                        Generate Seats
+                    </button>
+                    <button class="action-btn btn-secondary-action" onclick="unfinalizeBlueprint()" title="Unlock blueprint to edit room assignments">
+                        Edit Blueprint
+                    </button>
                 {% else %}
-                <button class="action-btn btn-success-action" onclick="finalizeBlueprint()"
-                        {% if blueprint.validation_errors %}disabled title="Fix errors before finalizing"{% endif %}>
-                    🔒 Finalize Blueprint
-                </button>
+                    <button class="action-btn btn-success-action" onclick="finalizeBlueprint()"
+                            {% if blueprint.validation_errors or has_dummy_rooms %}disabled title="{% if has_dummy_rooms %}Assign real classroom names to all dummy placeholder room(s) before finalizing{% else %}Fix errors before finalizing{% endif %}"{% endif %}>
+                        Finalize Blueprint
+                    </button>
+                    <button type="button" class="action-btn btn-secondary-action btn-allocate-slot-trigger" onclick="allocateDepartments(true)" title="Recalculate department blueprint for this slot">
+                        Recalculate Blueprint
+                    </button>
+                    <button class="action-btn btn-secondary-action" onclick="openAddRoomModal()" title="Add available classroom to blueprint">
+                        + Add Room
+                    </button>
+                    {% if blueprint.unallocated_count > 0 %}
+                    <button class="action-btn btn-warning-action" onclick="openUnallocatedModal()" title="Place unallocated students">
+                        ⚠️ Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
+                    </button>
+                    {% endif %}
                 {% endif %}
 
-                {% if blueprint.status == "FINALIZED" or blueprint.status == "SEATS_GENERATED" %}
-                <button class="action-btn btn-primary-action" onclick="generateSeats()">
-                    🪑 {% if blueprint.status == "SEATS_GENERATED" %}Regenerate Seats{% else %}Generate Seats for This Slot{% endif %}
-                </button>
-                {% endif %}
-
-                {% if has_physical_seats %}
-                <a href="{% url 'exam_allocator:session_allocation_result' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}"
-                   class="action-btn btn-secondary-action" style="background: rgba(99,102,241,0.15); color: #a5b4fc;">
-                    📋 View Seating Plan →
-                </a>
-                {% endif %}
+                <!-- MORE ACTIONS DROPDOWN -->
+                <div class="action-dropdown-wrap" id="actionDropdownWrap">
+                    <button type="button" class="action-btn btn-secondary-action" onclick="toggleActionDropdown(event)" title="More Actions">
+                        <span>⋮ More</span>
+                    </button>
+                    <div class="action-dropdown-menu" id="actionDropdownMenu">
+                        <button type="button" class="action-menu-item" onclick="validateBlueprint()">
+                            <span>✓</span> Re-validate Rules
+                        </button>
+                        <button type="button" class="action-menu-item" onclick="openAddRoomModal()">
+                            Add Classroom
+                        </button>
+                        <button type="button" class="action-menu-item" onclick="addDummyRoom()">
+                            + Add Placeholder Room
+                        </button>
+                        {% if blueprint.unallocated_count > 0 %}
+                        <button type="button" class="action-menu-item" onclick="openUnallocatedModal()">
+                            Unallocated (<span id="unallocatedDropdownCount">{{ blueprint.unallocated_count }}</span>)
+                        </button>
+                        {% endif %}
+                        <div class="action-menu-divider"></div>
+                        <button type="button" class="action-menu-item danger" onclick="resetBlueprint()">
+                            Reset Slot Blueprint
+                        </button>
+                    </div>
+                </div>
             {% endif %}
         </div>
     </div>
@@ -958,7 +1414,12 @@
     <div id="validationAlertsContainer">
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
-        <strong>⚠️ Blueprint Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+            <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+            <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
+                Auto-Resolve &amp; Recalculate
+            </button>
+        </div>
         <ul style="margin: 6px 0 0 18px; padding: 0;">
             {% for err in blueprint.validation_errors %}
             <li>{{ err }}</li>
@@ -967,60 +1428,86 @@
     </div>
     {% endif %}
 
-    {% if blueprint and blueprint.validation_warnings %}
-    <div class="alert-box alert-warning">
-        <strong>ℹ️ Optimization Warnings:</strong>
-        <ul style="margin: 6px 0 0 18px; padding: 0;">
-            {% for w in blueprint.validation_warnings %}
-            <li>{{ w }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-    {% if blueprint and not blueprint.validation_errors and not blueprint.validation_warnings %}
-    <div class="alert-box alert-success">
-        ✓ <strong>Blueprint is valid!</strong> All room, stream, capacity, and subject separation constraints are satisfied.
-    </div>
-    {% endif %}
-    </div>
-
-    <!-- METRICS PANEL -->
-    {% if blueprint %}
-    <div class="stats-panel">
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.total_eligible_students }}</div>
-            <div class="stat-lbl">Eligible Students</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-val" style="color: #34d399;">{{ blueprint.total_allocated_students }}</div>
-            <div class="stat-lbl">Allocated Students</div>
-        </div>
-        <div class="stat-card" style="cursor: pointer;" onclick="openUnallocatedModal()" title="Click to view and allocate unallocated students">
-            <div class="stat-val" id="statUnallocatedCount" style="color: {% if blueprint.unallocated_count %}#f87171{% else %}#94a3b8{% endif %};">
-                {{ blueprint.unallocated_count }}
+    {% if blueprint.validation_warnings or has_dummy_rooms %}
+    <div class="alert-box alert-warning" id="blueprintWarningBox">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+                <div>
+                    <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                    <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                        {% for w in blueprint.validation_warnings %}
+                        <li>{{ w }}</li>
+                        {% empty %}
+                        {% if has_dummy_rooms %}
+                        <li>Placeholder dummy room(s) allocated. Please click 'Assign Real Room Name' on the room card(s) to assign real classroom name(s) before finalizing.</li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
-            <div class="stat-lbl">Unallocated 📋</div>
+            <button type="button" onclick="this.closest('.alert-box').style.display='none'" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #92400e; padding: 2px 6px; line-height: 1;" title="Dismiss warning">✕</button>
         </div>
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.rooms_used }}</div>
-            <div class="stat-lbl">Rooms Used</div>
+    </div>
+    {% endif %}
+
+    </div>
+
+    <!-- INDIVIDUAL METRIC WINDOWS / CARDS -->
+    {% if blueprint %}
+    <div class="metrics-cards-grid">
+        <!-- 1. STUDENTS WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-students">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+                <span class="metric-window-label">Students:</span>
+                <strong class="metric-window-val" id="metricAllocatedVal">{{ blueprint.total_allocated_students }}</strong>
+                <span class="metric-window-sub">/ {{ blueprint.total_eligible_students }}</span>
+            </div>
+            <div class="metric-window-right">
+                {% if blueprint.unallocated_count > 0 %}
+                <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer;" title="Click to place unallocated students">
+                    ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
+                </span>
+                {% else %}
+                <span class="metric-pill pill-success">✓ 100% Placed</span>
+                <span style="display:none;" id="statUnallocatedCount">0</span>
+                {% endif %}
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.total_room_capacity }}</div>
-            <div class="stat-lbl">Total Capacity</div>
+
+        <!-- 2. ROOMS WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-rooms">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </span>
+                <span class="metric-window-label">Classrooms:</span>
+                <strong class="metric-window-val" id="metricRoomsUsedVal">{{ blueprint.rooms_used }}</strong>
+                <span class="metric-window-sub">Active Rooms</span>
+            </div>
+            <div class="metric-window-right">
+                <span class="metric-window-sub">({{ blueprint.total_room_capacity }} seats)</span>
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.remaining_capacity }}</div>
-            <div class="stat-lbl">Remaining Cap</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.room_utilization }}%</div>
-            <div class="stat-lbl">Utilization</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-val">{{ blueprint.department_scattering }}</div>
-            <div class="stat-lbl">Dept Scattering</div>
+
+        <!-- 3. UTILIZATION WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-util">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </span>
+                <span class="metric-window-label">Utilization:</span>
+                <strong class="metric-window-val" id="metricUtilVal">{{ blueprint.room_utilization }}%</strong>
+                <div class="compact-progress-track" title="{{ blueprint.room_utilization }}% utilized">
+                    <div class="metric-progress-fill" style="width: {{ blueprint.room_utilization }}%;"></div>
+                </div>
+            </div>
+            <div class="metric-window-right">
+                <span class="metric-window-sub">(<strong id="metricRemainingCapVal" style="color: #475569;">{{ blueprint.remaining_capacity }}</strong> seats free)</span>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -1032,7 +1519,13 @@
         <div class="room-card" id="roomCard-{{ r.room_blueprint_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-room-id="{{ r.room.room_id }}">
             <div class="room-card-header">
                 <div class="room-meta-left">
-                    <span class="room-title">🏛️ Room {{ r.room_number }}</span>
+                    <span class="room-title">Room {{ r.room_number }}</span>
+                    {% if r.is_dummy %}
+                    <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+                    <button type="button" class="btn-assign-room" onclick="openAssignRoomNameModal({{ r.room_blueprint_id }}, '{{ r.room_number }}')" title="Assign a real classroom name to this dummy room">
+                        Assign Real Room Name
+                    </button>
+                    {% endif %}
                     <span class="room-pattern-badge pattern-{{ r.pattern }}" id="patternBadge-{{ r.room_blueprint_id }}">
                         {{ r.pattern }}
                     </span>
@@ -1049,7 +1542,7 @@
                     </span>
                     {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                     <button type="button" class="btn-sm-action" onclick="openCapacityModal({{ r.room.room_id }}, '{{ r.room_number }}', {{ r.capacity }})" title="Edit Room Capacity">
-                        ✏️ Edit Cap
+                        Edit Cap
                     </button>
                     <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint({{ r.room.room_id }}, '{{ r.room_number }}')" title="Remove Classroom">
                         ✕
@@ -1062,7 +1555,10 @@
                 <!-- STREAM A -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="A">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream A</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-a">Stream A</span>
+                            <span class="stream-sub-label">(Col 1 &amp; 4)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_a_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-A">
                             {{ r.stream_a_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1083,12 +1579,13 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
-                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                    <span class="group-badge-count" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" style="cursor: pointer;" title="Click to view student list">{{ a.student_count }} st</span>
                                 </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
@@ -1101,21 +1598,21 @@
                                 <span></span>
                                 {% endif %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'A', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'A')" title="Split group into two">
-                                        ✂️ Split
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
-                                        👥 {{ a.student_count }}
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
-                                        ＋
+                                        Split
                                     </button>
                                     <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
-                                        🗑️
+                                        ✕
                                     </button>
+                                    {% else %}
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View student roll numbers">
+                                        Students
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -1128,7 +1625,10 @@
                 <!-- STREAM B -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="B">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream B</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-b">Stream B</span>
+                            <span class="stream-sub-label">(Col 2 &amp; 5)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_b_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-B">
                             {{ r.stream_b_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1149,12 +1649,13 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
-                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                    <span class="group-badge-count" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" style="cursor: pointer;" title="Click to view student list">{{ a.student_count }} st</span>
                                 </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
@@ -1167,21 +1668,21 @@
                                 <span></span>
                                 {% endif %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'B', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'B')" title="Split group into two">
-                                        ✂️ Split
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
-                                        👥 {{ a.student_count }}
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
-                                        ＋
+                                        Split
                                     </button>
                                     <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
-                                        🗑️
+                                        ✕
                                     </button>
+                                    {% else %}
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View student roll numbers">
+                                        Students
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -1194,7 +1695,10 @@
                 <!-- STREAM C -->
                 <div class="stream-column" data-room-id="{{ r.room.room_id }}" data-room-bp-id="{{ r.room_blueprint_id }}" data-stream="C">
                     <div class="stream-col-header">
-                        <span class="stream-name">Stream C</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="stream-badge stream-badge-c">Stream C</span>
+                            <span class="stream-sub-label">(Col 3 &amp; 6)</span>
+                        </div>
                         <span class="stream-count {% if r.stream_c_count >= r.stream_limit %}is-full{% endif %}" id="streamCount-{{ r.room_blueprint_id }}-C">
                             {{ r.stream_c_count }} / {{ r.stream_limit|default:15 }} students
                         </span>
@@ -1215,12 +1719,13 @@
                              draggable="true">
                             <div class="group-card-top">
                                 <span class="group-handle">⠿</span>
+                                <span class="group-dept-badge dept-{{ a.department_code|lower }}">{{ a.department_code }}</span>
                                 <span class="group-dept-class" title="{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}">
-                                    {{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}
+                                    {% if a.main_class_name %}{{ a.main_class_name }}{% elif a.class_name %}{{ a.class_name }}{% else %}{{ a.department_code }}{% endif %}
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 4px;">
                                     {% if a.semester %}<span class="group-sem-badge">S{{ a.semester }}</span>{% endif %}
-                                    <span class="group-badge-count">{{ a.student_count }} st</span>
+                                    <span class="group-badge-count" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" style="cursor: pointer;" title="Click to view student list">{{ a.student_count }} st</span>
                                 </div>
                             </div>
                             <div class="group-subject" title="{{ a.subject_code }} — {{ a.subject_name }}">
@@ -1233,21 +1738,21 @@
                                 <span></span>
                                 {% endif %}
                                 <div style="display: flex; align-items: center; gap: 4px;">
+                                    {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                                     <button type="button" class="btn-card-move" onclick="openMoveModal({{ a.assignment_id }}, '{{ r.room_number }}', 'C', '{{ a.subject_code|default:a.department_code }}', {{ a.student_count }})">
                                         ⇄ Move
                                     </button>
                                     <button type="button" class="btn-card-action" onclick="openSplitModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.main_class_name %} · {{ a.main_class_name }}{% elif a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }}, '{{ r.room_number }}', 'C')" title="Split group into two">
-                                        ✂️ Split
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View and remove students">
-                                        👥 {{ a.student_count }}
-                                    </button>
-                                    <button type="button" class="btn-card-action" onclick="openAddStudentModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', '{{ a.subject_code }}')" title="Add student">
-                                        ＋
+                                        Split
                                     </button>
                                     <button type="button" class="btn-card-danger" onclick="removeGroup({{ a.assignment_id }})" title="Remove group">
-                                        🗑️
+                                        ✕
                                     </button>
+                                    {% else %}
+                                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal({{ a.assignment_id }}, '{{ a.department_code }}{% if a.class_name %} · {{ a.class_name }}{% endif %}', {{ a.student_count }})" title="View student roll numbers">
+                                        Students
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -1259,6 +1764,15 @@
             </div>
         </div>
         {% endfor %}
+    </div>
+
+    <!-- ADD DUMMY ROOM TAB AT BOTTOM OF ROOM BOARD -->
+    <div class="add-dummy-room-tab-card" id="addDummyRoomTab" onclick="addDummyRoom()" title="Click to add a dummy placeholder classroom">
+        <span style="font-size: 18px; line-height: 1; font-weight: 700;">+</span>
+        <div style="text-align: left;">
+            <div style="font-weight: 700; font-size: 14px; color: #6366f1;">Add Dummy Room</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Add an unassigned placeholder room to reorganize, split, or balance students</div>
+        </div>
     </div>
     {% elif blueprint %}
     <div class="alert-box alert-warning">
@@ -1344,9 +1858,56 @@
                     {% endfor %}
                 </select>
             </div>
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); text-align: center;">
+                <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px;">No real classrooms left or need extra placeholder capacity?</span>
+                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(99, 102, 241, 0.08); color: #6366f1; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
+                    + Add Dummy Room Placeholder
+                </button>
+            </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button type="button" class="action-btn btn-secondary-action" onclick="closeAddRoomModal()">Cancel</button>
                 <button type="submit" class="action-btn btn-primary-action">Add Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ASSIGN REAL ROOM NAME MODAL -->
+<div class="modal-overlay" id="assignRoomNameModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div class="modal-title" id="assignRoomModalTitle">Assign Real Room Name</div>
+            <button type="button" class="close-btn" onclick="closeAssignRoomNameModal()">&times;</button>
+        </div>
+        <form id="assignRoomNameForm" onsubmit="submitAssignRoomName(event)">
+            <input type="hidden" id="assignRoomBpId">
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 16px;">
+                This room is currently an unassigned dummy placeholder. To enable physical seat generation, please assign a real physical classroom name.
+            </p>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 1: Type New / Custom Room Name</label>
+                <input type="text" id="assignNewRoomInput" class="form-control" placeholder="e.g. Drawing Hall 1, Seminar Hall, Room 305" autocomplete="off">
+                <small style="color: #64748b; font-size: 11px;">Enter the real hall or classroom name.</small>
+            </div>
+
+            <div style="text-align: center; margin: 12px 0; color: #94a3b8; font-weight: 600; font-size: 12px;">── OR ──</div>
+
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="assignExistingRoomSelect" style="font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 6px; display: block;">Option 2: Select Unassigned Classroom from Session</label>
+                <select id="assignExistingRoomSelect" class="form-control">
+                    <option value="">-- Choose Unassigned Room --</option>
+                    {% for rm in unassigned_rooms %}
+                    {% if not rm.is_dummy_room %}
+                    <option value="{{ rm.room_id }}">Room {{ rm.room_number }} (Capacity: {{ rm.capacity }})</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button type="button" class="action-btn btn-secondary-action" onclick="closeAssignRoomNameModal()">Cancel</button>
+                <button type="submit" class="action-btn btn-primary-action" id="assignRoomSubmitBtn">Save Real Room Name</button>
             </div>
         </form>
     </div>
@@ -1362,7 +1923,10 @@
         <div id="manageStudentsList" style="max-height: 360px; overflow-y: auto; padding: 4px 0;">
             <!-- Populated dynamically via JS -->
         </div>
-        <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+            <button type="button" class="action-btn btn-secondary-action" id="manageModalAddStudentBtn" style="color: #4f46e5; border-color: #c7d2fe;">
+                + Add Student
+            </button>
             <button type="button" class="action-btn btn-secondary-action" onclick="closeManageStudentsModal()">Close</button>
         </div>
     </div>
@@ -1462,7 +2026,7 @@
 <div class="modal-overlay" id="splitGroupModal">
     <div class="modal-card" style="max-width: 480px;">
         <div class="modal-header">
-            <div class="modal-title">✂️ Split or Edit Student Count</div>
+            <div class="modal-title">Split or Edit Student Count</div>
             <button type="button" class="close-btn" onclick="closeSplitModal()">&times;</button>
         </div>
         <form id="splitGroupForm" onsubmit="submitSplitGroup(event)">
@@ -1537,7 +2101,7 @@
 <div class="modal-overlay" id="unallocatedModal">
     <div class="modal-card" style="max-width: 680px; width: 100%;">
         <div class="modal-header">
-            <div class="modal-title">📋 Allocate Deleted / Unallocated Students</div>
+            <div class="modal-title">Allocate Deleted / Unallocated Students</div>
             <button type="button" class="close-btn" onclick="closeUnallocatedModal()">&times;</button>
         </div>
         <div style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
@@ -1554,7 +2118,7 @@
         </div>
 
         <div id="unallocatedEmptyState" style="text-align: center; padding: 28px; color: var(--text-muted); display: none;">
-            <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+            <div style="font-size: 24px; margin-bottom: 8px;">✓</div>
             <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">All students are allocated!</div>
             <div style="font-size: 12px;">There are no deleted or unallocated students remaining for this exam slot.</div>
         </div>
@@ -1600,6 +2164,25 @@
     </div>
 </div>
 
+
+<!-- CONFIRMATION MODAL -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-card" style="max-width: 440px;">
+        <div class="modal-header" style="margin-bottom: 12px;">
+            <div class="modal-title" id="confirmModalTitle" style="display: flex; align-items: center; gap: 8px;">
+                <span id="confirmModalIcon" style="font-size: 18px;">⚠️</span>
+                <span id="confirmModalTitleText">Confirm Action</span>
+            </div>
+            <button type="button" class="close-btn" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div id="confirmModalBody" style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 22px; white-space: pre-line;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button type="button" class="btn-modal-secondary" id="confirmModalCancel" onclick="closeConfirmModal()">Cancel</button>
+            <button type="button" class="btn-modal-danger" id="confirmModalConfirm">Confirm</button>
+        </div>
+    </div>
+</div>
 
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
@@ -1665,6 +2248,88 @@ function showToast(message, type = 'info', duration = 4000) {
         setTimeout(() => toast.remove(), 250);
     }, duration);
 }
+
+// CUSTOM CONFIRMATION MODAL
+function showConfirm(options) {
+    // options: { title, message, confirmText, confirmDanger, onConfirm, onCancel }
+    if (typeof options === 'string') {
+        options = { message: options };
+    }
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        if (!modal) {
+            const confirmed = window.confirm(options.message || 'Are you sure?');
+            if (confirmed && typeof options.onConfirm === 'function') options.onConfirm();
+            else if (!confirmed && typeof options.onCancel === 'function') options.onCancel();
+            resolve(confirmed);
+            return;
+        }
+
+        const titleText = document.getElementById('confirmModalTitleText');
+        const iconEl = document.getElementById('confirmModalIcon');
+        const bodyEl = document.getElementById('confirmModalBody');
+        const btnConfirm = document.getElementById('confirmModalConfirm');
+        const btnCancel = document.getElementById('confirmModalCancel');
+
+        if (titleText) titleText.textContent = options.title || 'Confirm Action';
+        if (bodyEl) bodyEl.textContent = options.message || 'Are you sure you want to proceed?';
+        if (btnConfirm) btnConfirm.textContent = options.confirmText || 'Confirm';
+
+        const isDanger = options.confirmDanger !== false;
+        if (btnConfirm) {
+            btnConfirm.className = isDanger ? 'btn-modal-danger' : 'btn-modal-primary';
+        }
+        if (iconEl) {
+            iconEl.textContent = isDanger ? '⚠️' : 'ℹ️';
+        }
+
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+
+        let resolved = false;
+        function finish(result) {
+            if (resolved) return;
+            resolved = true;
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            if (result && typeof options.onConfirm === 'function') {
+                options.onConfirm();
+            } else if (!result && typeof options.onCancel === 'function') {
+                options.onCancel();
+            }
+            resolve(result);
+        }
+
+        const newConfirm = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+
+        const newCancel = btnCancel.cloneNode(true);
+        btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+        newCancel.addEventListener('click', () => finish(false));
+        newConfirm.addEventListener('click', () => finish(true));
+
+        const closeBtn = modal.querySelector('.close-btn');
+        if (closeBtn) {
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', () => finish(false));
+        }
+    });
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+// In-app fallback override for any accidental window.alert calls
+window.alert = function(msg) {
+    showToast(msg, 'error', 4500);
+};
 
 // DRAG AND DROP INITIALIZATION
 function initDragAndDrop() {
@@ -1836,24 +2501,29 @@ function executeSwap(assignId1, assignId2) {
 function updateBoardFromData(data) {
     if (!data.rooms) return;
 
-    // Update Stats Chips
+    // Update Stats Summary Cards
     if (data.stats) {
         const stats = data.stats;
-        const statCards = document.querySelectorAll('.stat-card .stat-val');
-        if (statCards.length >= 8) {
-            statCards[0].textContent = stats.total_eligible_students || 0;
-            statCards[1].textContent = stats.total_allocated_students || 0;
-            statCards[2].textContent = stats.unallocated_count || 0;
-            statCards[2].style.color = (stats.unallocated_count > 0) ? '#f87171' : '#94a3b8';
-            statCards[3].textContent = stats.rooms_used || 0;
-            statCards[4].textContent = stats.total_room_capacity || 0;
-            statCards[5].textContent = stats.remaining_capacity || 0;
-            statCards[6].textContent = (stats.room_utilization || 0) + '%';
-            statCards[7].textContent = stats.department_scattering || 0;
-        }
+        const allocEl = document.getElementById('metricAllocatedVal');
+        if (allocEl) allocEl.textContent = stats.total_allocated_students || 0;
+        const roomsEl = document.getElementById('metricRoomsUsedVal');
+        if (roomsEl) roomsEl.textContent = stats.rooms_used || 0;
+        const utilEl = document.getElementById('metricUtilVal');
+        if (utilEl) utilEl.textContent = (stats.room_utilization || 0) + '%';
+        const progFill = document.querySelector('.metric-progress-fill');
+        if (progFill) progFill.style.width = (stats.room_utilization || 0) + '%';
+        const freeEl = document.getElementById('metricRemainingCapVal');
+        if (freeEl) freeEl.textContent = stats.remaining_capacity || 0;
+        const unallocBadge = document.getElementById('statUnallocatedCount');
+        if (unallocBadge) unallocBadge.textContent = stats.unallocated_count || 0;
+
         const unallocBtn = document.getElementById('unallocatedBtnCount');
         if (unallocBtn) {
             unallocBtn.textContent = stats.unallocated_count || 0;
+        }
+        const unallocDropdown = document.getElementById('unallocatedDropdownCount');
+        if (unallocDropdown) {
+            unallocDropdown.textContent = stats.unallocated_count || 0;
         }
     }
 
@@ -1864,7 +2534,12 @@ function updateBoardFromData(data) {
         if (data.errors && data.errors.length) {
             alertsHtml += `
             <div class="alert-box alert-danger">
-                <strong>⚠️ Blueprint Hard Constraint Errors (${data.errors.length}):</strong>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
+                    <strong>⚠️ Allocation Hard Constraint Errors (${data.errors.length}):</strong>
+                    <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
+                        Auto-Resolve &amp; Recalculate
+                    </button>
+                </div>
                 <ul style="margin: 6px 0 0 18px; padding: 0;">
                     ${data.errors.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
                 </ul>
@@ -1872,11 +2547,19 @@ function updateBoardFromData(data) {
         }
         if (data.warnings && data.warnings.length) {
             alertsHtml += `
-            <div class="alert-box alert-warning">
-                <strong>ℹ️ Optimization Warnings:</strong>
-                <ul style="margin: 6px 0 0 18px; padding: 0;">
-                    ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
-                </ul>
+            <div class="alert-box alert-warning" id="blueprintWarningBox">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 18px; line-height: 1.2;">⚠️</span>
+                        <div>
+                            <strong style="font-size: 13px; color: #92400e;">Allocation Warnings:</strong>
+                            <ul style="margin: 4px 0 0 18px; padding: 0; color: #b45309; font-size: 13px;">
+                                ${data.warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    <button type="button" onclick="this.closest('.alert-box').style.display='none'" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #92400e; padding: 2px 6px; line-height: 1;" title="Dismiss warning">✕</button>
+                </div>
             </div>`;
         }
         if ((!data.errors || !data.errors.length) && (!data.warnings || !data.warnings.length)) {
@@ -1897,15 +2580,33 @@ function updateBoardFromData(data) {
         }
     }
 
+    // Count remaining dummy placeholder rooms
+    const dummyRooms = data.rooms ? data.rooms.filter(r => r.is_dummy || (r.room_number && String(r.room_number).startsWith('Dummy Room'))) : [];
+
     // Enable/Disable Finalize Button
     const finalizeBtn = document.querySelector('button[onclick="finalizeBlueprint()"]');
     if (finalizeBtn) {
         if (data.errors && data.errors.length) {
             finalizeBtn.disabled = true;
             finalizeBtn.title = 'Fix errors before finalizing';
+        } else if (dummyRooms.length > 0) {
+            finalizeBtn.disabled = true;
+            finalizeBtn.title = `Assign real room names to all ${dummyRooms.length} placeholder room(s) before finalizing`;
         } else {
             finalizeBtn.disabled = false;
             finalizeBtn.title = 'Finalize Blueprint';
+        }
+    }
+
+    // Enable/Disable Generate Seats Button
+    const genSeatsBtn = document.querySelector('button[onclick="generateSeats()"]');
+    if (genSeatsBtn) {
+        if (dummyRooms.length > 0) {
+            genSeatsBtn.disabled = true;
+            genSeatsBtn.title = `Assign real room names to all ${dummyRooms.length} placeholder room(s) before generating seats`;
+        } else {
+            genSeatsBtn.disabled = false;
+            genSeatsBtn.title = 'Generate Physical Seats';
         }
     }
 
@@ -1934,6 +2635,8 @@ function updateBoardFromData(data) {
             card.dataset.roomBpId = r.room_blueprint_id;
             card.dataset.roomId = r.room_id;
             container.appendChild(card);
+        } else {
+            card.dataset.roomId = r.room_id;
         }
         card.innerHTML = buildRoomCardHTML(r);
     });
@@ -1942,17 +2645,50 @@ function updateBoardFromData(data) {
     initDragAndDrop();
 }
 
+const updateUIWithResult = updateBoardFromData;
+
+function getDeptColorStyle(dept) {
+    if (!dept) return '';
+    const d = dept.toUpperCase().trim();
+    const map = {
+        'ME': 'background: #e0f2fe; color: #0369a1; border-color: #bae6fd;',
+        'CSE': 'background: #e0e7ff; color: #3730a3; border-color: #c7d2fe;',
+        'CS': 'background: #e0e7ff; color: #3730a3; border-color: #c7d2fe;',
+        'CE': 'background: #fef3c7; color: #92400e; border-color: #fde68a;',
+        'EEE': 'background: #fef9c3; color: #854d0e; border-color: #fef08a;',
+        'ECE': 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;',
+        'EC': 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;',
+        'B.ARCH': 'background: #fae8ff; color: #86198f; border-color: #f5d0fe;',
+        'BARCH': 'background: #fae8ff; color: #86198f; border-color: #f5d0fe;',
+        'IT': 'background: #ffedd5; color: #9a3412; border-color: #fed7aa;',
+        'BT': 'background: #f1f5f9; color: #475569; border-color: #cbd5e1;'
+    };
+    if (map[d]) return map[d];
+    let hash = 0;
+    for (let i = 0; i < d.length; i++) hash = d.charCodeAt(i) + ((hash << 5) - hash);
+    const hue = Math.abs(hash % 360);
+    return `background: hsl(${hue}, 85%, 95%); color: hsl(${hue}, 80%, 25%); border-color: hsl(${hue}, 60%, 80%);`;
+}
+
 function buildRoomCardHTML(r) {
     const streamLimit = r.stream_limit || 15;
     const isFullA = r.stream_a_count >= streamLimit ? 'is-full' : '';
     const isFullB = r.stream_b_count >= streamLimit ? 'is-full' : '';
     const isFullC = r.stream_c_count >= streamLimit ? 'is-full' : '';
     const hasUnused = r.unused_capacity > 0 ? 'has-unused' : '';
+    const isDummy = r.is_dummy || (r.room_number && r.room_number.startsWith("Dummy Room"));
+    const dummyBadge = isDummy ? `
+        <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+        <button type="button" class="btn-assign-room" onclick="openAssignRoomNameModal(${r.room_blueprint_id}, '${r.room_number}')" title="Assign a real classroom name to this dummy room">
+            Assign Real Room Name
+        </button>
+    ` : '';
 
     return `
         <div class="room-card-header">
             <div class="room-meta-left">
-                <span class="room-title">🏛️ Room ${r.room_number}</span>
+                <span class="room-title">Room ${r.room_number}</span>
+                ${dummyBadge}
                 <span class="room-pattern-badge pattern-${r.pattern}" id="patternBadge-${r.room_blueprint_id}">
                     ${r.pattern}
                 </span>
@@ -1969,7 +2705,7 @@ function buildRoomCardHTML(r) {
                 </span>
                 ${!IS_LOCKED ? `
                 <button type="button" class="btn-sm-action" onclick="openCapacityModal(${r.room_id}, '${r.room_number}', ${r.capacity})" title="Edit Room Capacity">
-                    ✏️ Edit Cap
+                    Edit Cap
                 </button>
                 <button type="button" class="btn-sm-danger" onclick="removeRoomFromBlueprint(${r.room_id}, '${r.room_number}')" title="Remove Classroom">
                     ✕
@@ -1982,7 +2718,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM A -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="A">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream A</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-a">Stream A</span>
+                        <span class="stream-sub-label">(Col 1 &amp; 4)</span>
+                    </div>
                     <span class="stream-count ${isFullA}" id="streamCount-${r.room_blueprint_id}-A">
                         ${r.stream_a_count} / ${streamLimit} students
                     </span>
@@ -1995,7 +2734,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM B -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="B">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream B</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-b">Stream B</span>
+                        <span class="stream-sub-label">(Col 2 &amp; 5)</span>
+                    </div>
                     <span class="stream-count ${isFullB}" id="streamCount-${r.room_blueprint_id}-B">
                         ${r.stream_b_count} / ${streamLimit} students
                     </span>
@@ -2008,7 +2750,10 @@ function buildRoomCardHTML(r) {
             <!-- STREAM C -->
             <div class="stream-column" data-room-id="${r.room_id}" data-room-bp-id="${r.room_blueprint_id}" data-stream="C">
                 <div class="stream-col-header">
-                    <span class="stream-name">Stream C</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span class="stream-badge stream-badge-c">Stream C</span>
+                        <span class="stream-sub-label">(Col 3 &amp; 6)</span>
+                    </div>
                     <span class="stream-count ${isFullC}" id="streamCount-${r.room_blueprint_id}-C">
                         ${r.stream_c_count} / ${streamLimit} students
                     </span>
@@ -2024,7 +2769,10 @@ function buildRoomCardHTML(r) {
 function buildGroupCardHTML(a, r, stream) {
     const isDraggable = !IS_LOCKED ? 'true' : 'false';
     const displayClass = a.main_class_name || a.class_name || '';
-    const deptClass = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const deptClassFull = a.department_code ? (displayClass ? `${a.department_code} · ${displayClass}` : a.department_code) : (displayClass || '');
+    const deptCode = a.department_code || '';
+    const deptBadgeHtml = deptCode ? `<span class="group-dept-badge dept-${escapeHtml(deptCode.toLowerCase())}" style="${getDeptColorStyle(deptCode)}">${escapeHtml(deptCode)}</span>` : '';
+    const classOnly = displayClass || deptCode;
     const semBadge = a.semester ? `<span class="group-sem-badge">S${a.semester}</span>` : '';
     const catPill = (a.subject_category && a.subject_category !== 'NORMAL') 
         ? `<span class="group-category-pill">${a.subject_category}</span>` 
@@ -2046,10 +2794,11 @@ function buildGroupCardHTML(a, r, stream) {
              draggable="true">
             <div class="group-card-top">
                 <span class="group-handle">⠿</span>
-                <span class="group-dept-class" title="${escapeHtml(deptClass)}">${escapeHtml(deptClass)}</span>
+                ${deptBadgeHtml}
+                <span class="group-dept-class" title="${escapeHtml(deptClassFull)}">${escapeHtml(classOnly)}</span>
                 <div style="display: flex; align-items: center; gap: 4px;">
                     ${semBadge}
-                    <span class="group-badge-count">${a.student_count} st</span>
+                    <span class="group-badge-count" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count})" style="cursor: pointer;" title="Click to view student list">${a.student_count} st</span>
                 </div>
             </div>
             <div class="group-subject" title="${a.subject_code} — ${a.subject_name}">
@@ -2058,11 +2807,13 @@ function buildGroupCardHTML(a, r, stream) {
             <div class="group-card-bottom" style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; flex-wrap: wrap;">
                 ${catPill}
                 <div style="display: flex; align-items: center; gap: 4px;">
+                    ${!IS_LOCKED ? `
                     <button type="button" class="btn-card-move" onclick="openMoveModal(${a.assignment_id}, '${r.room_number}', '${stream}', '${a.subject_code || a.department_code}', ${a.student_count})">⇄ Move</button>
-                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">✂️ Split</button>
-                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClass)}', ${a.student_count})" title="View and remove students">👥 ${a.student_count}</button>
-                    <button type="button" class="btn-card-action" onclick="openAddStudentModal(${a.assignment_id}, '${escapeHtml(deptClass)}', '${a.subject_code}')" title="Add student">＋</button>
-                    <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">🗑️</button>
+                    <button type="button" class="btn-card-action" onclick="openSplitModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count}, '${r.room_number}', '${stream}')" title="Split group into two">Split</button>
+                    <button type="button" class="btn-card-danger" onclick="removeGroup(${a.assignment_id})" title="Remove group">✕</button>
+                    ` : `
+                    <button type="button" class="btn-card-action" onclick="openManageStudentsModal(${a.assignment_id}, '${escapeHtml(deptClassFull)}', ${a.student_count})" title="View student roll numbers">Students</button>
+                    `}
                 </div>
             </div>
         </div>
@@ -2159,9 +2910,74 @@ function submitAddRoom(e) {
     .catch(err => showToast('Request error: ' + err, 'error', 4000));
 }
 
-function removeRoomFromBlueprint(roomId, roomNumber) {
-    if (!confirm(`Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`)) return;
+function addDummyRoom(capacity = 45) {
+    if (!BLUEPRINT_ID) return;
 
+    const tab = document.getElementById('addDummyRoomTab');
+    if (tab) {
+        tab.style.pointerEvents = 'none';
+        tab.style.opacity = '0.6';
+    }
+    showToast('Creating new dummy placeholder room...', 'info', 2000);
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/dummy-room/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            capacity: capacity
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (tab) {
+            tab.style.pointerEvents = '';
+            tab.style.opacity = '';
+        }
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast(`✓ Added ${data.added_room_number || 'Dummy Room'} to blueprint!`, 'success', 3500);
+
+            // Smooth scroll to the newly added room card
+            if (data.added_room_blueprint_id) {
+                setTimeout(() => {
+                    const newCard = document.getElementById(`roomCard-${data.added_room_blueprint_id}`);
+                    if (newCard) {
+                        newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        newCard.style.outline = '2px solid #6366f1';
+                        setTimeout(() => { newCard.style.outline = ''; }, 2000);
+                    }
+                }, 100);
+            }
+        } else {
+            showToast('Failed to add dummy room: ' + (data.error || 'Unknown error'), 'error', 4500);
+        }
+    })
+    .catch(err => {
+        if (tab) {
+            tab.style.pointerEvents = '';
+            tab.style.opacity = '';
+        }
+        showToast('Request error: ' + err, 'error', 4000);
+    });
+}
+
+function removeRoomFromBlueprint(roomId, roomNumber) {
+    showConfirm({
+        title: 'Remove Room',
+        message: `Remove Room ${roomNumber} from this blueprint? All its student assignments will become unallocated.`,
+        confirmText: 'Remove Room',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveRoom(roomId, roomNumber);
+        }
+    });
+}
+
+function _executeRemoveRoom(roomId, roomNumber) {
     showToast('Removing classroom...', 'info', 2000);
     fetch(`/api/session/${SESSION_ID}/blueprint/room/remove/`, {
         method: 'POST',
@@ -2194,6 +3010,20 @@ function openManageStudentsModal(assignmentId, deptClass, count) {
     const card = document.getElementById(`groupCard-${assignmentId}`);
     const rolls = card && card.dataset.rolls ? card.dataset.rolls.split(',').filter(Boolean) : [];
 
+    const addBtn = document.getElementById('manageModalAddStudentBtn');
+    if (addBtn) {
+        if (!IS_LOCKED) {
+            addBtn.style.display = 'inline-flex';
+            addBtn.onclick = () => {
+                closeManageStudentsModal();
+                const subjCode = card ? card.dataset.subjCode : '';
+                openAddStudentModal(assignmentId, deptClass, subjCode);
+            };
+        } else {
+            addBtn.style.display = 'none';
+        }
+    }
+
     if (!rolls.length) {
         listEl.innerHTML = '<div style="color: var(--text-muted); padding: 12px; text-align: center;">No students in this group.</div>';
     } else {
@@ -2216,8 +3046,18 @@ function closeManageStudentsModal() {
 }
 
 function removeStudent(assignmentId, rollNumber) {
-    if (!confirm(`Remove student ${rollNumber} from this group?`)) return;
+    showConfirm({
+        title: 'Remove Student',
+        message: `Remove student ${rollNumber} from this group?`,
+        confirmText: 'Remove Student',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveStudent(assignmentId, rollNumber);
+        }
+    });
+}
 
+function _executeRemoveStudent(assignmentId, rollNumber) {
     fetch(`/api/session/${SESSION_ID}/blueprint/student/remove/`, {
         method: 'POST',
         headers: {
@@ -2295,8 +3135,18 @@ function submitAddStudent(e) {
 }
 
 function removeGroup(assignmentId) {
-    if (!confirm('Remove this entire group from the blueprint? Its students will become unallocated.')) return;
+    showConfirm({
+        title: 'Remove Group',
+        message: 'Remove this entire group from the blueprint? Its students will become unallocated.',
+        confirmText: 'Remove Group',
+        confirmDanger: true,
+        onConfirm: () => {
+            _executeRemoveGroup(assignmentId);
+        }
+    });
+}
 
+function _executeRemoveGroup(assignmentId) {
     showToast('Removing group...', 'info', 2000);
     fetch(`/api/session/${SESSION_ID}/blueprint/assignment/remove/`, {
         method: 'POST',
@@ -2375,7 +3225,7 @@ function submitMove(e) {
     if (mode === 'SWAP') {
         const swapTarget = document.getElementById("swapTargetSelect").value;
         if (!swapTarget) {
-            alert("Please select a group to swap with.");
+            showToast("Please select a group to swap with.", "error");
             btn.disabled = false;
             return;
         }
@@ -2492,86 +3342,102 @@ function submitSplitGroup(e) {
 
 // ALLOCATE, RESET, VALIDATE, FINALIZE ACTIONS
 function allocateDepartments(force) {
-    if (force && !confirm("Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?")) {
-        return;
-    }
-    const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
-    btns.forEach(btn => {
-        btn.disabled = true;
-        btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
-    });
+    const runAllocation = () => {
+        const btns = document.querySelectorAll('.btn-allocate-slot-trigger, #btn-allocate-slot, #btn-allocate-slot-center');
+        btns.forEach(btn => {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="inline-spinner"></span> Allocating Departments...`;
+        });
 
-    const overlay = document.getElementById('allocationLoadingOverlay');
-    const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
-    const subtext = document.getElementById('allocationLoadingSubtext');
-    if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
-    if (subtext) {
-        subtext.textContent = force 
-            ? 'Recalculating classroom blueprint and balancing stream distributions...' 
-            : 'Generating optimal room blueprint and balancing stream distributions...';
-    }
-    if (overlay) overlay.style.display = 'flex';
+        const overlay = document.getElementById('allocationLoadingOverlay');
+        const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
+        const subtext = document.getElementById('allocationLoadingSubtext');
+        if (title) title.textContent = force ? 'Recalculating Allocation' : 'Allocating Departments';
+        if (subtext) {
+            subtext.textContent = force 
+                ? 'Recalculating classroom blueprint and balancing stream distributions...' 
+                : 'Generating optimal room blueprint and balancing stream distributions...';
+        }
+        if (overlay) overlay.style.display = 'flex';
 
-    fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({
-            date: CURRENT_DATE,
-            shift: CURRENT_SHIFT,
-            force: force
+        fetch(`/api/session/${SESSION_ID}/blueprint/allocate/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                date: CURRENT_DATE,
+                shift: CURRENT_SHIFT,
+                force: force
+            })
         })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                if (overlay) overlay.style.display = 'none';
+                btns.forEach(btn => {
+                    btn.disabled = false;
+                    btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
+                });
+                showToast("Allocation failed: " + (data.error || "Unknown error"), 'error', 5000);
+            }
+        })
+        .catch(err => {
             if (overlay) overlay.style.display = 'none';
             btns.forEach(btn => {
                 btn.disabled = false;
-                btn.textContent = 'Allocate Departments for This Slot';
+                btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
             });
-            alert("Allocation failed: " + (data.error || "Unknown error"));
-        }
-    })
-    .catch(err => {
-        if (overlay) overlay.style.display = 'none';
-        btns.forEach(btn => {
-            btn.disabled = false;
-            btn.textContent = 'Allocate Departments for This Slot';
+            showToast("Request error: " + err, 'error', 5000);
         });
-        alert("Request error: " + err);
-    });
+    };
+
+    if (force) {
+        showConfirm({
+            title: 'Recalculate Blueprint',
+            message: 'Recalculate will re-run the allocation engine and overwrite manual adjustments for this slot. Continue?',
+            confirmText: 'Recalculate',
+            confirmDanger: true,
+            onConfirm: runAllocation
+        });
+    } else {
+        runAllocation();
+    }
 }
 
 function resetBlueprint() {
-    if (!confirm("Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.")) {
-        return;
-    }
-    fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({
-            blueprint_id: BLUEPRINT_ID,
-            date: CURRENT_DATE,
-            shift: CURRENT_SHIFT
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert("Reset failed: " + (data.error || "Unknown error"));
+    showConfirm({
+        title: 'Reset Slot Blueprint',
+        message: 'Are you sure you want to reset this slot? This will delete the department blueprint and any generated seating records for this slot.',
+        confirmText: 'Reset Blueprint',
+        confirmDanger: true,
+        onConfirm: () => {
+            fetch(`/api/session/${SESSION_ID}/blueprint/reset/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    blueprint_id: BLUEPRINT_ID,
+                    date: CURRENT_DATE,
+                    shift: CURRENT_SHIFT
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    showToast("Reset failed: " + (data.error || "Unknown error"), 'error', 5000);
+                }
+            })
+            .catch(err => showToast("Request error: " + err, 'error', 5000));
         }
-    })
-    .catch(err => alert("Request error: " + err));
+    });
 }
 
 function validateBlueprint() {
@@ -2589,15 +3455,21 @@ function validateBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Validation request failed: " + (data.error || "Unknown error"));
+            showToast("Validation request failed: " + (data.error || "Unknown error"), "error", 5000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 5000));
 }
 
 function finalizeBlueprint() {
     if (!BLUEPRINT_ID) return;
-    if (!confirm("Finalizing the blueprint will freeze department-stream assignments and enable physical seat generation. Proceed?")) return;
+    const dummyBadges = document.querySelectorAll('.badge-dummy-room');
+    if (dummyBadges.length > 0) {
+        showToast("Cannot finalize: Please assign real classroom names to all dummy placeholder rooms first.", "error", 4000);
+        return;
+    }
+
+    showToast("Finalizing blueprint...", "info", 1500);
 
     fetch(`/api/session/${SESSION_ID}/blueprint/finalize/`, {
         method: 'POST',
@@ -2612,15 +3484,15 @@ function finalizeBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Finalization blocked: \n" + (data.errors ? data.errors.join("\n") : (data.error || "Validation failed")));
+            showToast("Finalization blocked: " + (data.errors ? data.errors.join("; ") : (data.error || "Validation failed")), "error", 5000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 4000));
 }
 
 function unfinalizeBlueprint() {
     if (!BLUEPRINT_ID) return;
-    if (!confirm("Unfinalizing will unlock editing and mark any generated physical seating plan as outdated. Proceed?")) return;
+    showToast("Unlocking blueprint for editing...", "info", 1500);
 
     fetch(`/api/session/${SESSION_ID}/blueprint/unfinalize/`, {
         method: 'POST',
@@ -2635,14 +3507,20 @@ function unfinalizeBlueprint() {
         if (data.success) {
             window.location.reload();
         } else {
-            alert("Error: " + (data.error || "Failed to unfinalize"));
+            showToast("Error: " + (data.error || "Failed to unfinalize"), "error", 4000);
         }
     })
-    .catch(err => alert("Request error: " + err));
+    .catch(err => showToast("Request error: " + err, "error", 4000));
 }
 
 function generateSeats() {
     if (!BLUEPRINT_ID) return;
+    const dummyBadges = document.querySelectorAll('.badge-dummy-room');
+    if (dummyBadges.length > 0) {
+        showToast("Cannot generate physical seats: There are dummy placeholder rooms allocated. Please assign real classroom names to all dummy rooms first.", "error", 5000);
+        return;
+    }
+
     const overlay = document.getElementById('allocationLoadingOverlay');
     const title = overlay ? overlay.querySelector('.alloc-loading-title') : null;
     const subtext = document.getElementById('allocationLoadingSubtext');
@@ -2664,12 +3542,105 @@ function generateSeats() {
             window.location.reload();
         } else {
             if (overlay) overlay.style.display = 'none';
-            alert("Seat generation failed: " + (data.error || "Unknown constraint error"));
+            showToast("Seat generation failed: " + (data.error || "Unknown error"), "error", 5000);
         }
     })
     .catch(err => {
         if (overlay) overlay.style.display = 'none';
-        alert("Request error: " + err);
+        showToast("Request error: " + err, "error", 5000);
+    });
+}
+
+function openAssignRoomNameModal(roomBpId, currentName) {
+    document.getElementById('assignRoomBpId').value = roomBpId;
+    document.getElementById('assignRoomModalTitle').textContent = `Assign Real Room Name for ${currentName}`;
+    const newRoomInput = document.getElementById('assignNewRoomInput');
+    const existingSelect = document.getElementById('assignExistingRoomSelect');
+    if (newRoomInput) newRoomInput.value = '';
+    if (existingSelect) existingSelect.value = '';
+
+    // Filter unassigned rooms dropdown so rooms already on the board cannot be selected
+    const activeRoomIds = new Set();
+    document.querySelectorAll('.room-card').forEach(card => {
+        if (card.dataset.roomId) {
+            activeRoomIds.add(String(card.dataset.roomId));
+        }
+    });
+    if (existingSelect) {
+        Array.from(existingSelect.options).forEach(opt => {
+            if (!opt.value) return;
+            if (activeRoomIds.has(String(opt.value))) {
+                opt.style.display = 'none';
+                opt.disabled = true;
+            } else {
+                opt.style.display = '';
+                opt.disabled = false;
+            }
+        });
+    }
+
+    const modal = document.getElementById('assignRoomNameModal');
+    if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+    }
+    setTimeout(() => {
+        if (newRoomInput) newRoomInput.focus();
+    }, 50);
+}
+
+function closeAssignRoomNameModal() {
+    const modal = document.getElementById('assignRoomNameModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+function submitAssignRoomName(event) {
+    event.preventDefault();
+    const roomBpId = document.getElementById('assignRoomBpId').value;
+    const newName = document.getElementById('assignNewRoomInput').value.trim();
+    const targetRoomId = document.getElementById('assignExistingRoomSelect').value;
+
+    if (!newName && !targetRoomId) {
+        showToast('Please type a room name or select an existing classroom.', 'error');
+        return;
+    }
+
+    const submitBtn = document.getElementById('assignRoomSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    fetch(`/api/session/${SESSION_ID}/blueprint/assign-room-name/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+            blueprint_id: BLUEPRINT_ID,
+            room_blueprint_id: roomBpId,
+            new_room_number: newName || null,
+            target_room_id: targetRoomId || null,
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Real Room Name';
+        if (data.success) {
+            updateUIWithResult(data);
+            showToast('✓ Real classroom name assigned successfully!', 'success');
+            closeAssignRoomNameModal();
+        } else {
+            showToast('Failed to assign room: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Real Room Name';
+        showToast('Request error: ' + err, 'error');
     });
 }
 
@@ -2786,7 +3757,7 @@ function submitAllocateUnallocatedGroup(e) {
     e.preventDefault();
     const selectedRadio = document.querySelector('input[name="unallocatedGroupSelect"]:checked');
     if (!selectedRadio) {
-        alert('Please select an unallocated department group to allocate.');
+        showToast('Please select an unallocated department group to allocate.', 'error');
         return;
     }
 
@@ -2795,7 +3766,7 @@ function submitAllocateUnallocatedGroup(e) {
     const allowIncrease = document.getElementById('allocAllowCapIncrease').checked;
 
     if (!roomId || !stream) {
-        alert('Please choose both a target classroom and a stream.');
+        showToast('Please choose both a target classroom and a stream.', 'error');
         return;
     }
 
@@ -2850,7 +3821,18 @@ function submitAllocateUnallocatedGroup(e) {
 }
 
 function autoAllocateAllUnallocated() {
-    if (!confirm('Automatically allocate all remaining unallocated students across rooms with available capacity?')) return;
+    showConfirm({
+        title: 'Auto-allocate Students',
+        message: 'Automatically allocate all remaining unallocated students across rooms with available capacity?',
+        confirmText: 'Auto-allocate',
+        confirmDanger: false,
+        onConfirm: () => {
+            _executeAutoAllocateAll();
+        }
+    });
+}
+
+function _executeAutoAllocateAll() {
 
     fetch(`/api/session/${SESSION_ID}/blueprint/allocate-unallocated/`, {
         method: 'POST',
@@ -2876,9 +3858,60 @@ function autoAllocateAllUnallocated() {
     .catch(err => showToast('Request error: ' + err, 'error'));
 }
 
+function toggleActionDropdown(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('actionDropdownMenu');
+    if (menu) {
+        menu.classList.toggle('show');
+    }
+}
+
 // INITIALIZE ON LOAD
 document.addEventListener('DOMContentLoaded', () => {
     initDragAndDrop();
+
+    // Close action dropdown on outside click
+    document.addEventListener('click', (e) => {
+        const wrap = document.getElementById('actionDropdownWrap');
+        const menu = document.getElementById('actionDropdownMenu');
+        if (menu && menu.classList.contains('show') && (!wrap || !wrap.contains(e.target))) {
+            menu.classList.remove('show');
+        }
+    });
+
+    // Mutual clearing between new room input and existing room select
+    const newRoomInp = document.getElementById('assignNewRoomInput');
+    const existingSel = document.getElementById('assignExistingRoomSelect');
+    if (newRoomInp && existingSel) {
+        newRoomInp.addEventListener('input', function() {
+            if (this.value.trim()) {
+                existingSel.value = '';
+            }
+        });
+        existingSel.addEventListener('change', function() {
+            if (this.value) {
+                newRoomInp.value = '';
+            }
+        });
+    }
+
+    // Close modals on backdrop click or Escape key
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
+        });
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

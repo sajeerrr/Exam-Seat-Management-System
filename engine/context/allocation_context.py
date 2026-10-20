@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Optional
 from engine.models.stream_state import StreamState
-from engine.algorithms.conflict_graph import ConflictGraph
 
 
 @dataclass
@@ -10,10 +9,6 @@ class AllocationContext:
     groups: list
     room_allocations: list
     remaining_pool: object
-
-    conflict_graph: ConflictGraph = field(
-        default_factory=ConflictGraph
-    )
 
     streams: list[StreamState] = field(default_factory=list)
 
