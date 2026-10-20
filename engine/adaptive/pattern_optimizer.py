@@ -241,6 +241,10 @@ class PatternEvaluator:
             right_column.students,
             left_column.students,
         )
+        if hasattr(left_column, 'invalidate_cache'):
+            left_column.invalidate_cache()
+        if hasattr(right_column, 'invalidate_cache'):
+            right_column.invalidate_cache()
 
 
 class StreamPatternOptimizer:

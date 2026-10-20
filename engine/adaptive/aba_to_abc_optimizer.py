@@ -154,6 +154,8 @@ class ABAToABCOptimizer:
 
                     # Perform trial swap
                     s1.students, s2.students = s2.students, s1.students
+                    s1.invalidate_cache()
+                    s2.invalidate_cache()
 
                     if self._is_valid_room(r1) and self._is_valid_room(r2):
                         new_r1_aba = self._is_aba_room(r1)
@@ -167,6 +169,8 @@ class ABAToABCOptimizer:
 
                     # Revert swap
                     s1.students, s2.students = s2.students, s1.students
+                    s1.invalidate_cache()
+                    s2.invalidate_cache()
 
             if not improved:
                 break
@@ -201,6 +205,8 @@ class ABAToABCOptimizer:
                                        (2 if self._is_abc_room(r2) else 0)
 
                         s1.students, s2.students = s2.students, s1.students
+                        s1.invalidate_cache()
+                        s2.invalidate_cache()
 
                         if self._is_valid_room(r1) and self._is_valid_room(r2):
                             score_after = (2 if self._is_abc_room(r1) else 0) + \
@@ -212,6 +218,8 @@ class ABAToABCOptimizer:
 
                         # Revert
                         s1.students, s2.students = s2.students, s1.students
+                        s1.invalidate_cache()
+                        s2.invalidate_cache()
 
                     if improved:
                         break

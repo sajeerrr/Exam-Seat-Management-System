@@ -53,7 +53,7 @@ def _is_matching_elective_exam(exam, el_subj) -> bool:
     return False
 
 
-def django_registration_to_engine_student(registration):
+def django_registration_to_engine_student(registration, elec_map=None):
     student = registration.student
     exam = registration.exam
 
@@ -66,11 +66,14 @@ def django_registration_to_engine_student(registration):
     subj_name = exam.subject.subject_name
     category = "NORMAL"
 
-    el_regs = list(
-        student.elective_registrations
-        .filter(elective_subject__group__session=exam.subject.session)
-        .select_related("elective_subject", "elective_subject__group")
-    )
+    if elec_map is not None:
+        el_regs = elec_map.get(student.student_id, [])
+    else:
+        el_regs = list(
+            student.elective_registrations
+            .filter(elective_subject__group__session=exam.subject.session)
+            .select_related("elective_subject", "elective_subject__group")
+        )
     matching_el = None
     for r in el_regs:
         if _is_matching_elective_exam(exam, r.elective_subject):
@@ -92,7 +95,7 @@ def django_registration_to_engine_student(registration):
     elif hasattr(exam.subject, "subject_category") and exam.subject.subject_category:
         category = exam.subject.subject_category
 
-    return EngineStudent(
+    engine_stu = EngineStudent(
         register_no=roll,
         name=student.student_name,
         department=department.department_code,
@@ -106,6 +109,9 @@ def django_registration_to_engine_student(registration):
         subject_category=category,
         class_name=student_class.class_name,
     )
+    from engine.models.room_allocation import subject_conflict_key
+    engine_stu._conflict_key = subject_conflict_key(engine_stu.subject_code, engine_stu.department, engine_stu.subject_name)
+    return engine_stu
 
 
 def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session="FN"):
@@ -132,7 +138,17 @@ def elective_registration_to_engine_student(reg, exam_date="01-01-2025", session
     )
 
 
-def get_engine_students(exam):
+def get_engine_students(exam, elec_map=None):
+    if elec_map is None:
+        from collections import defaultdict
+        from exam_allocator.models import ElectiveStudentRegistration
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=exam.subject.session
+        ).select_related("elective_subject", "elective_subject__group")
+        elec_map = defaultdict(list)
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
+
     registrations = (
         ExamRegistration.objects.filter(exam=exam)
         .select_related(
@@ -146,7 +162,40 @@ def get_engine_students(exam):
     )
 
     return [
-        django_registration_to_engine_student(registration)
+        django_registration_to_engine_student(registration, elec_map=elec_map)
+        for registration in registrations
+    ]
+
+
+def get_engine_students_for_exams(exams, session=None):
+    if not exams:
+        return []
+    if session is None:
+        session = exams[0].subject.session
+
+    from collections import defaultdict
+    from exam_allocator.models import ElectiveStudentRegistration
+    elec_regs = ElectiveStudentRegistration.objects.filter(
+        elective_subject__group__session=session
+    ).select_related("elective_subject", "elective_subject__group")
+    elec_map = defaultdict(list)
+    for r in elec_regs:
+        elec_map[r.student_id].append(r)
+
+    registrations = (
+        ExamRegistration.objects.filter(exam__in=exams)
+        .select_related(
+            "student",
+            "student__student_class",
+            "student__student_class__department",
+            "exam",
+            "exam__subject",
+        )
+        .order_by("student__roll_number")
+    )
+
+    return [
+        django_registration_to_engine_student(registration, elec_map=elec_map)
         for registration in registrations
     ]
 

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 from engine.config import AllocationLimits
 
@@ -8,6 +9,16 @@ class StreamSlot:
     stream_name: str
     capacity: int = 15
     students: List[Any] = field(default_factory=list)
+    _cached_departments: Optional[set] = field(default=None, init=False, repr=False)
+    _cached_subject_codes: Optional[set] = field(default=None, init=False, repr=False)
+    _cached_len: int = field(default=-1, init=False, repr=False)
+    _cached_id: int = field(default=-1, init=False, repr=False)
+
+    def invalidate_cache(self):
+        self._cached_departments = None
+        self._cached_subject_codes = None
+        self._cached_len = -1
+        self._cached_id = -1
 
     @property
     def remaining_capacity(self) -> int:
@@ -19,28 +30,35 @@ class StreamSlot:
 
     @property
     def subject_codes(self) -> set:
-        return {
-            subject_conflict_key(
-                getattr(s, "subject_code", ""),
-                getattr(s, "department", ""),
-                getattr(s, "subject_name", ""),
-            )
-            for s in self.students
-            if subject_conflict_key(
-                getattr(s, "subject_code", ""),
-                getattr(s, "department", ""),
-                getattr(s, "subject_name", ""),
-            )
-        }
+        cur_id = id(self.students)
+        cur_len = len(self.students)
+        if self._cached_subject_codes is None or self._cached_len != cur_len or self._cached_id != cur_id:
+            self._cached_subject_codes = {
+                getattr(s, "_conflict_key", None) or subject_conflict_key(
+                    getattr(s, "subject_code", ""),
+                    getattr(s, "department", ""),
+                    getattr(s, "subject_name", ""),
+                )
+                for s in self.students
+            }
+            self._cached_subject_codes.discard("")
+            self._cached_len = cur_len
+            self._cached_id = cur_id
+        return self._cached_subject_codes
 
     @property
     def departments(self) -> set:
-        return {
-            getattr(s, "department", "")
-            for s in self.students
-            if getattr(s, "department", "")
-        }
-
+        cur_id = id(self.students)
+        cur_len = len(self.students)
+        if self._cached_departments is None or self._cached_len != cur_len or self._cached_id != cur_id:
+            self._cached_departments = {
+                getattr(s, "department", "")
+                for s in self.students
+                if getattr(s, "department", "")
+            }
+            self._cached_len = cur_len
+            self._cached_id = cur_id
+        return self._cached_departments
 
 class RoomAllocation:
 
@@ -103,16 +121,8 @@ class RoomAllocation:
         """Set of unique normalized subject conflict keys currently in this room."""
         subjs = set()
         for stream in self.streams.values():
-            for s in stream.students:
-                key = subject_conflict_key(
-                    getattr(s, "subject_code", ""),
-                    getattr(s, "department", ""),
-                    getattr(s, "subject_name", ""),
-                )
-                if key:
-                    subjs.add(key)
+            subjs.update(stream.subject_codes)
         return subjs
-
     def can_add_subject(
         self,
         subject_code: str,
@@ -257,6 +267,7 @@ class RoomAllocation:
 
         allocated_students = group.allocate_students(take)
         stream.students.extend(allocated_students)
+        stream.invalidate_cache()
 
     def snapshot(self) -> dict:
         return {
@@ -267,12 +278,15 @@ class RoomAllocation:
     def restore(self, snapshot: dict):
         for name, students in snapshot.items():
             self.streams[name].students = list(students)
+            self.streams[name].invalidate_cache()
 
     def clear_all_streams(self):
         for stream in self.streams.values():
             stream.students.clear()
+            stream.invalidate_cache()
 
 
+@lru_cache(maxsize=4096)
 def is_generic_elective(subject_code: str, subject_name: str = "") -> bool:
     code = str(subject_code or "").strip().upper()
     name = str(subject_name or "").strip().upper()
@@ -296,6 +310,7 @@ def is_generic_elective(subject_code: str, subject_name: str = "") -> bool:
     return any(t in text for t in generic_tokens)
 
 
+@lru_cache(maxsize=8192)
 def subject_conflict_key(
     subject_code: str,
     department: str = "",

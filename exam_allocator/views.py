@@ -900,9 +900,19 @@ def blueprint_review(request, session_id):
 
         if blueprint:
             BlueprintService.consolidate_slot_assignments(blueprint)
-            from exam_allocator.models import Subject, ElectiveSubject
+            from exam_allocator.models import Subject, ElectiveSubject, Class
             subject_map = dict(Subject.objects.filter(session=session).values_list("subject_code", "subject_name"))
             elective_map = dict(ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name"))
+            subj_sem_map = {
+                code.strip().upper(): sem
+                for code, sem in Subject.objects.filter(session=session).values_list("subject_code", "semester")
+                if sem
+            }
+            class_sem_map = {
+                cname.strip().upper(): sem
+                for cname, sem in Class.objects.filter(department__session=session).values_list("class_name", "semester")
+                if sem
+            }
 
             rbs = (
                 blueprint.room_blueprints.all()
@@ -919,7 +929,13 @@ def blueprint_review(request, session_id):
                     if not sa.subject_name:
                         sa.subject_name = subject_map.get(sa.subject_code) or elective_map.get(sa.subject_code) or ""
                     sa.main_class_name = BlueprintService.strip_section_suffix(sa.class_name)
-                    sa.semester = BlueprintService.get_semester_for_assignment(session, sa.subject_code, sa.class_name)
+                    sa.semester = BlueprintService.get_semester_for_assignment(
+                        session,
+                        sa.subject_code,
+                        sa.class_name,
+                        subj_sem_map=subj_sem_map,
+                        class_sem_map=class_sem_map,
+                    )
                     assignments_by_stream[sa.stream_name].append(sa)
                     stream_totals[sa.stream_name] += sa.student_count
 

@@ -9,6 +9,7 @@ and elective/minor/honours subject-code mapping.
 
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass, field
 from django.db import transaction
 from django.db.models import Q
@@ -212,7 +213,7 @@ def _resolve_elective_students(exam: Exam) -> list[Student]:
     return students
 
 
-def preview_exam_registration(exam: Exam) -> RegistrationPreview:
+def preview_exam_registration(exam: Exam, dept_sem_students=None) -> RegistrationPreview:
     session = exam.subject.session
     timetable_branches = resolve_exam_branches(exam)
     exam_semester = parse_semester_flexible(exam.subject.semester) or 0
@@ -250,21 +251,36 @@ def preview_exam_registration(exam: Exam) -> RegistrationPreview:
     matched_students = []
     matched_classes = set()
 
-    all_students = (
-        Student.objects.filter(student_class__department__session=session)
-        .select_related("student_class", "student_class__department")
-        .order_by("roll_number")
-    )
-
-    for student in all_students:
-        c_dept, c_sem = get_class_branch_and_sem(
-            student.student_class.class_name,
-            student.student_class.semester,
-            student.student_class.department.department_code,
+    if dept_sem_students is not None:
+        if "ALL_BRANCHES" in target_branches:
+            for (c_dept, c_sem), s_list in dept_sem_students.items():
+                if c_sem == exam_semester:
+                    matched_students.extend(s_list)
+                    for s in s_list:
+                        matched_classes.add(s.student_class.class_name)
+        else:
+            for branch in target_branches:
+                s_list = dept_sem_students.get((branch, exam_semester), [])
+                matched_students.extend(s_list)
+                for s in s_list:
+                    matched_classes.add(s.student_class.class_name)
+        matched_students.sort(key=lambda s: s.roll_number)
+    else:
+        all_students = (
+            Student.objects.filter(student_class__department__session=session)
+            .select_related("student_class", "student_class__department")
+            .order_by("roll_number")
         )
-        if c_sem == exam_semester and ("ALL_BRANCHES" in target_branches or c_dept in target_branches):
-            matched_students.append(student)
-            matched_classes.add(student.student_class.class_name)
+
+        for student in all_students:
+            c_dept, c_sem = get_class_branch_and_sem(
+                student.student_class.class_name,
+                student.student_class.semester,
+                student.student_class.department.department_code,
+            )
+            if c_sem == exam_semester and ("ALL_BRANCHES" in target_branches or c_dept in target_branches):
+                matched_students.append(student)
+                matched_classes.add(student.student_class.class_name)
 
     matched_classes_list = sorted(matched_classes)
 
@@ -322,8 +338,8 @@ def preview_all_exams():
 
 
 @transaction.atomic
-def create_exam_registrations(exam: Exam) -> dict:
-    preview = preview_exam_registration(exam)
+def create_exam_registrations(exam: Exam, dept_sem_students=None) -> dict:
+    preview = preview_exam_registration(exam, dept_sem_students=dept_sem_students)
 
     if preview.status != "AUTO_RESOLVED":
         return {
@@ -335,18 +351,24 @@ def create_exam_registrations(exam: Exam) -> dict:
             "message": preview.message,
         }
 
+    existing_student_ids = set(
+        ExamRegistration.objects.filter(exam=exam).values_list("student_id", flat=True)
+    )
+
     created_count = 0
     existing_count = 0
+    to_create = []
 
     for student in preview.matched_students:
-        registration, created = ExamRegistration.objects.get_or_create(
-            student=student,
-            exam=exam,
-        )
-        if created:
-            created_count += 1
-        else:
+        if student.student_id in existing_student_ids:
             existing_count += 1
+        else:
+            to_create.append(ExamRegistration(student=student, exam=exam))
+            existing_student_ids.add(student.student_id)
+            created_count += 1
+
+    if to_create:
+        ExamRegistration.objects.bulk_create(to_create, batch_size=2000, ignore_conflicts=True)
 
     return {
         "exam_id": exam.exam_id,
@@ -360,7 +382,7 @@ def create_exam_registrations(exam: Exam) -> dict:
 
 @transaction.atomic
 def create_all_exam_registrations(session) -> dict:
-    exams = (
+    exams = list(
         Exam.objects.select_related("subject")
         .prefetch_related("targets")
         .filter(subject__session=session)
@@ -371,22 +393,84 @@ def create_all_exam_registrations(session) -> dict:
         )
     )
 
+    if not exams:
+        return {
+            "total_created": 0,
+            "total_existing": 0,
+            "auto_resolved_exams": 0,
+            "unresolved_exams": 0,
+            "results": [],
+        }
+
+    # 1. Fetch all students once and group by (c_dept, c_sem)
+    all_students = list(
+        Student.objects.filter(student_class__department__session=session)
+        .select_related("student_class", "student_class__department")
+        .order_by("roll_number")
+    )
+    dept_sem_students = defaultdict(list)
+    for student in all_students:
+        c_dept, c_sem = get_class_branch_and_sem(
+            student.student_class.class_name,
+            student.student_class.semester,
+            student.student_class.department.department_code,
+        )
+        dept_sem_students[(c_dept, c_sem)].append(student)
+
+    # 2. Pre-fetch existing registrations across all exams in session in 1 query
+    existing_pairs = set(
+        ExamRegistration.objects.filter(exam__in=exams).values_list("exam_id", "student_id")
+    )
+
     total_created = 0
     total_existing = 0
     auto_resolved_exams = 0
     unresolved_exams = 0
     results = []
+    to_create = []
 
     for exam in exams:
-        result = create_exam_registrations(exam)
-        results.append(result)
-        total_created += result["registrations_created"]
-        total_existing += result["registrations_existing"]
+        preview = preview_exam_registration(exam, dept_sem_students=dept_sem_students)
 
-        if result["status"] == "AUTO_RESOLVED":
-            auto_resolved_exams += 1
-        else:
+        if preview.status != "AUTO_RESOLVED":
+            results.append({
+                "exam_id": exam.exam_id,
+                "subject_code": exam.subject.subject_code,
+                "status": preview.status,
+                "registrations_created": 0,
+                "registrations_existing": 0,
+                "message": preview.message,
+            })
             unresolved_exams += 1
+            continue
+
+        auto_resolved_exams += 1
+        created_count = 0
+        existing_count = 0
+
+        for student in preview.matched_students:
+            pair = (exam.exam_id, student.student_id)
+            if pair in existing_pairs:
+                existing_count += 1
+            else:
+                to_create.append(ExamRegistration(student=student, exam=exam))
+                existing_pairs.add(pair)
+                created_count += 1
+
+        total_created += created_count
+        total_existing += existing_count
+
+        results.append({
+            "exam_id": exam.exam_id,
+            "subject_code": exam.subject.subject_code,
+            "status": "AUTO_RESOLVED",
+            "registrations_created": created_count,
+            "registrations_existing": existing_count,
+            "message": "Registrations created successfully.",
+        })
+
+    if to_create:
+        ExamRegistration.objects.bulk_create(to_create, batch_size=2000, ignore_conflicts=True)
 
     return {
         "total_created": total_created,

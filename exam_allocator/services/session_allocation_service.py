@@ -10,6 +10,7 @@ from exam_allocator.models import (
 )
 
 from exam_allocator.services.engine_adapter import (
+    django_registration_to_engine_student,
     django_room_to_engine_classroom,
     get_engine_students,
 )
@@ -67,7 +68,7 @@ def _get_session_rooms(session):
     return list(rooms)
 
 
-def _get_slot_students(exams):
+def _get_slot_students(exams, session=None):
     """
     Return all registered engine students grouped by:
 
@@ -76,19 +77,42 @@ def _get_slot_students(exams):
     Every exam in the same date/session therefore participates
     in the same allocation problem.
     """
+    if not exams:
+        return defaultdict(list)
+
+    if session is None and exams:
+        session = getattr(exams[0].subject, "session", None)
+
+    elec_map = defaultdict(list)
+    if session:
+        from exam_allocator.models import ElectiveStudentRegistration
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related("elective_subject", "elective_subject__group")
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
 
     slot_students = defaultdict(list)
 
-    for exam in exams:
-
-        students = get_engine_students(exam)
-
-        key = (
-            exam.exam_date,
-            exam.session,
+    registrations = (
+        ExamRegistration.objects.filter(exam__in=exams)
+        .select_related(
+            "student",
+            "student__student_class",
+            "student__student_class__department",
+            "exam",
+            "exam__subject",
         )
+        .order_by("exam_id", "student__roll_number")
+    )
 
-        slot_students[key].extend(students)
+    for registration in registrations:
+        engine_stu = django_registration_to_engine_student(registration, elec_map=elec_map)
+        key = (
+            registration.exam.exam_date,
+            registration.exam.session,
+        )
+        slot_students[key].append(engine_stu)
 
     return slot_students
 
@@ -429,7 +453,7 @@ def run_session_allocation(session):
     if not rooms:
         raise SessionAllocationError("This session contains no classrooms.")
 
-    slot_students = _get_slot_students(exams)
+    slot_students = _get_slot_students(exams, session=session)
 
     all_allocations = []
 

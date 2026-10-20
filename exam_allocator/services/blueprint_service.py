@@ -19,6 +19,7 @@ from engine.models.room_allocation import RoomAllocation, subject_conflict_key
 from exam_allocator.models import (
     Allocation,
     AllocationSession,
+    Class,
     Exam,
     ExamRegistration,
     Room,
@@ -31,6 +32,7 @@ from exam_allocator.models import (
 from exam_allocator.services.engine_adapter import (
     django_room_to_engine_classroom,
     get_engine_students,
+    get_engine_students_for_exams,
 )
 from exam_allocator.services.registration_service import create_exam_registrations
 from exam_allocator.services.session_allocation_service import (
@@ -87,29 +89,43 @@ def format_merged_class_names(class_names: List[str]) -> str:
     return ", ".join(distinct)
 
 
-def get_semester_for_assignment(session, subject_code: str, class_name: str = "") -> Optional[int]:
+def get_semester_for_assignment(
+    session,
+    subject_code: str,
+    class_name: str = "",
+    subj_sem_map: Optional[dict] = None,
+    class_sem_map: Optional[dict] = None,
+) -> Optional[int]:
     """Resolve semester count from Subject or Class or subject code."""
-    if subject_code:
-        subj = Subject.objects.filter(session=session, subject_code__iexact=subject_code.strip()).first()
-        if subj and subj.semester:
-            return subj.semester
-
-        elec = ElectiveSubject.objects.filter(group__session=session, subject_code__iexact=subject_code.strip()).first()
-        if elec and hasattr(elec, "semester") and elec.semester:
-            return elec.semester
+    code_clean = (subject_code or "").strip().upper()
+    if code_clean:
+        if subj_sem_map is not None:
+            sem = subj_sem_map.get(code_clean)
+            if sem:
+                return sem
+        else:
+            subj = Subject.objects.filter(session=session, subject_code__iexact=code_clean).first()
+            if subj and subj.semester:
+                return subj.semester
 
         # Infer semester from common subject code formats like "22ECT801" -> 8, "23ARS403" -> 4
-        m = re.search(r"[A-Za-z]+([1-8])\d{2}", str(subject_code))
+        m = re.search(r"[A-Za-z]+([1-8])\d{2}", code_clean)
         if m:
             try:
                 return int(m.group(1))
             except ValueError:
                 pass
 
-    if class_name:
-        cls_obj = Class.objects.filter(department__session=session, class_name__iexact=class_name.strip()).first()
-        if cls_obj and cls_obj.semester:
-            return cls_obj.semester
+    cls_clean = (class_name or "").strip().upper()
+    if cls_clean:
+        if class_sem_map is not None:
+            sem = class_sem_map.get(cls_clean)
+            if sem:
+                return sem
+        else:
+            cls_obj = Class.objects.filter(department__session=session, class_name__iexact=cls_clean).first()
+            if cls_obj and cls_obj.semester:
+                return cls_obj.semester
 
     return None
 
@@ -204,9 +220,7 @@ class BlueprintService:
                 create_exam_registrations(ex)
 
         # Collect engine students
-        engine_students = []
-        for ex in exams:
-            engine_students.extend(get_engine_students(ex))
+        engine_students = get_engine_students_for_exams(exams, session=session)
 
         if not engine_students:
             raise BlueprintServiceError(
@@ -471,9 +485,7 @@ class BlueprintService:
             )
 
         # Expected eligible engine students
-        expected_students = []
-        for ex in exams:
-            expected_students.extend(get_engine_students(ex))
+        expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         expected_rolls = {
             (getattr(s, "roll_no", None) or getattr(s, "register_no", "")).strip()
@@ -729,11 +741,16 @@ class BlueprintService:
         """
         changed = False
         with transaction.atomic():
-            for rb in slot_blueprint.room_blueprints.all():
+            room_blueprints = list(
+                slot_blueprint.room_blueprints.prefetch_related("stream_assignments").all()
+            )
+            for rb in room_blueprints:
                 rb_changed = False
+                all_assignments = list(rb.stream_assignments.all())
                 for stream_name in ["A", "B", "C"]:
-                    assignments = list(
-                        rb.stream_assignments.filter(stream_name=stream_name).order_by("order", "assignment_id")
+                    assignments = sorted(
+                        [sa for sa in all_assignments if sa.stream_name == stream_name],
+                        key=lambda x: (x.order or 0, x.assignment_id or 0),
                     )
                     seen_keys = {}
                     for sa in assignments:
@@ -785,6 +802,16 @@ class BlueprintService:
         elective_map = dict(
             ElectiveSubject.objects.filter(group__session=session).values_list("subject_code", "subject_name")
         )
+        subj_sem_map = {
+            code.strip().upper(): sem
+            for code, sem in Subject.objects.filter(session=session).values_list("subject_code", "semester")
+            if sem
+        }
+        class_sem_map = {
+            cname.strip().upper(): sem
+            for cname, sem in Class.objects.filter(department__session=session).values_list("class_name", "semester")
+            if sem
+        }
 
         rbs = (
             slot_blueprint.room_blueprints.all()
@@ -807,7 +834,13 @@ class BlueprintService:
                     or ""
                 )
                 main_cls = strip_section_suffix(sa.class_name)
-                sem = get_semester_for_assignment(session, sa.subject_code, sa.class_name)
+                sem = get_semester_for_assignment(
+                    session,
+                    sa.subject_code,
+                    sa.class_name,
+                    subj_sem_map=subj_sem_map,
+                    class_sem_map=class_sem_map,
+                )
                 assign_data = {
                     "assignment_id": sa.assignment_id,
                     "stream_name": sa.stream_name,
@@ -1163,9 +1196,7 @@ class BlueprintService:
             exams = cls.get_slot_exams(
                 slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
             )
-            expected_students = []
-            for ex in exams:
-                expected_students.extend(get_engine_students(ex))
+            expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
             target_student = None
             for s in expected_students:
@@ -1830,9 +1861,7 @@ class BlueprintService:
         exams = cls.get_slot_exams(
             slot_blueprint.session, slot_blueprint.exam_date, slot_blueprint.shift
         )
-        expected_students = []
-        for ex in exams:
-            expected_students.extend(get_engine_students(ex))
+        expected_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         allocated_rolls = set()
         for sa in StreamBlueprintAssignment.objects.filter(
@@ -2185,9 +2214,7 @@ class BlueprintService:
             raise BlueprintServiceError("No examinations found for this slot.")
 
         # Map eligible engine students by roll number
-        slot_students = []
-        for ex in exams:
-            slot_students.extend(get_engine_students(ex))
+        slot_students = get_engine_students_for_exams(exams, session=slot_blueprint.session)
 
         student_by_roll = {}
         for s in slot_students:
