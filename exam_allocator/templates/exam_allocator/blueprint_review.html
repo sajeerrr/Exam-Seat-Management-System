@@ -337,57 +337,101 @@
         margin: 4px 0;
     }
 
-    /* COMPACT 1-LINE METRICS BAR */
-    .compact-metrics-bar {
+    /* ══════════════════════════════════════════════════════════════════════
+       INDIVIDUAL METRIC WINDOWS / CARDS
+       ══════════════════════════════════════════════════════════════════════ */
+    .metrics-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+
+    .metric-card-window {
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: var(--radius-sm);
-        padding: 9px 18px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        padding: 10px 16px;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
+        gap: 10px;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .compact-metric-item {
+
+    .metric-card-window:hover {
+        border-color: rgba(99, 102, 241, 0.35);
+        box-shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.1), 0 2px 4px rgba(15, 23, 42, 0.03);
+        transform: translateY(-1px);
+    }
+
+    .metric-window-body {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
+        gap: 8px;
         font-size: 13px;
         color: #475569;
+        flex-wrap: wrap;
     }
-    .compact-metric-icon {
-        font-size: 16px;
-        line-height: 1;
+
+    .metric-window-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
     }
-    .compact-metric-label {
+
+    .metric-window-icon.icon-students {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+    }
+
+    .metric-window-icon.icon-rooms {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+
+    .metric-window-icon.icon-util {
+        background: rgba(139, 92, 246, 0.1);
+        color: #7c3aed;
+    }
+
+    .metric-window-label {
         font-weight: 700;
         color: #64748b;
         font-size: 11.5px;
         text-transform: uppercase;
         letter-spacing: 0.4px;
     }
-    .compact-metric-val {
+
+    .metric-window-val {
         font-size: 15px;
         font-weight: 800;
         color: #0f172a;
     }
-    .compact-metric-sub {
+
+    .metric-window-sub {
         font-size: 12.5px;
         color: #64748b;
     }
-    .compact-metric-divider {
-        width: 1px;
-        height: 20px;
-        background: #e2e8f0;
+
+    .metric-window-right {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
     }
-    @media (max-width: 860px) {
-        .compact-metric-divider {
-            display: none;
+
+    @media (max-width: 992px) {
+        .metrics-cards-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
         }
     }
+
     .compact-progress-track {
         width: 65px;
         height: 7px;
@@ -1341,47 +1385,61 @@
 
     </div>
 
-    <!-- COMPACT 1-LINE METRICS BAR -->
+    <!-- INDIVIDUAL METRIC WINDOWS / CARDS -->
     {% if blueprint %}
-    <div class="compact-metrics-bar">
-        <!-- 1. STUDENTS SUMMARY -->
-        <div class="compact-metric-item">
-            <span class="compact-metric-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
-            <span class="compact-metric-label">Students:</span>
-            <strong class="compact-metric-val" id="metricAllocatedVal">{{ blueprint.total_allocated_students }}</strong>
-            <span class="compact-metric-sub">/ {{ blueprint.total_eligible_students }}</span>
-            {% if blueprint.unallocated_count > 0 %}
-            <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer; margin-left: 6px;" title="Click to place unallocated students">
-                ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
-            </span>
-            {% else %}
-            <span class="metric-pill pill-success" style="margin-left: 6px;">✓ 100% Placed</span>
-            <span style="display:none;" id="statUnallocatedCount">0</span>
-            {% endif %}
-        </div>
-
-        <div class="compact-metric-divider"></div>
-
-        <!-- 2. ROOMS SUMMARY -->
-        <div class="compact-metric-item">
-            <span class="compact-metric-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
-            <span class="compact-metric-label">Classrooms:</span>
-            <strong class="compact-metric-val" id="metricRoomsUsedVal">{{ blueprint.rooms_used }}</strong>
-            <span class="compact-metric-sub">Active Rooms</span>
-            <span class="compact-metric-sub" style="margin-left: 4px;">({{ blueprint.total_room_capacity }} seats)</span>
-        </div>
-
-        <div class="compact-metric-divider"></div>
-
-        <!-- 3. CAPACITY & UTILIZATION SUMMARY -->
-        <div class="compact-metric-item">
-            <span class="compact-metric-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></span>
-            <span class="compact-metric-label">Utilization:</span>
-            <strong class="compact-metric-val" id="metricUtilVal">{{ blueprint.room_utilization }}%</strong>
-            <div class="compact-progress-track" title="{{ blueprint.room_utilization }}% utilized">
-                <div class="metric-progress-fill" style="width: {{ blueprint.room_utilization }}%;"></div>
+    <div class="metrics-cards-grid">
+        <!-- 1. STUDENTS WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-students">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+                <span class="metric-window-label">Students:</span>
+                <strong class="metric-window-val" id="metricAllocatedVal">{{ blueprint.total_allocated_students }}</strong>
+                <span class="metric-window-sub">/ {{ blueprint.total_eligible_students }}</span>
             </div>
-            <span class="compact-metric-sub">(<strong id="metricRemainingCapVal" style="color: #475569;">{{ blueprint.remaining_capacity }}</strong> seats free)</span>
+            <div class="metric-window-right">
+                {% if blueprint.unallocated_count > 0 %}
+                <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer;" title="Click to place unallocated students">
+                    ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
+                </span>
+                {% else %}
+                <span class="metric-pill pill-success">✓ 100% Placed</span>
+                <span style="display:none;" id="statUnallocatedCount">0</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 2. ROOMS WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-rooms">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                </span>
+                <span class="metric-window-label">Classrooms:</span>
+                <strong class="metric-window-val" id="metricRoomsUsedVal">{{ blueprint.rooms_used }}</strong>
+                <span class="metric-window-sub">Active Rooms</span>
+            </div>
+            <div class="metric-window-right">
+                <span class="metric-window-sub">({{ blueprint.total_room_capacity }} seats)</span>
+            </div>
+        </div>
+
+        <!-- 3. UTILIZATION WINDOW -->
+        <div class="metric-card-window">
+            <div class="metric-window-body">
+                <span class="metric-window-icon icon-util">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </span>
+                <span class="metric-window-label">Utilization:</span>
+                <strong class="metric-window-val" id="metricUtilVal">{{ blueprint.room_utilization }}%</strong>
+                <div class="compact-progress-track" title="{{ blueprint.room_utilization }}% utilized">
+                    <div class="metric-progress-fill" style="width: {{ blueprint.room_utilization }}%;"></div>
+                </div>
+            </div>
+            <div class="metric-window-right">
+                <span class="metric-window-sub">(<strong id="metricRemainingCapVal" style="color: #475569;">{{ blueprint.remaining_capacity }}</strong> seats free)</span>
+            </div>
         </div>
     </div>
     {% endif %}
