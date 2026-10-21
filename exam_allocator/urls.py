@@ -6,8 +6,11 @@ app_name = "exam_allocator"
 
 
 urlpatterns = [
+    # ── Home Landing Page ─────────────────────────────────────────────────
+    path("", views.home_landing, name="home"),
+
     # ── Session management ────────────────────────────────────────────────
-    path("", views.session_list, name="session_list"),
+    path("sessions/", views.session_list, name="session_list"),
     path("session/new/", views.create_session, name="create_session"),
     path("session/<int:session_id>/", views.session_detail, name="session_detail"),
     path("session/<int:session_id>/delete/", views.delete_session, name="delete_session"),

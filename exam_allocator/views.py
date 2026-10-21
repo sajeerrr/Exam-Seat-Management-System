@@ -114,6 +114,33 @@ def format_rolls_for_room(rolls, class_rolls):
     return ", ".join(parts)
 
 
+def home_landing(request):
+    """
+    Public Home/Landing page for ESMS inspired by Shibutz.
+    Provides clear value proposition, live interactive seating preview,
+    feature pillars, and direct entry points to active sessions.
+    """
+    recent_sessions = list(AllocationSession.objects.order_by("-updated_at", "-session_id")[:4])
+    total_sessions = AllocationSession.objects.count()
+    total_students = Student.objects.count()
+    total_rooms = Room.objects.count()
+    total_exams = Exam.objects.count()
+    total_allocations = Allocation.objects.count()
+
+    return render(
+        request,
+        "exam_allocator/home_landing.html",
+        {
+            "recent_sessions": recent_sessions,
+            "total_sessions": total_sessions,
+            "total_students": total_students,
+            "total_rooms": total_rooms,
+            "total_exams": total_exams,
+            "total_allocations": total_allocations,
+        },
+    )
+
+
 @ensure_csrf_cookie
 def session_list(request):
 
