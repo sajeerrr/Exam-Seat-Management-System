@@ -1,3 +1,4 @@
+import json
 from django.test import TestCase, Client
 from django.urls import reverse
 from exam_allocator.models import (
@@ -9,6 +10,11 @@ from exam_allocator.models import (
     ElectiveGroup,
     ElectiveSubject,
     ElectiveStudentRegistration,
+    Exam,
+    ExamRegistration,
+    Allocation,
+    Room,
+    Subject,
 )
 from exam_allocator.parsers.elective_parser import (
     ElectiveExtractionResult,
@@ -562,5 +568,296 @@ class BlueprintSplitAndAllocationResultTests(TestCase):
         self.assertIn("view-department", html)
         self.assertIn("MCA 2 Year", html)
 
+    def test_api_allocation_move_and_swap(self):
+        import json
+        dept = Department.objects.create(session=self.session, department_code="CS", department_name="Computer Science")
+        cls = Class.objects.create(department=dept, class_name="CS-A", semester=4, academic_year="2025-2026")
+        st1 = Student.objects.create(student_class=cls, roll_number="B23CS01", student_name="Alice")
+        st2 = Student.objects.create(student_class=cls, roll_number="B23CS02", student_name="Bob")
+        subj = Subject.objects.create(session=self.session, subject_code="CS201", subject_name="Algorithms", semester=4)
+        exam = Exam.objects.create(
+            subject=subj,
+            exam_date="2026-03-15",
+            session="FN",
+            duration=180,
+        )
+        reg1 = ExamRegistration.objects.create(student=st1, exam=exam)
+        reg2 = ExamRegistration.objects.create(student=st2, exam=exam)
 
+        alloc1 = Allocation.objects.create(exam=exam, registration=reg1, room=self.room1, bench_number=1, seat_number=1)
+        alloc2 = Allocation.objects.create(exam=exam, registration=reg2, room=self.room1, bench_number=1, seat_number=2)
+
+        client = Client()
+        update_url = reverse("exam_allocator:api_allocation_update", args=[self.session.session_id])
+
+        # 1. Move alloc1 to an empty seat (Bench 5, Seat 3)
+        move_resp = client.post(
+            update_url,
+            data=json.dumps({
+                "action": "move",
+                "allocation_id": alloc1.allocation_id,
+                "target_room_id": self.room1.room_id,
+                "target_bench_number": 5,
+                "target_seat_number": 3,
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(move_resp.status_code, 200)
+        data = move_resp.json()
+        self.assertTrue(data["success"])
+        self.assertFalse(data["is_swap"])
+
+        alloc1.refresh_from_db()
+        self.assertEqual(alloc1.bench_number, 5)
+        self.assertEqual(alloc1.seat_number, 3)
+
+        # 2. Swap alloc1 (now at B5, S3) and alloc2 (at B1, S2)
+        swap_resp = client.post(
+            update_url,
+            data=json.dumps({
+                "action": "swap",
+                "source_allocation_id": alloc1.allocation_id,
+                "target_allocation_id": alloc2.allocation_id,
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(swap_resp.status_code, 200)
+        swap_data = swap_resp.json()
+        self.assertTrue(swap_data["success"])
+        self.assertTrue(swap_data["is_swap"])
+
+        alloc1.refresh_from_db()
+        alloc2.refresh_from_db()
+        self.assertEqual(alloc1.bench_number, 1)
+        self.assertEqual(alloc1.seat_number, 2)
+        self.assertEqual(alloc2.bench_number, 5)
+        self.assertEqual(alloc2.seat_number, 3)
+
+    def test_export_allocations_csv(self):
+        dept = Department.objects.create(session=self.session, department_code="EC", department_name="Electronics")
+        cls = Class.objects.create(department=dept, class_name="EC-A", semester=4, academic_year="2025-2026")
+        st = Student.objects.create(student_class=cls, roll_number="B23EC01", student_name="Carol")
+        subj = Subject.objects.create(session=self.session, subject_code="EC201", subject_name="Signals", semester=4)
+        exam = Exam.objects.create(
+            subject=subj,
+            exam_date="2026-03-16",
+            session="FN",
+            duration=180,
+        )
+        reg = ExamRegistration.objects.create(student=st, exam=exam)
+        Allocation.objects.create(exam=exam, registration=reg, room=self.room1, bench_number=2, seat_number=1)
+
+        client = Client()
+        csv_url = reverse("exam_allocator:export_allocations_csv", args=[self.session.session_id])
+        resp = client.get(csv_url + "?date=2026-03-16&shift=FN")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/csv")
+        self.assertIn("attachment; filename=", resp["Content-Disposition"])
+
+        content = resp.content.decode("utf-8")
+        self.assertIn("Branch,Count,Classname,Status,Start Roll Number,End Rollnumber,Comma Separater ,Subject", content)
+        self.assertIn(st.roll_number, content)
+        self.assertIn(self.room1.room_number, content)
+
+        # Also test detailed fallback
+        resp_detail = client.get(csv_url + "?date=2026-03-16&shift=FN&format=detailed")
+        self.assertEqual(resp_detail.status_code, 200)
+        content_detail = resp_detail.content.decode("utf-8")
+        self.assertIn("Roll Number,Student Name,Department,Class,Subject Code", content_detail)
+
+
+class RoomEditAndCapacityStepperTests(TestCase):
+    def setUp(self):
+        from exam_allocator.models import AllocationSession, SlotBlueprint, RoomBlueprint, Room, StreamBlueprintAssignment
+        self.session = AllocationSession.objects.create(name="Test Session Spring 2026", status="DRAFT")
+        self.room1 = Room.objects.create(session=self.session, room_number="101", capacity=45, benches=15, building="Main")
+        self.room2 = Room.objects.create(session=self.session, room_number="102", capacity=45, benches=15, building="Main")
+        self.room_small = Room.objects.create(session=self.session, room_number="Small 1", capacity=10, benches=4, building="Main")
+
+        self.bp = SlotBlueprint.objects.create(
+            session=self.session,
+            exam_date="2026-03-20",
+            shift="FN",
+            status=SlotBlueprint.Status.DRAFT,
+            total_eligible_students=20,
+            total_allocated_students=15,
+            unallocated_count=5
+        )
+        self.rbp1 = RoomBlueprint.objects.create(
+            slot_blueprint=self.bp,
+            room=self.room1,
+            capacity=45,
+            total_students=15,
+            unused_capacity=30,
+            room_order=1
+        )
+        self.assign1 = StreamBlueprintAssignment.objects.create(
+            room_blueprint=self.rbp1,
+            stream_name="A",
+            department_code="CSE",
+            class_name="CSE-A",
+            subject_code="CS101",
+            subject_name="Intro CS",
+            student_count=15,
+            student_rolls=[f"CS{i:02d}" for i in range(1, 16)],
+            order=1
+        )
+
+    def test_step_capacity_up_and_down(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        # Step capacity up by 3
+        res = BlueprintService.update_room_capacity(self.bp, self.room1.room_id, 48)
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 48)
+        self.assertEqual(self.rbp1.unused_capacity, 33)
+
+        # Step capacity down
+        res2 = BlueprintService.update_room_capacity(self.bp, self.room1.room_id, 42)
+        self.assertTrue(res2["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 42)
+        self.assertEqual(self.rbp1.unused_capacity, 27)
+
+    def test_rename_room_in_blueprint(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=self.bp,
+            room_blueprint_id=self.rbp1.room_blueprint_id,
+            new_room_number="Hall 101"
+        )
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room.room_number, "Hall 101")
+
+    def test_switch_room_to_existing_session_room(self):
+        from exam_allocator.services.blueprint_service import BlueprintService
+        res = BlueprintService.assign_real_room_name(
+            slot_blueprint=self.bp,
+            room_blueprint_id=self.rbp1.room_blueprint_id,
+            target_room_id=self.room2.room_id
+        )
+        self.assertTrue(res["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room, self.room2)
+        self.assertEqual(self.rbp1.total_students, 15)
+
+    def test_switch_room_rejects_smaller_capacity_than_students(self):
+        from exam_allocator.services.blueprint_service import BlueprintService, BlueprintServiceError
+        with self.assertRaises(BlueprintServiceError) as ctx:
+            BlueprintService.assign_real_room_name(
+                slot_blueprint=self.bp,
+                room_blueprint_id=self.rbp1.room_blueprint_id,
+                target_room_id=self.room_small.room_id
+            )
+        self.assertIn("smaller than the 15 currently assigned students", str(ctx.exception))
+
+    def test_api_blueprint_room_capacity_stepper_endpoint(self):
+        client = Client()
+        url = reverse("exam_allocator:api_blueprint_room_capacity", args=[self.session.session_id])
+        resp = client.post(
+            url,
+            data=json.dumps({
+                "blueprint_id": self.bp.blueprint_id,
+                "room_id": self.room1.room_id,
+                "capacity": 48
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.capacity, 48)
+
+    def test_api_blueprint_assign_room_name_endpoint(self):
+        client = Client()
+        url = reverse("exam_allocator:api_blueprint_assign_room_name", args=[self.session.session_id])
+        resp = client.post(
+            url,
+            data=json.dumps({
+                "blueprint_id": self.bp.blueprint_id,
+                "room_blueprint_id": self.rbp1.room_blueprint_id,
+                "target_room_id": self.room2.room_id
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["success"])
+        self.rbp1.refresh_from_db()
+        self.assertEqual(self.rbp1.room, self.room2)
+
+class ExamSlotOrderingTests(TestCase):
+    def setUp(self):
+        self.session = AllocationSession.objects.create(name="Slot Order Session")
+        self.subj1 = Subject.objects.create(session=self.session, subject_code="SUB101", subject_name="Subject 1", semester=1)
+        self.subj2 = Subject.objects.create(session=self.session, subject_code="SUB102", subject_name="Subject 2", semester=1)
+        self.subj3 = Subject.objects.create(session=self.session, subject_code="SUB103", subject_name="Subject 3", semester=1)
+        self.subj4 = Subject.objects.create(session=self.session, subject_code="SUB104", subject_name="Subject 4", semester=1)
+
+        # Create exams across 2 dates, deliberately inserting AN before FN
+        # Date 1: 2026-04-10
+        Exam.objects.create(subject=self.subj1, exam_date="2026-04-10", session="AN", duration=180)
+        Exam.objects.create(subject=self.subj2, exam_date="2026-04-10", session="FN", duration=180)
+        # Date 2: 2026-04-11
+        Exam.objects.create(subject=self.subj3, exam_date="2026-04-11", session="AN", duration=180)
+        Exam.objects.create(subject=self.subj4, exam_date="2026-04-11", session="FN", duration=180)
+
+    def test_blueprint_review_slot_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:blueprint_review", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        slots = resp.context["slots"]
+        slot_pairs = [(str(s["date"]), s["shift"]) for s in slots]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(slot_pairs, expected_pairs)
+
+        # Also check default selected slot is the first slot (FN)
+        selected_slot = resp.context["selected_slot"]
+        self.assertEqual(str(selected_slot["date"]), "2026-04-10")
+        self.assertEqual(selected_slot["shift"], "FN")
+
+    def test_session_allocation_result_slot_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:session_allocation_result", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        slots = resp.context["slots"]
+        slot_pairs = [(str(s["date"]), s["shift"]) for s in slots]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(slot_pairs, expected_pairs)
+
+        selected_slot = resp.context["selected_slot"]
+        self.assertEqual(str(selected_slot["date"]), "2026-04-10")
+        self.assertEqual(selected_slot["shift"], "FN")
+
+    def test_exam_list_order_fn_first(self):
+        client = Client()
+        url = reverse("exam_allocator:session_exam_list", args=[self.session.session_id])
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        exams = list(resp.context["exams"])
+        exam_pairs = [(str(e.exam_date), e.session) for e in exams]
+        expected_pairs = [
+            ("2026-04-10", "FN"),
+            ("2026-04-10", "AN"),
+            ("2026-04-11", "FN"),
+            ("2026-04-11", "AN"),
+        ]
+        self.assertEqual(exam_pairs, expected_pairs)
 

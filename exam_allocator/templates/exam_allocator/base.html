@@ -6,58 +6,232 @@
     <title>{% block title %}ExamSeat{% endblock %}</title>
     {% block extra_head %}{% endblock %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
+        /* ══════════════════════════════════════════════════════════════════════
+           BLACK & WHITE MINIMALIST IOS / MACOS PREMIUM DESIGN SYSTEM
+           Inspired by shibutz.com and Apple Design Principles
+           ══════════════════════════════════════════════════════════════════════ */
         :root {
-            --bg-primary:     #f0f4ff;
-            --bg-secondary:   #e8eeff;
-            --bg-card:        rgba(255,255,255,0.75);
-            --bg-card-hover:  rgba(255,255,255,0.95);
-            --border:         rgba(99,102,241,0.15);
-            --border-hover:   rgba(99,102,241,0.5);
-            --accent:         #4f46e5;
-            --accent-light:   #6366f1;
-            --accent-glow:    rgba(99,102,241,0.15);
-            --text-primary:   #1e1b4b;
-            --text-secondary: #475569;
-            --text-muted:     #94a3b8;
-            --success:        #059669;
-            --success-bg:     rgba(5,150,105,0.1);
-            --success-border: rgba(5,150,105,0.25);
-            --warning:        #d97706;
-            --warning-bg:     rgba(217,119,6,0.1);
-            --error:          #dc2626;
-            --error-bg:       rgba(220,38,38,0.08);
-            --error-border:   rgba(220,38,38,0.2);
-            --end-seat:       rgba(5,150,105,0.12);
-            --mid-seat:       rgba(99,102,241,0.03);
-            --shadow-card:    rgba(99,102,241,0.1);
-            --blob-a:         rgba(99,102,241,0.08);
-            --blob-b:         rgba(16,185,129,0.05);
-            --bg-sunken:      rgba(99,102,241,0.05);
-            --bg-nav-bar:     rgba(99,102,241,0.07);
-            --bg-interactive: rgba(99,102,241,0.07);
-            --bg-interactive-hover: rgba(99,102,241,0.14);
-            --radius:         14px;
-            --radius-sm:      8px;
+            /* Canvas & Surfaces */
+            --canvas:                 #ffffff;
+            --surface-card:           #ffffff;
+            --surface-subtle:         #f4f4f5;   /* zinc-100 */
+            --surface-muted:          #fafafa;   /* zinc-50 */
+            --surface-sunken:         #f1f1f4;
+
+            /* Outlines & Borders */
+            --border-subtle:          #f4f4f5;
+            --border-default:         #e4e4e7;   /* zinc-200 */
+            --border-hover:           #a1a1aa;   /* zinc-400 */
+            --border-active:          #09090b;   /* zinc-950 */
+
+            /* Stark Monochrome Typography */
+            --text-hero:              #000000;
+            --text-primary:           #09090b;   /* zinc-950 */
+            --text-secondary:         #52525b;   /* zinc-600 */
+            --text-muted:             #71717a;   /* zinc-500 */
+            --text-faint:             #a1a1aa;   /* zinc-400 */
+
+            /* Interactive Elements & Buttons */
+            --btn-primary-bg:         #000000;
+            --btn-primary-text:       #ffffff;
+            --btn-primary-hover:      #27272a;   /* zinc-800 */
+
+            --btn-secondary-bg:       #ffffff;
+            --btn-secondary-border:   #e4e4e7;
+            --btn-secondary-text:     #09090b;
+            --btn-secondary-hover:    #f4f4f5;
+
+            /* Backward-compatible aliases for all legacy template variables */
+            --bg-primary:             #ffffff;
+            --bg-secondary:           #fafafa;
+            --bg-card:                #ffffff;
+            --bg-card-hover:          #ffffff;
+            --border:                 #e4e4e7;
+            --border-hover:           #18181b;
+            --accent:                 #09090b;
+            --accent-light:           #27272a;
+            --accent-glow:            rgba(0, 0, 0, 0.04);
+            --success:                #10b981;
+            --success-bg:             #ecfdf5;
+            --success-border:         #a7f3d0;
+            --warning:                #f59e0b;
+            --warning-bg:             #fffbeb;
+            --error:                  #ef4444;
+            --error-bg:               #fef2f2;
+            --error-border:           #fecaca;
+            --end-seat:               #f4f4f5;
+            --mid-seat:               #ffffff;
+            --shadow-card:            rgba(0, 0, 0, 0.04);
+            --blob-a:                 transparent;
+            --blob-b:                 transparent;
+            --bg-sunken:              #f4f4f5;
+            --bg-nav-bar:             #ffffff;
+            --bg-interactive:         #f4f4f5;
+            --bg-interactive-hover:   #e4e4e7;
+
+            /* Radii */
+            --radius-pill:            9999px;
+            --radius:                 16px;
+            --radius-sm:              8px;
+
+            /* Traffic Light Window Chrome */
+            --traffic-close:          #ef4444;
+            --traffic-minimize:       #f59e0b;
+            --traffic-expand:         #10b981;
         }
 
-        /* ══ GLOBAL RESET ═══════════════════════════════════════════ */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ══ GLOBAL RESET & REFINEMENT ══════════════════════════════ */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
 
-        body { font-family: 'Inter', sans-serif; }
+        html {
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important; /* IE and Edge */
+        }
 
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+            background-color: var(--canvas);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important; /* IE and Edge */
+        }
+
+        /* ══ HIDE SCROLLBARS GLOBALLY ACROSS BROWSERS (CHROME, EDGE, SAFARI, OPERA) ══ */
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        *::-webkit-scrollbar,
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
+            background: transparent !important;
+        }
+
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
+        /* Suppress colored ambient blobs across all templates */
+        body::before, body::after {
+            display: none !important;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        /* ══ REUSABLE MONOCHROME IOS PRIMITIVES ═════════════════════ */
+        .btn-pill-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 22px;
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text) !important;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--btn-primary-bg);
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+        .btn-pill-primary:hover {
+            background: var(--btn-primary-hover);
+            border-color: var(--btn-primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .btn-pill-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 22px;
+            background: var(--btn-secondary-bg);
+            color: var(--btn-secondary-text) !important;
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--btn-secondary-border);
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .btn-pill-secondary:hover {
+            background: var(--btn-secondary-hover);
+            border-color: var(--border-hover);
+            color: #000000 !important;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            background: var(--surface-subtle);
+            border: 1px solid var(--border-default);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .code-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
+
+    <style>
+        /* Global guarantee: Suppress right-side vertical & horizontal scrollbars project-wide */
+        html, body {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        *::-webkit-scrollbar,
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+        }
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+        }
+    </style>
 </head>
 <body>
 
-
 {% block content %}{% endblock %}
-
-
 
 </body>
 </html>

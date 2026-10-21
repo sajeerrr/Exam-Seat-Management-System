@@ -1,0 +1,869 @@
+{% extends "exam_allocator/base.html" %}
+
+{% block title %}ExamSeat — Placement & Seating Management System{% endblock %}
+
+{% block extra_head %}
+<meta name="description" content="Turn timetable chaos into clash-free, balanced exam seating plans without spreadsheet frustration. Inspired by shibutz.com.">
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ══════════════════════════════════════════════════════════════════════
+       SHIBUTZ / IOS MINIMALIST MONOCHROME THEME
+       ══════════════════════════════════════════════════════════════════════ */
+    :root {
+        --sb-canvas: #ffffff;
+        --sb-surface: #ffffff;
+        --sb-surface-subtle: #f4f4f5;
+        --sb-border: #e4e4e7;
+        --sb-border-subtle: #f1f1f4;
+        
+        --sb-text-title: #09090b;
+        --sb-text-body: #52525b;
+        --sb-text-muted: #71717a;
+        --sb-text-faint: #a1a1aa;
+        
+        --sb-btn-black: #000000;
+        --sb-btn-black-hover: #27272a;
+        
+        --sb-traffic-red: #ef4444;
+        --sb-traffic-yellow: #f59e0b;
+        --sb-traffic-green: #10b981;
+    }
+
+    body {
+        background-color: var(--sb-canvas) !important;
+        color: var(--sb-text-body) !important;
+        overflow-x: hidden;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       TOP NAVIGATION BAR
+       ══════════════════════════════════════════════════════════════════════ */
+    .landing-nav {
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--sb-border);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .nav-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 32px;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+    }
+
+    .nav-brand-logo {
+        width: 32px;
+        height: 32px;
+        background: #000000;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+    }
+
+    .nav-brand-logo svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .nav-brand-text {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: var(--sb-text-title);
+    }
+
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+    }
+
+    .nav-link {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--sb-text-muted);
+        transition: color 0.15s ease;
+    }
+
+    .nav-link:hover {
+        color: var(--sb-text-title);
+    }
+
+    .nav-right-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .nav-btn-dashboard {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 20px;
+        background: #ffffff;
+        color: var(--sb-text-title) !important;
+        border: 1px solid var(--sb-border);
+        border-radius: 9999px;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.15s ease;
+    }
+
+    .nav-btn-dashboard:hover {
+        background: var(--sb-surface-subtle);
+        border-color: #d4d4d8;
+    }
+
+    .nav-btn-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 9999px;
+        background: #000000;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+
+    .nav-btn-icon:hover {
+        transform: scale(1.05);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       HERO 2-COLUMN SECTION (Exact Shibutz Layout)
+       ══════════════════════════════════════════════════════════════════════ */
+    .hero-wrapper {
+        max-width: 1280px;
+        margin: 0 auto;
+        min-height: calc(100vh - 70px);
+        padding: clamp(24px, 4.5vh, 48px) 32px;
+        display: grid;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 48px;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .hero-content {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .hero-pill-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        background: #ffffff;
+        border: 1px solid #d4d4d8;
+        border-radius: 9999px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--sb-text-body);
+        margin-bottom: 24px;
+    }
+
+    .hero-title {
+        font-size: 64px;
+        font-weight: 850;
+        letter-spacing: -0.045em;
+        line-height: 1.05;
+        color: var(--sb-text-title);
+        margin-bottom: 24px;
+    }
+
+    .hero-subhead {
+        font-size: 17.5px;
+        line-height: 1.65;
+        color: var(--sb-text-body);
+        margin-bottom: 34px;
+        max-width: 540px;
+    }
+
+    .hero-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .btn-hero-primary {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 13px 26px;
+        background: var(--sb-btn-black);
+        color: #ffffff !important;
+        border-radius: 9999px;
+        font-size: 14.5px;
+        font-weight: 600;
+        border: 1px solid var(--sb-btn-black);
+        transition: all 0.15s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-hero-primary:hover {
+        background: var(--sb-btn-black-hover);
+        border-color: var(--sb-btn-black-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-hero-secondary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 13px 24px;
+        background: #ffffff;
+        color: var(--sb-text-title) !important;
+        border-radius: 9999px;
+        font-size: 14.5px;
+        font-weight: 600;
+        border: 1px solid var(--sb-border);
+        transition: all 0.15s ease;
+    }
+
+    .btn-hero-secondary:hover {
+        background: var(--sb-surface-subtle);
+        border-color: #d4d4d8;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       MACOS BROWSER WINDOW MOCKUP (Shibutz App Window)
+       ══════════════════════════════════════════════════════════════════════ */
+    .mac-window {
+        background: #ffffff;
+        border: 1px solid var(--sb-border);
+        border-radius: 20px;
+        box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* Window Chrome Bar */
+    .mac-window-bar {
+        background: #fafafa;
+        border-bottom: 1px solid var(--sb-border);
+        padding: 12px 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .traffic-lights {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .traffic-dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 9999px;
+    }
+
+    .dot-close { background-color: var(--sb-traffic-red); }
+    .dot-min { background-color: var(--sb-traffic-yellow); }
+    .dot-expand { background-color: var(--sb-traffic-green); }
+
+    .mac-window-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--sb-text-muted);
+        font-weight: 500;
+    }
+
+    .mac-window-breadcrumb svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--sb-text-faint);
+    }
+
+    /* Window Body */
+    .mac-window-body {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        min-height: 460px;
+    }
+
+    /* Inner Sidebar */
+    .mock-sidebar {
+        background: #fafafa;
+        border-right: 1px solid var(--sb-border);
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .btn-mock-generate {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: #000000;
+        color: #ffffff;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        cursor: default;
+    }
+
+    .mock-nav-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .mock-nav-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--sb-text-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 6px 8px;
+    }
+
+    .mock-nav-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--sb-text-body);
+    }
+
+    .mock-nav-item.active {
+        background: #f4f4f5;
+        color: var(--sb-text-title);
+        font-weight: 600;
+    }
+
+    .mock-nav-item svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--sb-text-muted);
+    }
+
+    /* Inner Main Content */
+    .mock-main {
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #ffffff;
+    }
+
+    .mock-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mock-title {
+        font-size: 18px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        color: var(--sb-text-title);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .mock-subtitle {
+        font-size: 11.5px;
+        color: var(--sb-text-muted);
+        margin-top: 2px;
+    }
+
+    /* Metric Card inside Mockup */
+    .mock-stat-card {
+        background: #fafafa;
+        border: 1px solid var(--sb-border);
+        border-radius: 12px;
+        padding: 13px 15px;
+    }
+
+    .mock-stat-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--sb-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 4px;
+    }
+
+    .mock-stat-value {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        color: var(--sb-text-title);
+        line-height: 1;
+    }
+
+    .mock-stat-subtext {
+        font-size: 11px;
+        color: var(--sb-text-muted);
+        margin-top: 4px;
+    }
+
+    /* Statistics Grid inside Mockup */
+    .mock-stats-box {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .mock-stats-headline {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--sb-text-title);
+    }
+
+    .mock-stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .stat-metric-card {
+        border: 1px solid var(--sb-border);
+        border-radius: 10px;
+        padding: 11px 12px;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .stat-metric-header {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--sb-text-title);
+    }
+
+    .stat-bar-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10.5px;
+        color: var(--sb-text-muted);
+    }
+
+    .stat-dot-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .stat-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+    }
+
+    .stat-bar-track {
+        height: 4px;
+        background: #f4f4f5;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-top: 2px;
+    }
+
+    .stat-bar-fill {
+        height: 100%;
+        border-radius: 9999px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       EVALUATION PATH / 3-STEP SECTION
+       ══════════════════════════════════════════════════════════════════════ */
+    .path-section {
+        border-top: 1px solid var(--sb-border);
+        padding: 80px 32px;
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    .path-heading-badge {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--sb-text-faint);
+        margin-bottom: 12px;
+    }
+
+    .path-title {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        color: var(--sb-text-title);
+        margin-bottom: 48px;
+    }
+
+    .path-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+
+    .path-card {
+        border: 1px solid var(--sb-border);
+        border-radius: 16px;
+        padding: 32px 28px;
+        background: #ffffff;
+        transition: all 0.2s ease;
+    }
+
+    .path-card:hover {
+        border-color: #a1a1aa;
+        transform: translateY(-2px);
+    }
+
+    .path-step-num {
+        font-size: 13px;
+        font-weight: 800;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--sb-text-faint);
+        margin-bottom: 16px;
+    }
+
+    .path-card-title {
+        font-size: 18px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        color: var(--sb-text-title);
+        margin-bottom: 12px;
+    }
+
+    .path-card-body {
+        font-size: 14.5px;
+        line-height: 1.6;
+        color: var(--sb-text-body);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       MINIMALIST FOOTER
+       ══════════════════════════════════════════════════════════════════════ */
+    .landing-footer {
+        border-top: 1px solid var(--sb-border);
+        padding: 40px 32px;
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 13px;
+        color: var(--sb-text-muted);
+    }
+
+    @media (max-width: 1024px) {
+        .hero-wrapper {
+            grid-template-columns: 1fr;
+            gap: 40px;
+            min-height: auto;
+            padding: 40px 24px;
+        }
+        .hero-title {
+            font-size: 48px;
+        }
+        .path-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ══ TOP NAVIGATION ═══════════════════════════════════════════════════ -->
+<header class="landing-nav">
+    <div class="nav-container">
+        <a href="{% url 'exam_allocator:home' %}" class="nav-brand">
+            <div class="nav-brand-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+                    <path d="M3 9h18"></path>
+                    <path d="M9 21V9"></path>
+                </svg>
+            </div>
+            <span class="nav-brand-text">ExamSeat</span>
+        </a>
+
+        <nav class="nav-links">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="{% url 'exam_allocator:session_list' %}" class="nav-link">Live Sessions</a>
+            <a href="#path" class="nav-link">Evaluation Path</a>
+            <a href="#docs" class="nav-link">Docs</a>
+        </nav>
+
+        <div class="nav-right-actions">
+            <a href="{% url 'exam_allocator:session_list' %}" class="nav-btn-dashboard">Dashboard</a>
+            <a href="{% url 'exam_allocator:create_session' %}" class="nav-btn-icon" title="New Session">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </a>
+        </div>
+    </div>
+</header>
+
+<!-- ══ HERO 2-COLUMN SECTION (Exact Shibutz.com Reference) ═══════════════ -->
+<section class="hero-wrapper">
+    <!-- Left Column: Typography & CTAs -->
+    <div class="hero-content">
+        <div class="hero-pill-badge">
+            Student & exam seat placement software for modern institutions
+        </div>
+
+        <h1 class="hero-title">
+            You bring the<br>
+            student lists.<br>
+            We build the<br>
+            seating plans.
+        </h1>
+
+        <p class="hero-subhead">
+            ExamSeat helps administrators transform student lists, branch-wise constraints, and classroom capacities into optimized exam seating plans. Generate allocations, resolve conflicts, and review every placement from one dashboard.
+        </p>
+
+        <div class="hero-actions">
+            <a href="{% url 'exam_allocator:create_session' %}" class="btn-hero-primary">
+                Build a draft you can review
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
+            <a href="{% url 'exam_allocator:session_list' %}" class="btn-hero-secondary">
+                See all sessions
+            </a>
+        </div>
+    </div>
+
+    <!-- Right Column: macOS Browser Window Mockup -->
+    <div class="mac-window">
+        <!-- Window Chrome Bar -->
+        <div class="mac-window-bar">
+            <div class="traffic-lights">
+                <span class="traffic-dot dot-close"></span>
+                <span class="traffic-dot dot-min"></span>
+                <span class="traffic-dot dot-expand"></span>
+            </div>
+            <div class="mac-window-breadcrumb">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                </svg>
+                <span>Dashboard</span>
+                <span>&rsaquo;</span>
+                <span style="color: var(--sb-text-title); font-weight: 600;">2026 Examination</span>
+            </div>
+        </div>
+
+        <!-- Window Body -->
+        <div class="mac-window-body">
+            <!-- Sidebar -->
+            <div class="mock-sidebar">
+                <button class="btn-mock-generate" type="button">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    Generate
+                </button>
+
+                <div class="mock-nav-group">
+                    <div class="mock-nav-item active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        Overview
+                    </div>
+                </div>
+
+                <div class="mock-nav-group">
+                    <div class="mock-nav-label">Details</div>
+                    <div class="mock-nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                        Students
+                    </div>
+                    <div class="mock-nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                        Branch Match
+                    </div>
+                    <div class="mock-nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="17" y1="11" x2="23" y2="11"></line></svg>
+                        Interleaving
+                    </div>
+                    <div class="mock-nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                        Classrooms
+                    </div>
+                    <div class="mock-nav-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        Options
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Pane -->
+            <div class="mock-main">
+                <div class="mock-header-row">
+                    <div>
+                        <div class="mock-title">
+                            Class of 2026
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--sb-text-muted);"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                        </div>
+                        <div class="mock-subtitle">Created today · Autumn Semester</div>
+                    </div>
+                </div>
+
+                <!-- Total Count -->
+                <div class="mock-stat-card">
+                    <div class="mock-stat-title">Total Students Registered</div>
+                    <div class="mock-stat-value">684</div>
+                    <div class="mock-stat-subtext">342 Forenoon (FN) &middot; 342 Afternoon (AN)</div>
+                </div>
+
+                <!-- Statistics Box -->
+                <div class="mock-stats-box">
+                    <div class="mock-stats-headline">Placement Statistics</div>
+                    
+                    <div class="mock-stat-grid">
+                        <!-- Metric 1: Branch Interleaving -->
+                        <div class="stat-metric-card">
+                            <div class="stat-metric-header">Branch Interleaving</div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#ef4444;"></span>Adjacent Clash</span>
+                                    <span class="code-mono">0 students</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 0%; background: #ef4444;"></div></div>
+                            </div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#10b981;"></span>Interleaved</span>
+                                    <span class="code-mono">684 students</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 100%; background: #10b981;"></div></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 2: Hall Capacity -->
+                        <div class="stat-metric-card">
+                            <div class="stat-metric-header">Hall Utilization</div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#f59e0b;"></span>Buffer Reserve</span>
+                                    <span class="code-mono">16 seats</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 12%; background: #f59e0b;"></div></div>
+                            </div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#10b981;"></span>Allocated</span>
+                                    <span class="code-mono">684 seats</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 98%; background: #10b981;"></div></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 3: Classroom Spread -->
+                        <div class="stat-metric-card">
+                            <div class="stat-metric-header">Classroom Allocation</div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#10b981;"></span>Optimal Density</span>
+                                    <span class="code-mono">18 halls</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 100%; background: #10b981;"></div></div>
+                            </div>
+                        </div>
+
+                        <!-- Metric 4: Verification -->
+                        <div class="stat-metric-card">
+                            <div class="stat-metric-header">Verification Status</div>
+                            <div>
+                                <div class="stat-bar-row">
+                                    <span class="stat-dot-label"><span class="stat-dot" style="background:#10b981;"></span>Blueprint Validated</span>
+                                    <span class="code-mono">100% check</span>
+                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: 100%; background: #10b981;"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══ EVALUATION PATH / 3-STEP SECTION ═════════════════════════════════ -->
+<section id="path" class="path-section">
+    <div class="path-heading-badge">Workflow Architecture</div>
+    <h2 class="path-title">An exam controller's evaluation path</h2>
+
+    <div class="path-grid">
+        <div class="path-card">
+            <div class="path-step-num">STEP 01</div>
+            <h3 class="path-card-title">Register & Ingest Data</h3>
+            <p class="path-card-body">
+                Upload department registries, student enrollments, exam slots (FN & AN), and classroom floor blueprints via simple clean spreadsheets.
+            </p>
+        </div>
+
+        <div class="path-card">
+            <div class="path-step-num">STEP 02</div>
+            <h3 class="path-card-title">Interleaving & Blueprinting</h3>
+            <p class="path-card-body">
+                The constraint engine isolates branches, alternates roll numbers across adjacent desks, and balances classroom capacities with zero overlap.
+            </p>
+        </div>
+
+        <div class="path-card">
+            <div class="path-step-num">STEP 03</div>
+            <h3 class="path-card-title">Review & Instant Dispatch</h3>
+            <p class="path-card-body">
+                Inspect high-contrast seating grids, verify roll distributions per hall, and export production-ready PDF seating charts and attendance slips.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ══ MINIMALIST FOOTER ═════════════════════════════════════════════════ -->
+<footer class="landing-footer">
+    <div>
+        &copy; 2026 ExamSeat. High-Performance Academic Seating Allocation System.
+    </div>
+    <div style="display: flex; gap: 20px;">
+        <a href="{% url 'exam_allocator:session_list' %}" style="color: var(--sb-text-title); font-weight: 500;">Sessions</a>
+        <a href="{% url 'exam_allocator:create_session' %}" style="color: var(--sb-text-title); font-weight: 500;">New Session</a>
+    </div>
+</footer>
+{% endblock %}

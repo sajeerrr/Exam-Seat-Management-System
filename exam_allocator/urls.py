@@ -6,8 +6,11 @@ app_name = "exam_allocator"
 
 
 urlpatterns = [
+    # ── Home Landing Page ─────────────────────────────────────────────────
+    path("", views.home_landing, name="home"),
+
     # ── Session management ────────────────────────────────────────────────
-    path("", views.session_list, name="session_list"),
+    path("sessions/", views.session_list, name="session_list"),
     path("session/new/", views.create_session, name="create_session"),
     path("session/<int:session_id>/", views.session_detail, name="session_detail"),
     path("session/<int:session_id>/delete/", views.delete_session, name="delete_session"),
@@ -22,6 +25,8 @@ urlpatterns = [
     path("session/<int:session_id>/registrations/generate/", views.generate_registrations, name="generate_registrations"),
     path("session/<int:session_id>/blueprint/", views.blueprint_review, name="blueprint_review"),
     path("session/<int:session_id>/allocations/", views.session_allocation_result, name="session_allocation_result"),
+    path("session/<int:session_id>/allocations/export-csv/", views.export_allocations_csv, name="export_allocations_csv"),
+    path("api/session/<int:session_id>/allocations/update/", views.api_allocation_update, name="api_allocation_update"),
     path("session/<int:session_id>/allocate/", views.generate_session_allocation, name="generate_session_allocation"),
     path("exam/<int:exam_id>/generate/", views.generate_allocation, name="generate_allocation"),
     path("exam/<int:exam_id>/allocations/", views.allocation_list, name="allocation_list"),

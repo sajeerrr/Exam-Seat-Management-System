@@ -26,7 +26,7 @@
         right: -10%;
         width: 55vw;
         height: 55vw;
-        background: radial-gradient(circle, rgba(99, 102, 241, .09) 0%, transparent 70%);
+        background: radial-gradient(circle, #f4f4f5 0%, transparent 70%);
         pointer-events: none;
         z-index: 0;
     }
@@ -137,7 +137,7 @@
         background: #f8fafc;
         border-color: var(--accent-light);
         color: var(--accent);
-        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         transform: translateY(-1px);
     }
 
@@ -146,7 +146,7 @@
         align-items: center;
         gap: 8px;
         padding: 9px 20px;
-        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        background: #000000; border-radius: 9999px;
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 10px;
@@ -154,7 +154,7 @@
         font-size: 13.5px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
         user-select: none;
         white-space: nowrap;
@@ -162,7 +162,7 @@
 
     .btn-header-allocate:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         filter: brightness(1.05);
     }
 
@@ -200,12 +200,12 @@
         width: 52px;
         height: 52px;
         border-radius: 14px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 24px;
-        box-shadow: 0 0 28px var(--accent-glow);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         flex-shrink: 0;
     }
 
@@ -253,8 +253,8 @@
     }
 
     .msg:not(.success):not(.error):not(.warning) {
-        background: rgba(99, 102, 241, .09);
-        border-color: rgba(99, 102, 241, .22);
+        background: #f4f4f5;
+        border-color: #e4e4e7;
         color: var(--accent-light);
     }
 
@@ -280,9 +280,9 @@
     }
 
     .stat-card:hover {
-        border-color: rgba(99, 102, 241, 0.35);
+        border-color: #a1a1aa;
         transform: translateY(-2px);
-        box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(15, 23, 42, 0.04);
     }
 
     .stat-card-top {
@@ -402,7 +402,7 @@
     }
 
     .sec-card-header:hover {
-        background: rgba(99, 102, 241, .04);
+        background: #f4f4f5;
     }
 
     .sec-card-title {
@@ -445,7 +445,7 @@
         align-items: center;
         padding: 11px 20px 11px 36px;
         gap: 12px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
         cursor: pointer;
         transition: background .2s;
     }
@@ -455,7 +455,7 @@
     }
 
     .class-row:hover {
-        background: rgba(99, 102, 241, .04);
+        background: #f4f4f5;
     }
 
     .class-name {
@@ -512,7 +512,7 @@
     .stud-table td {
         padding: 9px 10px;
         font-size: 13px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
     }
 
     .stud-table tr:last-child td {
@@ -617,7 +617,7 @@
 
     .tt-exam-row {
         padding: 10px 16px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
     }
 
     .tt-exam-row:last-child {
@@ -679,21 +679,23 @@
         align-items: center;
         gap: 7px;
         padding: 9px 18px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
+        border-radius: 9999px;
         color: white;
-        border: none;
-        border-radius: 9px;
+        border: 1px solid #000000;
         font-size: 13px;
         font-weight: 700;
         font-family: inherit;
         cursor: pointer;
-        transition: all .2s;
-        box-shadow: 0 3px 14px var(--accent-glow);
+        transition: all .2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .btn-add-room:hover {
+        background: #27272a;
+        border-color: #27272a;
         transform: translateY(-1px);
-        box-shadow: 0 6px 22px rgba(99, 102, 241, .4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .rooms-grid {
@@ -902,7 +904,7 @@
     .btn-save {
         padding: 10px 22px;
         border-radius: 8px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         border: none;
         color: white;
         font-size: 13px;
@@ -959,47 +961,57 @@
     }
 
     .btn-sm-danger {
-        padding: 7px 14px;
-        border-radius: 8px;
-        background: rgba(239, 68, 68, 0.12);
-        border: 1px solid rgba(239, 68, 68, 0.35);
-        color: #ef4444;
+        padding: 7px 16px;
+        border-radius: 9999px;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
         font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         font-family: inherit;
-        transition: all .2s;
+        transition: all .2s ease;
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .btn-sm-danger:hover {
-        background: #ef4444;
-        color: white;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        background: #f8fafc;
+        border-color: #000000;
+        color: #000000;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-sm-danger:active {
+        transform: translateY(0);
+        background: #f1f5f9;
     }
 
     .btn-sm-primary {
-        padding: 7px 14px;
-        border-radius: 8px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
-        border: none;
+        padding: 7px 16px;
+        border-radius: 9999px;
+        background: #000000;
+        border: 1px solid #000000;
         color: white;
         font-size: 12px;
         font-weight: 700;
         cursor: pointer;
         font-family: inherit;
-        transition: all .2s;
-        box-shadow: 0 2px 8px var(--accent-glow);
+        transition: all .2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         display: inline-flex;
         align-items: center;
         gap: 6px;
     }
 
     .btn-sm-primary:hover {
+        background: #27272a;
+        border-color: #27272a;
         transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(99, 102, 241, .4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .row-act-btn {
@@ -1064,19 +1076,19 @@
         align-items: center;
         gap: 8px;
         padding: 10px 22px;
-        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        background: #000000; border-radius: 9999px;
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 10px;
         font-size: 13.5px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: all .2s ease;
     }
 
     .btn-bottom-allocate:hover {
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         transform: translateY(-1px);
     }
 
@@ -1108,7 +1120,7 @@
         align-items: center;
         gap: 8px;
         padding: 11px 26px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         color: white;
         border: none;
         border-radius: 10px;
@@ -1413,7 +1425,7 @@
                 <span id="toolbar-missing-badge-wrap">
                 {% if missing_roll_count > 0 %}
                 <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
-                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>{{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)</span>
                 </span>
                 {% endif %}
@@ -1434,7 +1446,7 @@
                     <span id="dept-missing-badge-wrap-{{ dept.department_id }}">
                     {% if dept.missing_roll_count > 0 %}
                     <span class="missing-roll-badge">
-                        <span class="badge-warn-icon">⚠️</span> {{ dept.missing_roll_count }} missing roll
+                        <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ dept.missing_roll_count }} missing roll
                     </span>
                     {% endif %}
                     </span>
@@ -1451,7 +1463,7 @@
                             <span id="class-missing-badge-wrap-{{ cls.class_id }}">
                             {% if cls.missing_roll_count > 0 %}
                             <span class="missing-roll-badge">
-                                <span class="badge-warn-icon">⚠️</span> {{ cls.missing_roll_count }} missing roll
+                                <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ cls.missing_roll_count }} missing roll
                             </span>
                             {% endif %}
                             </span>
@@ -1676,7 +1688,7 @@
                                 </td>
                                 <td>
                                     {% for dept in item.departments %}
-                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
+                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(0, 0, 0, 0.05);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
                                         {{ dept }}
                                     </span>
                                     {% empty %}
@@ -1949,7 +1961,7 @@
 <div class="modal-backdrop" id="confirm-modal" hidden>
     <div class="modal-box" style="max-width:440px; animation: fu .2s ease both;">
         <div class="modal-title" id="confirm-modal-title" style="display:flex; align-items:center; gap:8px;">
-            <span class="badge-warn-icon" style="font-size:18px;">⚠️</span>
+            <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
             <span id="confirm-modal-title-text">Confirm Action</span>
         </div>
         <div id="confirm-modal-body" style="font-size:13.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:20px; white-space:pre-line;">
@@ -2149,7 +2161,7 @@
             html += `
             <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                 </div>
                 <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
@@ -2167,7 +2179,7 @@
             const hasRoll = s.roll_number && s.roll_number.trim();
             const rollDisplay = hasRoll 
                 ? `<span style="font-weight:600">${escHTML(s.roll_number)}</span>`
-                : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
+                : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> Missing Roll No</span>`;
 
             html += `<tr id="stud-row-${s.id}" data-student-id="${s.id}" data-class-id="${classId}">
             <td class="row-num" style="color:var(--text-muted)">${i + 1}</td>
@@ -2244,7 +2256,7 @@
                 noticeContainer.innerHTML = `
                 <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between; animation: fu .3s ease both;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                        <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                         <span>Notice: <strong>${data.class_missing_count} student${data.class_missing_count > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                     </div>
                     <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
@@ -2260,7 +2272,7 @@
             if (data.class_missing_count > 0) {
                 classBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge">
-                    <span class="badge-warn-icon">⚠️</span> ${data.class_missing_count} missing roll
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> ${data.class_missing_count} missing roll
                 </span>`;
             } else {
                 classBadgeWrap.innerHTML = '';
@@ -2283,7 +2295,7 @@
             if (data.dept_missing_count > 0) {
                 deptBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge">
-                    <span class="badge-warn-icon">⚠️</span> ${data.dept_missing_count} missing roll
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> ${data.dept_missing_count} missing roll
                 </span>`;
             } else {
                 deptBadgeWrap.innerHTML = '';
@@ -2296,7 +2308,7 @@
             if (data.total_missing_count > 0) {
                 toolbarBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
-                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>${data.total_missing_count} student${data.total_missing_count > 1 ? 's' : ''} with missing Roll No (left blank)</span>
                 </span>`;
             } else {
@@ -2356,7 +2368,7 @@
                         const hasRoll = data.roll_number && data.roll_number.trim();
                         row.cells[2].innerHTML = hasRoll
                             ? `<span style="font-weight:600">${escHTML(data.roll_number)}</span>`
-                            : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
+                            : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> Missing Roll No</span>`;
                         row.cells[3].textContent = data.uni_reg_no || '—';
                         row.cells[4].textContent = data.student_name;
                         row.cells[5].textContent = data.gender || '—';

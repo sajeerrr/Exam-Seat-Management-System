@@ -1,216 +1,225 @@
 {% extends "exam_allocator/base.html" %}
 
-{% block title %}ExamSeat — Allocation Sessions{% endblock %}
+{% block title %}Sessions — ExamSeat{% endblock %}
 
 {% block extra_head %}
-<meta name="description" content="Manage and view all exam seat allocation sessions.">{% endblock %}
+<meta name="description" content="Manage and view all exam seat allocation sessions in a clean, minimalist workspace.">
+{% endblock %}
 
 {% block extra_css %}
 <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        min-height: 100vh;
-        padding: 0;
-    }
-
-    /* Ambient background blobs */
-    body::before {
-        content: '';
-        position: fixed;
-        top: -20%;
-        left: -10%;
-        width: 60vw;
-        height: 60vw;
-        background: radial-gradient(circle, var(--blob-a) 0%, transparent 70%);
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    body::after {
-        content: '';
-        position: fixed;
-        bottom: -20%;
-        right: -10%;
-        width: 50vw;
-        height: 50vw;
-        background: radial-gradient(circle, var(--blob-b) 0%, transparent 70%);
-        pointer-events: none;
-        z-index: 0;
-    }
-
-    .page-wrapper {
-        position: relative;
-        z-index: 1;
-        max-width: 1000px;
+    /* ══════════════════════════════════════════════════════════════════════
+       SHIBUTZ / IOS MINIMALIST SESSIONS DIRECTORY
+       ══════════════════════════════════════════════════════════════════════ */
+    .pw {
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 48px 24px 80px;
+        padding: 44px 28px 90px;
     }
 
-    /* ── HEADER ─────────────────────────────── */
+    /* ── PAGE HEADER ─────────────────────────────────────────── */
     .page-header {
-        position: relative;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 180px;
-        margin-bottom: 48px;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 32px;
+        flex-wrap: wrap;
+        gap: 20px;
     }
 
-    .header-brand {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-    }
-
-    .header-text h1 {
-        font-size: 64px;
-        font-weight: 900;
-        line-height: 1;
-        letter-spacing: 4px;
-        background: linear-gradient(135deg, var(--text-primary), var(--accent-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .header-text p {
-        color: var(--text-secondary);
-        font-size: 18px;
-        font-weight: 500;
-        letter-spacing: 1px;
-        margin-top: 12px;
-    }
-
-    /* ── NEW SESSION BUTTON ──────────────────── */
-    .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 22px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
-        color: white;
-        text-decoration: none;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 20px var(--accent-glow);
-        white-space: nowrap;
-    }
-
-    /* Keep button positioned independently from centered branding */
-    .page-header>.btn-primary {
-        position: absolute;
-        right: 0;
-        bottom: 0;
-    }
-
-    /* ── NEW SESSION BUTTON ──────────────────── */
-    .btn-primary {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 22px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
-        color: white;
-        text-decoration: none;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 20px var(--accent-glow);
-        white-space: nowrap;
-    }
-
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.4);
-    }
-
-    .btn-primary:active {
-        transform: translateY(0);
-    }
-
-    /* ── SESSION CARDS ───────────────────────── */
-    .sessions-grid {
+    .header-left {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 8px;
+    }
+
+    .breadcrumb-trail {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .breadcrumb-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color .15s ease;
+    }
+
+    .breadcrumb-link:hover {
+        color: var(--text-primary);
+    }
+
+    .breadcrumb-slash {
+        opacity: 0.4;
+        font-size: 12px;
+    }
+
+    .breadcrumb-current {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .header-title-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .page-title {
+        font-size: 32px;
+        font-weight: 850;
+        letter-spacing: -0.035em;
+        color: var(--text-hero);
+        line-height: 1.1;
+    }
+
+    .header-count-badge {
+        font-size: 12px;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        padding: 3px 10px;
+        border-radius: var(--radius-pill);
+        background: var(--surface-subtle);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-default);
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Minimalist Pill Search Bar */
+    .header-search-wrap {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-svg {
+        position: absolute;
+        left: 14px;
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+
+    .header-search-input {
+        background: #ffffff;
+        color: var(--text-primary);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-pill);
+        padding: 10px 38px 10px 36px;
+        font-size: 13.5px;
+        font-family: inherit;
+        outline: none;
+        width: 250px;
+        transition: all .2s ease;
+    }
+
+    .header-search-input:focus {
+        border-color: var(--border-active);
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+        width: 300px;
+    }
+
+    .header-search-key {
+        position: absolute;
+        right: 12px;
+        font-size: 11px;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+        background: var(--surface-subtle);
+        border: 1px solid var(--border-default);
+        border-radius: 4px;
+        padding: 1px 6px;
+        pointer-events: none;
+    }
+
+    /* Stark Black Pill Button */
+    .btn-new-session {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 22px;
+        background: #000000;
+        color: #ffffff !important;
+        border: 1px solid #000000;
+        border-radius: var(--radius-pill);
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        white-space: nowrap;
+    }
+
+    .btn-new-session:hover {
+        background: #27272a;
+        border-color: #27272a;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* ── FLASH MESSAGES ──────────────────────────────────────── */
+    .msgs {
+        margin-bottom: 24px;
+    }
+
+    .msg {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border-radius: var(--radius-sm);
+        font-size: 13.5px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-default);
+        background: var(--surface-card);
+    }
+
+    .msg.success {
+        border-color: #a7f3d0;
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .msg.error {
+        border-color: #fecaca;
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    /* ── SESSIONS LIST (Shibutz Clean Cards) ──────────────────── */
+    .sessions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
     .session-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 24px 28px;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-radius: 16px;
+        padding: 20px 26px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 20px;
         text-decoration: none;
         color: var(--text-primary);
-        transition: all 0.25s ease;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        animation: slideUp 0.4s ease both;
+        transition: all 0.18s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .session-card:hover {
-        background: var(--bg-card-hover);
         border-color: var(--border-hover);
-        transform: translateX(4px);
-        box-shadow: 0 8px 32px var(--shadow-card), 0 0 0 1px var(--border-hover);
-    }
-
-    .session-card:nth-child(1) {
-        animation-delay: 0ms;
-    }
-
-    .session-card:nth-child(2) {
-        animation-delay: 100ms;
-    }
-
-    .session-card:nth-child(3) {
-        animation-delay: 200ms;
-    }
-
-    .session-card:nth-child(4) {
-        animation-delay: 300ms;
-    }
-
-    .session-card:nth-child(5) {
-        animation-delay: 400ms;
-    }
-
-    .session-card:nth-child(6) {
-        animation-delay: 500ms;
-    }
-
-    .session-card:nth-child(7) {
-        animation-delay: 600ms;
-    }
-
-    .session-card:nth-child(8) {
-        animation-delay: 700ms;
-    }
-
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(16px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        transform: translateY(-1.5px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }
 
     .session-info {
@@ -219,410 +228,492 @@
     }
 
     .session-name {
-        font-size: 17px;
-        font-weight: 700;
+        font-size: 17.5px;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+        color: var(--text-hero);
         margin-bottom: 6px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        transition: color 0.15s ease;
+    }
+
+    .session-card:hover .session-name {
+        color: #000000;
     }
 
     .session-meta {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
+        font-size: 13px;
+        color: var(--text-secondary);
         flex-wrap: wrap;
     }
 
-    .session-date {
-        font-size: 13px;
-        color: var(--text-secondary);
-        display: flex;
+    .meta-item {
+        display: inline-flex;
         align-items: center;
-        gap: 5px;
+        gap: 6px;
     }
 
+    .meta-sep {
+        color: var(--border-default);
+    }
+
+    .session-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+    }
+
+    /* Status Badges */
     .status-badge {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 3px 10px;
-        border-radius: 20px;
+        padding: 4px 12px;
+        border-radius: var(--radius-pill);
         font-size: 12px;
         font-weight: 600;
-        background: var(--warning-bg);
-        color: var(--warning);
-        border: 1px solid rgba(245, 158, 11, 0.2);
-    }
-
-    .status-badge.active {
-        background: var(--success-bg);
-        color: var(--success);
-        border-color: rgba(16, 185, 129, 0.2);
+        background: var(--surface-subtle);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-default);
     }
 
     .status-dot {
         width: 6px;
         height: 6px;
-        border-radius: 50%;
-        background: currentColor;
+        border-radius: 9999px;
+        background: #71717a;
     }
 
-    .session-arrow {
-        color: var(--text-muted);
-        font-size: 20px;
-        transition: transform 0.2s ease, color 0.2s ease;
-        flex-shrink: 0;
+    .status-ready .status-dot, .status-active .status-dot {
+        background: #10b981;
     }
 
-    .session-card:hover .session-arrow {
-        color: var(--accent-light);
-        transform: translateX(4px);
+    .status-draft .status-dot {
+        background: #f59e0b;
     }
 
-    /* ── EMPTY STATE ─────────────────────────── */
-    .empty-state {
-        text-align: center;
-        padding: 80px 40px;
-        background: var(--bg-card);
-        border: 1px dashed var(--border);
-        border-radius: var(--radius);
-        backdrop-filter: blur(12px);
-        animation: slideUp 0.4s ease both;
+    .status-completed .status-dot {
+        background: #000000;
     }
 
-    .empty-icon {
-        font-size: 56px;
-        margin-bottom: 20px;
-        opacity: 0.5;
-    }
-
-    .empty-state h2 {
-        font-size: 22px;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: var(--text-primary);
-    }
-
-    .empty-state p {
-        color: var(--text-secondary);
-        font-size: 15px;
-        margin-bottom: 28px;
-    }
-
-    /* ── RESPONSIVE ──────────────────────────── */
-    @media (max-width: 600px) {
-        .page-header {
-            min-height: 220px;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .header-text h1 {
-            font-size: 48px;
-        }
-
-        .header-text p {
-            font-size: 15px;
-        }
-
-        .page-header>.btn-primary {
-            position: static;
-            margin-top: 28px;
-        }
-
-        .session-card {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .session-arrow {
-            display: none;
-        }
-    }
-
-    /* ── DELETE BUTTON ───────────────────────── */
-    .session-card-actions {
-        display: flex;
+    .btn-open-session {
+        display: inline-flex;
         align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
+        gap: 6px;
+        padding: 7px 16px;
+        border-radius: var(--radius-pill);
+        border: 1px solid var(--border-default);
+        background: #ffffff;
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.15s ease;
     }
 
+    .session-card:hover .btn-open-session {
+        background: #000000;
+        color: #ffffff;
+        border-color: #000000;
+    }
+
+    /* Delete Button */
     .btn-delete-session {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 34px;
-        height: 34px;
-        border-radius: var(--radius-sm);
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-pill);
         background: transparent;
         border: 1px solid transparent;
         cursor: pointer;
-        font-size: 16px;
-        color: var(--text-muted);
+        color: var(--text-faint);
         opacity: 0;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
+        transition: all 0.15s ease;
     }
 
     .session-card:hover .btn-delete-session {
-        opacity: 1;
+        opacity: 0.8;
     }
 
     .btn-delete-session:hover {
-        background: var(--error-bg);
-        border-color: var(--error-border);
-        color: var(--error);
-        transform: scale(1.1);
+        opacity: 1 !important;
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #ef4444;
     }
 
-    .btn-delete-session:active {
-        transform: scale(0.95);
+    /* ── EMPTY STATE ─────────────────────────────────────────── */
+    .empty-state {
+        text-align: center;
+        padding: 72px 24px;
+        background: var(--surface-card);
+        border: 1px dashed var(--border-default);
+        border-radius: 20px;
     }
 
-    /* ── FLASH MESSAGES ──────────────────────── */
-    .messages-list {
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 28px;
-        animation: slideUp 0.35s ease both;
+    .empty-icon {
+        font-size: 44px;
+        margin-bottom: 16px;
+        opacity: 0.5;
     }
 
-    .message-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 20px;
-        border-radius: var(--radius-sm);
+    .empty-state h2 {
+        font-size: 20px;
+        font-weight: 750;
+        margin-bottom: 8px;
+        color: var(--text-hero);
+    }
+
+    .empty-state p {
+        color: var(--text-secondary);
         font-size: 14px;
-        font-weight: 500;
-        backdrop-filter: blur(10px);
+        margin-bottom: 24px;
     }
 
-    .message-item.success {
-        background: var(--success-bg);
-        border: 1px solid var(--success-border);
-        color: var(--success);
-    }
-
-    .message-item.error {
-        background: var(--error-bg);
-        border: 1px solid var(--error-border);
-        color: var(--error);
-    }
-
-    /* ── CONFIRMATION MODAL ──────────────────── */
+    /* ── MODALS (Apple Clean Modal Window) ───────────────────── */
     .modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         z-index: 10000;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 24px;
-        animation: fadeIn 0.18s ease;
     }
 
     .modal-overlay[hidden] {
         display: none;
     }
 
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
     .modal-box {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 36px;
+        background: #ffffff;
+        border: 1px solid var(--border-default);
+        border-radius: 20px;
+        padding: 32px;
         max-width: 440px;
         width: 100%;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
-        animation: slideUp 0.22s ease;
-        text-align: center;
-    }
-
-    .modal-icon {
-        font-size: 44px;
-        margin-bottom: 16px;
-        filter: grayscale(0.2);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15);
+        text-align: left;
     }
 
     .modal-title {
         font-size: 20px;
         font-weight: 800;
-        margin-bottom: 12px;
-        color: var(--text-primary);
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+        color: var(--text-hero);
     }
 
     .modal-desc {
-        font-size: 14px;
+        font-size: 13.5px;
         color: var(--text-secondary);
-        line-height: 1.6;
-        margin-bottom: 28px;
+        line-height: 1.55;
+        margin-bottom: 22px;
     }
 
-    .modal-desc strong {
+    .modal-form-group {
+        margin-bottom: 24px;
+    }
+
+    .modal-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+    }
+
+    .modal-input {
+        width: 100%;
+        border: 1px solid var(--border-default);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-size: 14.5px;
+        font-family: inherit;
         color: var(--text-primary);
-        font-weight: 700;
+        outline: none;
+        transition: all 0.15s;
+    }
+
+    .modal-input:focus {
+        border-color: #000000;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
     }
 
     .modal-actions {
         display: flex;
-        gap: 12px;
-        justify-content: center;
+        justify-content: flex-end;
+        gap: 10px;
     }
 
     .btn-modal-cancel {
-        padding: 11px 24px;
-        border-radius: var(--radius-sm);
-        background: var(--bg-interactive);
-        border: 1px solid var(--border);
+        padding: 10px 20px;
+        border-radius: var(--radius-pill);
+        background: #ffffff;
+        border: 1px solid var(--border-default);
         color: var(--text-secondary);
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
-        font-family: inherit;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
     }
 
     .btn-modal-cancel:hover {
-        background: var(--bg-card-hover);
-        border-color: var(--border-hover);
+        background: var(--surface-subtle);
         color: var(--text-primary);
     }
 
-    .btn-modal-delete {
-        padding: 11px 24px;
-        border-radius: var(--radius-sm);
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        border: none;
-        color: white;
-        font-size: 14px;
-        font-weight: 700;
-        font-family: inherit;
+    .btn-modal-submit {
+        padding: 10px 22px;
+        border-radius: var(--radius-pill);
+        background: #000000;
+        border: 1px solid #000000;
+        color: #ffffff;
+        font-size: 13.5px;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+        transition: all 0.15s ease;
+    }
+
+    .btn-modal-submit:hover {
+        background: #27272a;
+        transform: translateY(-1px);
+    }
+
+    .btn-modal-delete {
+        padding: 10px 22px;
+        border-radius: var(--radius-pill);
+        background: #ef4444;
+        border: 1px solid #ef4444;
+        color: #ffffff;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease;
     }
 
     .btn-modal-delete:hover {
+        background: #dc2626;
         transform: translateY(-1px);
-        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45);
     }
 
-    .btn-modal-delete:active {
-        transform: translateY(0);
+    @media (max-width: 600px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .header-actions {
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .header-search-input {
+            width: 100% !important;
+        }
+        .session-card {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .session-actions {
+            width: 100%;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-default);
+        }
+        .btn-delete-session {
+            opacity: 1;
+        }
     }
 </style>
 {% endblock %}
+
 {% block content %}
 
-<div class="page-wrapper">
+<div class="pw">
 
+    <!-- ── PAGE HEADER ─────────────────────────────────────────── -->
     <header class="page-header">
-        <div class="header-brand">
-            <div class="header-text">
-                <h1>E.S.M.S</h1>
-                <p>Exam Seat Management System</p>
+        <div class="header-left">
+            <nav class="breadcrumb-trail">
+                <a href="{% url 'exam_allocator:home' %}" class="breadcrumb-link">Home</a>
+                <span class="breadcrumb-slash">/</span>
+                <span class="breadcrumb-current">Sessions</span>
+            </nav>
+            <div class="header-title-row">
+                <h1 class="page-title">Sessions</h1>
+                <span class="header-count-badge" id="sessionCountBadge">{{ total_sessions }}</span>
             </div>
         </div>
 
-        <a class="btn-primary" href="{% url 'exam_allocator:create_session' %}" id="new-session-btn">
-            <span>+</span> New Session
-        </a>
+        <div class="header-actions">
+            <!-- Search bar -->
+            <div class="header-search-wrap">
+                <svg class="search-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input 
+                    type="text" 
+                    id="sessionSearchInput" 
+                    class="header-search-input" 
+                    placeholder="Search sessions..." 
+                    autocomplete="off"
+                >
+                <span class="header-search-key">/</span>
+            </div>
+
+            <!-- New Session Pill Button -->
+            <button class="btn-new-session" id="new-session-btn" onclick="openCreateModal();">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>New Session</span>
+            </button>
+        </div>
     </header>
 
-    <!-- FLASH MESSAGES -->
+    <!-- ── FLASH MESSAGES ──────────────────────────────────────── -->
     {% if messages %}
-    <ul class="messages-list">
+    <div class="msgs">
         {% for message in messages %}
-        <li class="message-item {{ message.tags }}">
-            {% if message.tags == 'success' %}✅{% else %}❌{% endif %}
+        <div class="msg {{ message.tags }}">
+            {% if message.tags == 'success' %}✓{% else %}⚠{% endif %}
             {{ message }}
-        </li>
+        </div>
         {% endfor %}
-    </ul>
+    </div>
     {% endif %}
 
-    <!-- SESSIONS -->
+    <!-- ── SESSIONS LIST ───────────────────────────────────────── -->
     {% if sessions %}
-
-    <div class="sessions-grid">
+    <div class="sessions-list" id="sessionsList">
         {% for session in sessions %}
-        <a class="session-card" href="{% url 'exam_allocator:session_detail' session.session_id %}">
-
+        <a class="session-card" href="{% url 'exam_allocator:session_detail' session.session_id %}" data-session-name="{{ session.name|lower }}">
+            
             <div class="session-info">
                 <div class="session-name">{{ session.name }}</div>
                 <div class="session-meta">
-                    <span class="session-date">
-                        📅 {{ session.created_at|date:"d M Y, H:i" }}
+                    <span class="meta-item code-mono">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <span>{{ session.created_at|date:"d M Y, H:i" }}</span>
                     </span>
-                    <span class="status-badge {% if session.status == 'active' %}active{% endif %}">
-                        <span class="status-dot"></span>
-                        {{ session.get_status_display }}
-                    </span>
+                    {% if session.student_count or session.room_count or session.exam_count %}
+                    <span class="meta-sep">•</span>
+                    <span class="meta-item code-mono">{{ session.student_count }} students</span>
+                    <span class="meta-sep">•</span>
+                    <span class="meta-item code-mono">{{ session.room_count }} rooms</span>
+                    <span class="meta-sep">•</span>
+                    <span class="meta-item code-mono">{{ session.exam_count }} exams</span>
+                    {% endif %}
                 </div>
             </div>
 
-            <div class="session-card-actions">
-                <button class="btn-delete-session" data-session-id="{{ session.session_id }}"
+            <div class="session-actions">
+                <span class="status-badge status-{{ session.status|lower }}">
+                    <span class="status-dot"></span>
+                    <span>{{ session.get_status_display }}</span>
+                </span>
+
+                <span class="btn-open-session">
+                    Open
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </span>
+
+                <button 
+                    class="btn-delete-session" 
+                    data-session-id="{{ session.session_id }}"
                     data-session-name="{{ session.name }}"
                     data-delete-url="{% url 'exam_allocator:delete_session' session.session_id %}"
                     onclick="event.preventDefault(); event.stopPropagation(); openDeleteModal(this);"
-                    aria-label="Delete {{ session.name }}" title="Delete session">🗑️</button>
-                <span class="session-arrow">›</span>
+                    aria-label="Delete {{ session.name }}" 
+                    title="Delete session"
+                >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
             </div>
 
         </a>
         {% endfor %}
+
+        <!-- Empty Filter State -->
+        <div id="searchEmptyState" class="empty-state" style="display: none;">
+            <p>No sessions match your search query.</p>
+            <button type="button" class="btn-modal-cancel" onclick="clearSearch();">Clear filter</button>
+        </div>
     </div>
 
     {% else %}
 
+    <!-- ── EMPTY DATABASE STATE ────────────────────────────────── -->
     <div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <h2>No Sessions Yet</h2>
-        <p>Create your first allocation session to get started.</p>
-        <a class="btn-primary" href="{% url 'exam_allocator:create_session' %}">
-            + Create First Session
-        </a>
+        <div class="empty-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+        <h2>No Sessions Found</h2>
+        <p>Get started by initializing your first exam seating session.</p>
+        <button class="btn-new-session" onclick="openCreateModal();">
+            + Create Session
+        </button>
     </div>
 
     {% endif %}
 
 </div>
 
-<!-- ── DELETE CONFIRMATION MODAL ──────────────────────────── -->
+<!-- ══════════════════════════════════════════════════════════════
+     CREATE SESSION MODAL (Apple Style)
+     ══════════════════════════════════════════════════════════════ -->
+<div id="create-modal" class="modal-overlay" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="create-modal-title">
+        <h2 class="modal-title" id="create-modal-title">New Allocation Session</h2>
+        <p class="modal-desc">Create a completely separate workspace for a new examination cycle.</p>
+
+        <form method="post" action="{% url 'exam_allocator:create_session' %}" id="create-session-form">
+            {% csrf_token %}
+
+            <div class="modal-form-group">
+                <label class="modal-label" for="new-session-name">Session Name</label>
+                <input 
+                    type="text" 
+                    id="new-session-name" 
+                    name="name" 
+                    class="modal-input" 
+                    placeholder="e.g. May 2026 Semester Exams" 
+                    required 
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeCreateModal();">Cancel</button>
+                <button type="submit" class="btn-modal-submit" id="submit-create-btn">Create Session →</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     DELETE CONFIRMATION MODAL
+     ══════════════════════════════════════════════════════════════ -->
 <div id="delete-modal" class="modal-overlay" hidden>
-    <div class="modal-box">
-        <div class="modal-icon">🗑️</div>
-        <h2 class="modal-title">Delete Session?</h2>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+        <h2 class="modal-title" id="delete-modal-title">Delete Session?</h2>
         <p class="modal-desc">
-            You are about to permanently delete
-            <strong id="modal-session-name"></strong>.
-            This will remove all associated students, exams, rooms,
-            registrations, and allocations.
+            You are about to permanently delete <strong id="modal-session-name"></strong>.
+            This will remove all associated students, exams, classrooms, and allocations.
             <br><br>
-            <strong>This action cannot be undone.</strong>
+            <strong style="color: #ef4444;">This action cannot be undone.</strong>
         </p>
+
         <form id="delete-form" method="post" action="">
             {% csrf_token %}
             <div class="modal-actions">
-                <button type="button" class="btn-modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" class="btn-modal-cancel" onclick="closeDeleteModal();">Cancel</button>
                 <button type="submit" class="btn-modal-delete" id="confirm-delete-btn">Delete Session</button>
             </div>
         </form>
@@ -630,6 +721,23 @@
 </div>
 
 <script>
+    /* ── CREATE MODAL HANDLERS ───────────────────────────────── */
+    function openCreateModal() {
+        const modal = document.getElementById('create-modal');
+        const input = document.getElementById('new-session-name');
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => input.focus(), 50);
+    }
+
+    function closeCreateModal() {
+        const modal = document.getElementById('create-modal');
+        modal.hidden = true;
+        document.body.style.overflow = '';
+        document.getElementById('new-session-name').value = '';
+    }
+
+    /* ── DELETE MODAL HANDLERS ───────────────────────────────── */
     function openDeleteModal(btn) {
         const modal = document.getElementById('delete-modal');
         const nameEl = document.getElementById('modal-session-name');
@@ -648,15 +756,63 @@
         document.body.style.overflow = '';
     }
 
-    /* Close when clicking the backdrop */
-    document.getElementById('delete-modal').addEventListener('click', function (e) {
-        if (e.target === this) closeDeleteModal();
+    /* ── GLOBAL BACKDROP CLICK & ESCAPE LISTENER ─────────────── */
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCreateModal();
+                closeDeleteModal();
+            }
+        });
     });
 
-    /* Close on Escape */
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeDeleteModal();
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeCreateModal();
+            closeDeleteModal();
+        } else if (e.key === '/' && document.activeElement.tagName !== 'INPUT') {
+            e.preventDefault();
+            const searchInput = document.getElementById('sessionSearchInput');
+            if (searchInput) searchInput.focus();
+        }
     });
+
+    /* ── REALTIME SEARCH FILTER ──────────────────────────────── */
+    const searchInput = document.getElementById('sessionSearchInput');
+    const badge = document.getElementById('sessionCountBadge');
+    const emptyState = document.getElementById('searchEmptyState');
+    const cards = document.querySelectorAll('.session-card');
+    const totalCount = cards.length;
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const query = e.target.value.trim().toLowerCase();
+            let count = 0;
+
+            cards.forEach(card => {
+                const name = card.dataset.sessionName || '';
+                if (!query || name.includes(query)) {
+                    card.style.display = 'flex';
+                    count++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            if (badge) badge.textContent = count;
+            if (emptyState) {
+                emptyState.style.display = (count === 0 && totalCount > 0) ? 'block' : 'none';
+            }
+        });
+    }
+
+    function clearSearch() {
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+            searchInput.focus();
+        }
+    }
 </script>
 
 {% endblock %}

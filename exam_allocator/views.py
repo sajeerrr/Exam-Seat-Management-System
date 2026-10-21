@@ -4,8 +4,8 @@ from collections import defaultdict, Counter
 from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db import transaction, models
-from django.db.models import Prefetch, Case, When, Value
-from django.http import JsonResponse
+from django.db.models import Prefetch, Case, When, Value, Count
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -114,19 +114,92 @@ def format_rolls_for_room(rolls, class_rolls):
     return ", ".join(parts)
 
 
+def home_landing(request):
+    """
+    Public Home/Landing page for ESMS inspired by Shibutz.
+    Provides clear value proposition, live interactive seating preview,
+    feature pillars, and direct entry points to active sessions.
+    """
+    recent_sessions = list(AllocationSession.objects.order_by("-updated_at", "-session_id")[:4])
+    total_sessions = AllocationSession.objects.count()
+    total_students = Student.objects.count()
+    total_rooms = Room.objects.count()
+    total_exams = Exam.objects.count()
+    total_allocations = Allocation.objects.count()
+
+    return render(
+        request,
+        "exam_allocator/home_landing.html",
+        {
+            "recent_sessions": recent_sessions,
+            "total_sessions": total_sessions,
+            "total_students": total_students,
+            "total_rooms": total_rooms,
+            "total_exams": total_exams,
+            "total_allocations": total_allocations,
+        },
+    )
+
+
 @ensure_csrf_cookie
 def session_list(request):
 
-    sessions = AllocationSession.objects.order_by(
-        "-updated_at",
-        "-session_id",
+    sessions = list(
+        AllocationSession.objects.order_by("-updated_at", "-session_id")
     )
+    session_ids = [s.session_id for s in sessions]
+
+    # Efficient grouped counts per session without Cartesian explosion
+    student_counts = dict(
+        Student.objects.filter(student_class__department__session_id__in=session_ids)
+        .values("student_class__department__session_id")
+        .annotate(c=Count("student_id"))
+        .values_list("student_class__department__session_id", "c")
+    )
+
+    room_counts = dict(
+        Room.objects.filter(session_id__in=session_ids)
+        .values("session_id")
+        .annotate(c=Count("room_id"))
+        .values_list("session_id", "c")
+    )
+
+    exam_counts = dict(
+        Exam.objects.filter(subject__session_id__in=session_ids)
+        .values("subject__session_id")
+        .annotate(c=Count("exam_id"))
+        .values_list("subject__session_id", "c")
+    )
+
+    alloc_counts = dict(
+        Allocation.objects.filter(exam__subject__session_id__in=session_ids)
+        .values("exam__subject__session_id")
+        .annotate(c=Count("allocation_id"))
+        .values_list("exam__subject__session_id", "c")
+    )
+
+    for s in sessions:
+        s.student_count = student_counts.get(s.session_id, 0)
+        s.room_count = room_counts.get(s.session_id, 0)
+        s.exam_count = exam_counts.get(s.session_id, 0)
+        s.allocation_count = alloc_counts.get(s.session_id, 0)
+
+    total_sessions = len(sessions)
+    total_students = sum(s.student_count for s in sessions)
+    total_rooms = sum(s.room_count for s in sessions)
+    total_exams = sum(s.exam_count for s in sessions)
+    total_allocations = sum(s.allocation_count for s in sessions)
 
     return render(
         request,
         "exam_allocator/session_list.html",
         {
             "sessions": sessions,
+            "total_sessions": total_sessions,
+            "total_students": total_students,
+            "total_rooms": total_rooms,
+            "total_exams": total_exams,
+            "total_allocations": total_allocations,
         },
     )
 
@@ -243,22 +316,33 @@ def exam_list(request, session_id=None):
             session_id=session_id,
         )
 
+        shift_order_expr = Case(
+            When(session="FN", then=Value(0)),
+            When(session="AN", then=Value(1)),
+            default=Value(2),
+            output_field=models.IntegerField(),
+        )
         exams = (
             Exam.objects.select_related("subject")
             .filter(subject__session=session)
             .order_by(
                 "exam_date",
-                "session",
+                shift_order_expr,
                 "exam_id",
             )
         )
 
     else:
         session = None
-
+        shift_order_expr = Case(
+            When(session="FN", then=Value(0)),
+            When(session="AN", then=Value(1)),
+            default=Value(2),
+            output_field=models.IntegerField(),
+        )
         exams = Exam.objects.select_related("subject").order_by(
             "exam_date",
-            "session",
+            shift_order_expr,
             "exam_id",
         )
 
@@ -391,6 +475,8 @@ def session_allocation_result(request, session_id):
             'date': slot['exam_date'],
             'shift': slot['session']
         })
+    shift_order = {"FN": 0, "AN": 1}
+    slots.sort(key=lambda s: (s['date'], shift_order.get(str(s['shift']).strip().upper(), 2), str(s['shift'])))
         
     date_filter = request.GET.get('date')
     shift_filter = request.GET.get('shift')
@@ -751,6 +837,591 @@ def session_allocation_result(request, session_id):
     )
 
 
+# ── Final Physical Allocation Management & Export ──────────────────────────
+
+@require_POST
+def api_allocation_update(request, session_id):
+    """
+    API to move or swap individual student seat allocations in a room/session.
+    Payload:
+      action: "move" | "swap"
+      # For move:
+      allocation_id: int
+      target_room_id: int (optional, defaults to current room)
+      target_bench_number: int
+      target_seat_number: int (1, 2, or 3)
+      # For swap:
+      source_allocation_id: int
+      target_allocation_id: int
+    """
+    import json
+    session = get_object_or_404(AllocationSession, pk=session_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"success": False, "error": "Invalid JSON body"}, status=400)
+
+    action = data.get("action", "move")
+
+    if action == "swap":
+        source_id = data.get("source_allocation_id")
+        target_id = data.get("target_allocation_id")
+        if not source_id or not target_id:
+            return JsonResponse({"success": False, "error": "Both source and target allocation IDs are required for swap"}, status=400)
+
+        with transaction.atomic():
+            source_alloc = get_object_or_404(Allocation, pk=source_id, exam__subject__session=session)
+            target_alloc = get_object_or_404(Allocation, pk=target_id, exam__subject__session=session)
+
+            s_room = source_alloc.room
+            s_bench = source_alloc.bench_number
+            s_seat = source_alloc.seat_number
+
+            t_room = target_alloc.room
+            t_bench = target_alloc.bench_number
+            t_seat = target_alloc.seat_number
+
+            # Temporarily shift source to avoid unique_exam_room_bench_seat collision
+            source_alloc.bench_number = 999999
+            source_alloc.seat_number = 999999
+            source_alloc.save(update_fields=["bench_number", "seat_number"])
+
+            target_alloc.room = s_room
+            target_alloc.bench_number = s_bench
+            target_alloc.seat_number = s_seat
+            target_alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+            source_alloc.room = t_room
+            source_alloc.bench_number = t_bench
+            source_alloc.seat_number = t_seat
+            source_alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+            s_roll = source_alloc.registration.student.roll_number
+            t_roll = target_alloc.registration.student.roll_number
+
+            return JsonResponse({
+                "success": True,
+                "is_swap": True,
+                "message": f"Successfully swapped {s_roll} and {t_roll}",
+                "source": {
+                    "allocation_id": source_alloc.allocation_id,
+                    "roll_number": s_roll,
+                    "room_id": t_room.room_id,
+                    "room_number": t_room.room_number,
+                    "bench_number": t_bench,
+                    "seat_number": t_seat,
+                },
+                "target": {
+                    "allocation_id": target_alloc.allocation_id,
+                    "roll_number": t_roll,
+                    "room_id": s_room.room_id,
+                    "room_number": s_room.room_number,
+                    "bench_number": s_bench,
+                    "seat_number": s_seat,
+                }
+            })
+
+    elif action == "move":
+        alloc_id = data.get("allocation_id")
+        target_room_id = data.get("target_room_id")
+        target_bench = data.get("target_bench_number")
+        target_seat = data.get("target_seat_number")
+
+        if not alloc_id or target_bench is None or target_seat is None:
+            return JsonResponse({"success": False, "error": "Missing allocation_id, target_bench_number, or target_seat_number"}, status=400)
+
+        with transaction.atomic():
+            alloc = get_object_or_404(Allocation, pk=alloc_id, exam__subject__session=session)
+            if target_room_id:
+                target_room = get_object_or_404(Room, pk=target_room_id, session=session)
+            else:
+                target_room = alloc.room
+
+            target_bench = int(target_bench)
+            target_seat = int(target_seat)
+
+            # Check if an allocation already occupies that target seat in this slot
+            existing = Allocation.objects.filter(
+                exam__subject__session=session,
+                exam__exam_date=alloc.exam.exam_date,
+                exam__session=alloc.exam.session,
+                room=target_room,
+                bench_number=target_bench,
+                seat_number=target_seat,
+            ).exclude(pk=alloc.pk).first()
+
+            if existing:
+                # Target is occupied -> execute atomic swap!
+                s_room, s_bench, s_seat = alloc.room, alloc.bench_number, alloc.seat_number
+                t_room, t_bench, t_seat = existing.room, existing.bench_number, existing.seat_number
+
+                alloc.bench_number = 999999
+                alloc.seat_number = 999999
+                alloc.save(update_fields=["bench_number", "seat_number"])
+
+                existing.room = s_room
+                existing.bench_number = s_bench
+                existing.seat_number = s_seat
+                existing.save(update_fields=["room", "bench_number", "seat_number"])
+
+                alloc.room = t_room
+                alloc.bench_number = t_bench
+                alloc.seat_number = t_seat
+                alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+                s_roll = alloc.registration.student.roll_number
+                t_roll = existing.registration.student.roll_number
+
+                return JsonResponse({
+                    "success": True,
+                    "is_swap": True,
+                    "message": f"Swapped {s_roll} and {t_roll}",
+                    "source": {
+                        "allocation_id": alloc.allocation_id,
+                        "roll_number": s_roll,
+                        "room_id": alloc.room.room_id,
+                        "room_number": alloc.room.room_number,
+                        "bench_number": alloc.bench_number,
+                        "seat_number": alloc.seat_number,
+                    },
+                    "target": {
+                        "allocation_id": existing.allocation_id,
+                        "roll_number": t_roll,
+                        "room_id": existing.room.room_id,
+                        "room_number": existing.room.room_number,
+                        "bench_number": existing.bench_number,
+                        "seat_number": existing.seat_number,
+                    }
+                })
+            else:
+                # Target seat is empty -> clean move!
+                old_room_num = alloc.room.room_number
+                old_bench = alloc.bench_number
+                old_seat = alloc.seat_number
+
+                alloc.room = target_room
+                alloc.bench_number = target_bench
+                alloc.seat_number = target_seat
+                alloc.save(update_fields=["room", "bench_number", "seat_number"])
+
+                roll = alloc.registration.student.roll_number
+                return JsonResponse({
+                    "success": True,
+                    "is_swap": False,
+                    "message": f"Moved {roll} to Room {target_room.room_number}, Bench {target_bench}, Seat {target_seat}",
+                    "allocation_id": alloc.allocation_id,
+                    "roll_number": roll,
+                    "room_id": target_room.room_id,
+                    "room_number": target_room.room_number,
+                    "bench_number": alloc.bench_number,
+                    "seat_number": alloc.seat_number,
+                    "old_position": {
+                        "room_number": old_room_num,
+                        "bench_number": old_bench,
+                        "seat_number": old_seat,
+                    }
+                })
+
+    return JsonResponse({"success": False, "error": f"Unknown action '{action}'"}, status=400)
+
+
+def compress_roll_numbers(rolls):
+    if not rolls:
+        return ""
+
+    import re
+    from collections import Counter
+
+    parsed = []
+    prefixes = []
+    for r in rolls:
+        m = re.match(r'^(.*?)(\d+)$', str(r).strip())
+        if m:
+            prefix, num_str = m.group(1), m.group(2)
+            parsed.append((prefix, int(num_str), str(r).strip()))
+            prefixes.append(prefix)
+        else:
+            parsed.append((None, None, str(r).strip()))
+
+    if not prefixes:
+        return ""
+
+    prefix_counts = Counter(prefixes)
+    dominant_prefix = prefix_counts.most_common(1)[0][0]
+
+    # If numbers for dominant prefix are not strictly increasing, return empty
+    dom_nums = [num for p, num, _ in parsed if p == dominant_prefix and num is not None]
+    if dom_nums != sorted(dom_nums):
+        return ""
+
+    items = []
+    for prefix, num, orig in parsed:
+        if prefix == dominant_prefix and num is not None:
+            items.append(num)
+        else:
+            items.append(orig)
+
+    result_parts = []
+    current_range = []
+
+    for item in items:
+        if isinstance(item, int):
+            if not current_range:
+                current_range.append(item)
+            elif item == current_range[-1] + 1:
+                current_range.append(item)
+            else:
+                if len(current_range) == 1:
+                    result_parts.append(str(current_range[0]))
+                elif len(current_range) >= 2:
+                    result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+                current_range = [item]
+        else:
+            if current_range:
+                if len(current_range) == 1:
+                    result_parts.append(str(current_range[0]))
+                elif len(current_range) >= 2:
+                    result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+                current_range = []
+            result_parts.append(str(item))
+
+    if current_range:
+        if len(current_range) == 1:
+            result_parts.append(str(current_range[0]))
+        elif len(current_range) >= 2:
+            result_parts.append(f"{current_range[0]}-{current_range[-1]}")
+
+    return ",".join(result_parts)
+
+
+def format_branch_code(class_name, dept_code, semester=None, subject_category=None, subject_code=None, subject_name=None, rolls=None):
+    import re
+    # Check if elective / special
+    is_elec = (subject_category in ("ELECTIVE", "MINOR", "HONOURS")) or (
+        subject_code and any(subject_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE"))
+    )
+    if is_elec:
+        clean_name = (subject_name or "").strip()
+        first_word = clean_name.split()[0] if clean_name else ""
+        return f"{subject_code} - {first_word}" if first_word else (subject_code or "ELECTIVE")
+
+    dept = (dept_code or "").strip().upper()
+    dept_map = {
+        'CSE': 'CS', 'COMPUTER SCIENCE': 'CS',
+        'ECE': 'EC', 'ELECTRONICS': 'EC',
+        'EEE': 'EE', 'ELECTRICAL': 'EE',
+        'CHE': 'CH', 'CHEMICAL': 'CH',
+        'B.ARCH': 'AR', 'ARCHITECTURE': 'AR',
+        'CIVIL': 'CE', 'MECHANICAL': 'ME',
+    }
+    short_dept = dept_map.get(dept, dept[:2] if len(dept) >= 2 else dept)
+
+    # Extract sem from class_name or semester
+    sem = str(semester or '')
+    if not sem and class_name:
+        m_sem = re.search(r'[Ss](\d+)', class_name)
+        if m_sem:
+            sem = m_sem.group(1)
+        else:
+            m_year = re.search(r'2[Kk](\d+)', class_name)
+            if m_year:
+                yr = int(m_year.group(1))
+                yr_map = {21: '10', 22: '8', 23: '6', 24: '4', 25: '2'}
+                sem = yr_map.get(yr, '')
+
+    # Extract section (A, B, C)
+    sec = ""
+    if class_name:
+        m_sec = re.search(r'([A-C])$', class_name.strip())
+        if m_sec:
+            sec = m_sec.group(1)
+
+    # If section still not found, check dominant roll prefix: e.g. B23CEA01 -> A, B23CEB01 -> B
+    if not sec and rolls:
+        for r in rolls:
+            m_r = re.match(r'^[A-Za-z]\d{2}[A-Za-z]{2}([A-Ca-c])\d+$', str(r).strip())
+            if m_r:
+                sec = m_r.group(1).upper()
+                break
+
+    return f"{short_dept}{sem}{sec}"
+
+
+def export_allocations_csv(request, session_id):
+    """
+    Export seating allocation CSV for this session and slot.
+    Generates the clean summary seating plan layout (Branch, Count, Classname, Status, 
+    Start Roll Number, End Rollnumber, Comma Separater , Subject).
+    Supports format='detailed' for the student-by-student flat list if needed.
+    """
+    import csv
+    from collections import Counter, defaultdict
+    from exam_allocator.models import AllocationSession, SlotBlueprint, Allocation, ElectiveStudentRegistration, Exam
+    from exam_allocator.services.engine_adapter import _is_matching_elective_exam
+
+    session = get_object_or_404(AllocationSession, pk=session_id)
+    date_filter = request.GET.get('date')
+    shift_filter = request.GET.get('shift')
+    format_type = request.GET.get('format', 'summary').lower()
+
+    # Detailed student-by-student export fallback
+    if format_type in ('detailed', 'detail', 'students'):
+        allocations = (
+            Allocation.objects.filter(exam__subject__session=session)
+            .select_related(
+                "registration__student",
+                "registration__student__student_class",
+                "registration__student__student_class__department",
+                "exam",
+                "exam__subject",
+                "room",
+            )
+        )
+        if date_filter:
+            allocations = allocations.filter(exam__exam_date=date_filter)
+        if shift_filter:
+            allocations = allocations.filter(exam__session=shift_filter)
+        allocations = allocations.order_by("room__room_number", "bench_number", "seat_number")
+
+        response = HttpResponse(content_type="text/csv")
+        filename = f"seating_detail_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Roll Number", "Student Name", "Department", "Class",
+            "Subject Code", "Subject Name", "Room", "Bench Number",
+            "Seat Position", "Exam Date", "Shift",
+        ])
+        seat_pos_map = {1: "Left (1)", 2: "Middle (2)", 3: "Right (3)"}
+        for a in allocations:
+            st = a.registration.student
+            dept = st.student_class.department.department_code if (st.student_class and st.student_class.department) else ""
+            cls_name = st.student_class.class_name if st.student_class else ""
+            writer.writerow([
+                st.roll_number,
+                st.student_name or st.roll_number,
+                dept,
+                cls_name,
+                a.exam.subject.subject_code,
+                a.exam.subject.subject_name,
+                a.room.room_number,
+                a.bench_number,
+                seat_pos_map.get(a.seat_number, str(a.seat_number)),
+                a.exam.exam_date.strftime("%Y-%m-%d"),
+                a.exam.session,
+            ])
+        return response
+
+    # Default: Clean Summary Layout (Branch, Count, Classname, Status, Start Roll Number, End Rollnumber, Comma Separater , Subject, "")
+    response = HttpResponse(content_type="text/csv")
+    filename = f"seating_plan_{session.name}_{date_filter or 'all'}_{shift_filter or 'all'}.csv".replace(" ", "_")
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+    # Header matching exact specification
+    writer.writerow([
+        "Branch",
+        "Count",
+        "Classname",
+        "Status",
+        "Start Roll Number",
+        "End Rollnumber",
+        "Comma Separater ",
+        "Subject",
+        "",
+    ])
+
+    slot_bp = None
+    if date_filter and shift_filter:
+        slot_bp = SlotBlueprint.objects.filter(session=session, exam_date=date_filter, shift=shift_filter).first()
+    elif date_filter:
+        slot_bp = SlotBlueprint.objects.filter(session=session, exam_date=date_filter).first()
+    else:
+        slot_bp = SlotBlueprint.objects.filter(session=session).first()
+
+    # Query allocations
+    allocations = Allocation.objects.filter(exam__subject__session=session)
+    if date_filter:
+        allocations = allocations.filter(exam__exam_date=date_filter)
+    if shift_filter:
+        allocations = allocations.filter(exam__session=shift_filter)
+    allocations = (
+        allocations
+        .select_related(
+            "registration__student",
+            "registration__student__student_class",
+            "registration__student__student_class__department",
+            "exam",
+            "exam__subject",
+            "room",
+        )
+        .order_by("room__room_number", "bench_number", "seat_number")
+    )
+
+    elective_counters = Counter()
+
+    if allocations.exists():
+        elec_regs = ElectiveStudentRegistration.objects.filter(
+            elective_subject__group__session=session
+        ).select_related('elective_subject', 'elective_subject__group')
+        elec_map = defaultdict(list)
+        for r in elec_regs:
+            elec_map[r.student_id].append(r)
+
+        # Group allocations by room
+        room_map = defaultdict(list)
+        for a in allocations:
+            room_map[a.room].append(a)
+
+        if slot_bp:
+            order_map = {rb.room.room_id: rb.room_order for rb in slot_bp.room_blueprints.all()}
+            sorted_rooms = sorted(room_map.keys(), key=lambda r: order_map.get(r.room_id, 999))
+        else:
+            sorted_rooms = sorted(room_map.keys(), key=lambda r: r.room_number)
+
+        for room in sorted_rooms:
+            room_allocs = room_map[room]
+            for seat_num, prefix in [(1, 'first'), (2, 'second'), (3, 'last')]:
+                seat_allocs = [a for a in room_allocs if a.seat_number == seat_num]
+                if not seat_allocs:
+                    continue
+                seat_allocs.sort(key=lambda a: a.bench_number)
+
+                groups = []
+                curr_group = []
+                curr_key = None
+
+                for a in seat_allocs:
+                    st = a.registration.student
+                    ex = a.exam
+                    cls = st.student_class
+
+                    subj_code = ex.subject.subject_code
+                    subj_name = ex.subject.subject_name
+                    cat = "NORMAL"
+                    for r in elec_map.get(st.student_id, []):
+                        if _is_matching_elective_exam(ex, r.elective_subject):
+                            subj_code = r.elective_subject.subject_code
+                            subj_name = r.elective_subject.subject_name
+                            cat = r.elective_subject.elective_type or "ELECTIVE"
+                            break
+
+                    key = (cls.class_id if cls else None, subj_code)
+                    if key == curr_key:
+                        curr_group.append((a, st, cls, subj_code, subj_name, cat))
+                    else:
+                        if curr_group:
+                            groups.append(curr_group)
+                        curr_group = [(a, st, cls, subj_code, subj_name, cat)]
+                        curr_key = key
+                if curr_group:
+                    groups.append(curr_group)
+
+                for idx, grp in enumerate(groups):
+                    is_last = (idx == len(groups) - 1)
+                    status = f"{prefix}row" if is_last else f"{prefix}hold"
+
+                    st_first = grp[0][1]
+                    st_last = grp[-1][1]
+                    cls = grp[0][2]
+                    s_code = grp[0][3]
+                    s_name = grp[0][4]
+                    cat = grp[0][5]
+
+                    rolls = [item[1].roll_number for item in grp]
+                    count = len(grp)
+                    start_roll = st_first.roll_number
+                    end_roll = st_last.roll_number
+                    comma_sep = compress_roll_numbers(rolls)
+
+                    branch = format_branch_code(
+                        cls.class_name if cls else "",
+                        cls.department.department_code if (cls and cls.department) else "",
+                        semester=cls.semester if cls else None,
+                        subject_category=cat,
+                        subject_code=s_code,
+                        subject_name=s_name,
+                        rolls=rolls
+                    )
+
+                    if cat in ("ELECTIVE", "MINOR", "HONOURS") or (s_code and any(s_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE"))):
+                        elective_counters[branch] += 1
+                        if elective_counters[branch] > 1:
+                            branch = f"{branch} ({elective_counters[branch]})"
+
+                    subj_title = s_name
+                    if s_code and s_code not in subj_title:
+                        subj_title = f"{subj_title} ({s_code})"
+
+                    writer.writerow([
+                        branch,
+                        count,
+                        room.room_number,
+                        status,
+                        start_roll,
+                        end_roll,
+                        comma_sep,
+                        subj_title,
+                        "",
+                    ])
+
+    elif slot_bp:
+        for rb in slot_bp.room_blueprints.all().order_by('room_order'):
+            room_num = rb.room.room_number
+            stream_map = {'A': [], 'B': [], 'C': []}
+            for sa in rb.stream_assignments.all().order_by('order'):
+                stream_map[sa.stream_name].append(sa)
+
+            for s_name, prefix in [('A', 'first'), ('B', 'second'), ('C', 'last')]:
+                assignments = stream_map[s_name]
+                for idx, sa in enumerate(assignments):
+                    is_last = (idx == len(assignments) - 1)
+                    status = f"{prefix}row" if is_last else f"{prefix}hold"
+
+                    rolls = sa.student_rolls or []
+                    start_roll = rolls[0] if rolls else ""
+                    end_roll = rolls[-1] if rolls else ""
+                    comma_sep = compress_roll_numbers(rolls)
+
+                    is_elec = (sa.subject_category in ("ELECTIVE", "MINOR", "HONOURS")) or any(
+                        sa.subject_code.startswith(p) for p in ("22MEE", "22CEE", "22CHE", "22CSE", "22ECE", "22EEE", "22ARE")
+                    )
+
+                    branch = format_branch_code(
+                        sa.class_name,
+                        sa.department_code,
+                        subject_category="ELECTIVE" if is_elec else "NORMAL",
+                        subject_code=sa.subject_code,
+                        subject_name=sa.subject_name,
+                        rolls=rolls
+                    )
+
+                    if is_elec:
+                        elective_counters[branch] += 1
+                        if elective_counters[branch] > 1:
+                            branch = f"{branch} ({elective_counters[branch]})"
+
+                    subj_title = sa.subject_name
+                    if sa.subject_code and sa.subject_code not in subj_title:
+                        subj_title = f"{subj_title} ({sa.subject_code})"
+
+                    writer.writerow([
+                        branch,
+                        sa.student_count,
+                        room_num,
+                        status,
+                        start_roll,
+                        end_roll,
+                        comma_sep,
+                        subj_title,
+                        "",
+                    ])
+
+    return response
+
+
+
 # ── Blueprint Views & APIs (Two-Stage Allocation) ──────────────────────────
 
 def blueprint_review(request, session_id):
@@ -839,6 +1510,9 @@ def blueprint_review(request, session_id):
             "eligible_count": reg_count,
             "allocations_count": alloc_count,
         })
+
+    shift_order = {"FN": 0, "AN": 1}
+    slots.sort(key=lambda s: (s["date"], shift_order.get(str(s["shift"]).strip().upper(), 2), str(s["shift"])))
 
     date_filter = request.GET.get("date")
     shift_filter = request.GET.get("shift")

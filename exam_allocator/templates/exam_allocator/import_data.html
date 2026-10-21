@@ -27,7 +27,7 @@
         right: -10%;
         width: 55vw;
         height: 55vw;
-        background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        background: radial-gradient(circle, #f4f4f5 0%, transparent 70%);
         pointer-events: none;
         z-index: 0;
     }
@@ -108,16 +108,22 @@
     }
 
     .hero-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
+        color: #09090b;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 26px;
-        box-shadow: 0 0 32px var(--accent-glow);
         flex-shrink: 0;
+    }
+
+    .hero-icon svg {
+        width: 22px;
+        height: 22px;
+        stroke: #09090b;
     }
 
     .hero-text h1 {
@@ -165,8 +171,8 @@
     }
 
     .flash-msg:not(.success):not(.error):not(.warning) {
-        background: rgba(99, 102, 241, 0.1);
-        border-color: rgba(99, 102, 241, 0.25);
+        background: #f4f4f5;
+        border-color: #e4e4e7;
         color: var(--accent-light);
     }
 
@@ -244,7 +250,7 @@
     }
 
     .card-icon.student {
-        background: rgba(99, 102, 241, 0.12);
+        background: #f4f4f5;
     }
 
     .card-icon.timetable {
@@ -301,7 +307,7 @@
     .drop-zone:hover,
     .drop-zone.drag-over {
         border-color: var(--accent);
-        background: rgba(99, 102, 241, 0.05);
+        background: #f4f4f5;
     }
 
     .drop-zone.has-files {
@@ -463,9 +469,9 @@
         width: 100%;
         margin-top: auto;
         padding: 9px 10px;
-        background: rgba(99, 102, 241, 0.12);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.25);
+        border: 1px solid #e4e4e7;
         border-radius: 8px;
         font-size: 12.5px;
         font-weight: 600;
@@ -568,16 +574,16 @@
         justify-content: center;
         gap: 8px;
         padding: 11px 26px;
-        border-radius: 10px;
+        border-radius: 9999px;
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 650;
         font-family: inherit;
         cursor: pointer;
         transition: all 0.25s ease;
         border: 1px solid var(--accent);
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
         color: #ffffff;
-        box-shadow: 0 4px 18px var(--accent-glow);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         white-space: nowrap;
         box-sizing: border-box;
         height: 42px;
@@ -585,7 +591,7 @@
 
     .btn-common-upload:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45);
+        box-shadow: 0 8px 30px #e4e4e7;
         filter: brightness(1.08);
     }
 
@@ -657,8 +663,8 @@
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -701,12 +707,12 @@
         justify-content: center;
         gap: 8px;
         padding: 11px 24px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
         color: white;
         border: none;
-        border-radius: 10px;
+        border-radius: 9999px;
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 650;
         font-family: inherit;
         cursor: pointer;
         text-decoration: none;
@@ -719,7 +725,7 @@
 
     .btn-primary-lg:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45);
+        box-shadow: 0 8px 32px #e4e4e7;
         color: white;
     }
 
@@ -799,15 +805,15 @@
     }
 
     .badge-processing {
-        background: rgba(99, 102, 241, 0.1);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        border: 1px solid #e4e4e7;
     }
 
     .badge-student {
-        background: rgba(99, 102, 241, 0.1);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        border: 1px solid #e4e4e7;
     }
 
     .badge-timetable {
@@ -915,7 +921,7 @@
 
     <!-- PAGE HERO -->
     <div class="page-hero">
-        <div class="hero-icon">📥</div>
+        <div class="hero-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
         <div class="hero-text">
             <h1>Import Data for {{ session.name }}</h1>
 
@@ -928,7 +934,7 @@
         <!-- STUDENT LISTS -->
         <div class="upload-card">
             <div class="card-header">
-                <div class="card-icon student">👥</div>
+                <div class="card-icon student"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
                 <div>
                     <div class="card-title">Student Lists</div>
 
@@ -943,7 +949,7 @@
                 <div class="drop-zone" id="dz-student" onclick="document.getElementById('fi-student').click()">
                     <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-student"
                         style="display:none">
-                    <div class="drop-icon">📄</div>
+                    <div class="drop-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
                     <div class="drop-label">Click or drag files here</div>
 
                     <div class="file-list" id="fl-student"></div>
@@ -958,7 +964,7 @@
         <!-- TIMETABLE -->
         <div class="upload-card">
             <div class="card-header">
-                <div class="card-icon timetable">🗓️</div>
+                <div class="card-icon timetable"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
                 <div>
                     <div class="card-title">Exam Timetable</div>
 
@@ -973,7 +979,7 @@
                 <div class="drop-zone" id="dz-timetable" onclick="document.getElementById('fi-timetable').click()">
                     <input type="file" name="file" accept=".xlsx,.xls,.pdf" multiple id="fi-timetable"
                         style="display:none">
-                    <div class="drop-icon">📅</div>
+                    <div class="drop-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
                     <div class="drop-label">Click or drag files here</div>
 
                     <div class="file-list" id="fl-timetable"></div>
@@ -988,7 +994,7 @@
         <!-- CLASSROOMS -->
         <div class="upload-card">
             <div class="card-header">
-                <div class="card-icon classroom">🏫</div>
+                <div class="card-icon classroom"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></div>
                 <div>
                     <div class="card-title">Classroom Data</div>
 
@@ -1002,7 +1008,7 @@
 
                 <div class="drop-zone" id="dz-classroom" onclick="document.getElementById('fi-classroom').click()">
                     <input type="file" name="file" accept=".xlsx,.xls" id="fi-classroom" style="display:none">
-                    <div class="drop-icon">🏛️</div>
+                    <div class="drop-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
                     <div class="drop-label">Click or drag files here</div>
 
                     <div class="file-list" id="fl-classroom"></div>
@@ -1017,7 +1023,7 @@
         <!-- ELECTIVE DATA -->
         <div class="upload-card">
             <div class="card-header">
-                <div class="card-icon elective">📚</div>
+                <div class="card-icon elective"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
                 <div>
                     <div class="card-title">Elective Data</div>
                 </div>
@@ -1031,7 +1037,7 @@
                 <div class="drop-zone" id="dz-elective" onclick="document.getElementById('fi-elective').click()">
                     <input type="file" name="file" accept=".xlsx,.xls,.xlsm,.pdf" multiple id="fi-elective"
                         style="display:none">
-                    <div class="drop-icon">📑</div>
+                    <div class="drop-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>
                     <div class="drop-label">Click or drag files here</div>
                     <div class="file-list" id="fl-elective"></div>
                 </div>
@@ -1087,13 +1093,13 @@
                     <td>{{ f.original_filename }}</td>
                     <td>
                         {% if f.file_kind == 'STUDENT' %}
-                        <span class="badge badge-student">👥 Students</span>
+                        <span class="badge badge-student">Students</span>
                         {% elif f.file_kind == 'TIMETABLE' %}
-                        <span class="badge badge-timetable">🗓️ Timetable</span>
+                        <span class="badge badge-timetable">Timetable</span>
                         {% elif f.file_kind == 'ELECTIVE' %}
-                        <span class="badge badge-elective">📚 Electives</span>
+                        <span class="badge badge-elective">Electives</span>
                         {% else %}
-                        <span class="badge badge-classroom">🏫 Classroom</span>
+                        <span class="badge badge-classroom">Classroom</span>
                         {% endif %}
                     </td>
                     <td>
