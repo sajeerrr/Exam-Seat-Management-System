@@ -679,21 +679,23 @@
         align-items: center;
         gap: 7px;
         padding: 9px 18px;
-        background: #000000; border-radius: 9999px;
+        background: #000000;
+        border-radius: 9999px;
         color: white;
-        border: none;
-        border-radius: 9px;
+        border: 1px solid #000000;
         font-size: 13px;
         font-weight: 700;
         font-family: inherit;
         cursor: pointer;
-        transition: all .2s;
-        box-shadow: 0 3px 14px var(--accent-glow);
+        transition: all .2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .btn-add-room:hover {
+        background: #27272a;
+        border-color: #27272a;
         transform: translateY(-1px);
-        box-shadow: 0 6px 22px rgba(99, 102, 241, .4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .rooms-grid {
@@ -959,47 +961,57 @@
     }
 
     .btn-sm-danger {
-        padding: 7px 14px;
-        border-radius: 8px;
-        background: rgba(239, 68, 68, 0.12);
-        border: 1px solid rgba(239, 68, 68, 0.35);
-        color: #ef4444;
+        padding: 7px 16px;
+        border-radius: 9999px;
+        background: #ffffff;
+        border: 1px solid var(--border);
+        color: var(--text-primary);
         font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         font-family: inherit;
-        transition: all .2s;
+        transition: all .2s ease;
         display: inline-flex;
         align-items: center;
         gap: 6px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
 
     .btn-sm-danger:hover {
-        background: #ef4444;
-        color: white;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        background: #f8fafc;
+        border-color: #000000;
+        color: #000000;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-sm-danger:active {
+        transform: translateY(0);
+        background: #f1f5f9;
     }
 
     .btn-sm-primary {
-        padding: 7px 14px;
-        border-radius: 8px;
-        background: #000000; border-radius: 9999px;
-        border: none;
+        padding: 7px 16px;
+        border-radius: 9999px;
+        background: #000000;
+        border: 1px solid #000000;
         color: white;
         font-size: 12px;
         font-weight: 700;
         cursor: pointer;
         font-family: inherit;
-        transition: all .2s;
-        box-shadow: 0 2px 8px var(--accent-glow);
+        transition: all .2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         display: inline-flex;
         align-items: center;
         gap: 6px;
     }
 
     .btn-sm-primary:hover {
+        background: #27272a;
+        border-color: #27272a;
         transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(99, 102, 241, .4);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .row-act-btn {
