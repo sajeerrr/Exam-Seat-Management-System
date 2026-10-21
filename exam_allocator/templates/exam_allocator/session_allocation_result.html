@@ -2205,7 +2205,7 @@
         <div class="seat-modal-card">
             <div class="seat-modal-header">
                 <div class="seat-modal-title">
-                    <span style="font-size: 18px;">✏️</span>
+                    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
                     <span>Edit Seat Allocation</span>
                 </div>
                 <button type="button" class="seat-modal-close" onclick="closeSeatEditModal()">✕</button>
@@ -2256,13 +2256,13 @@
                 </div>
 
                 <div id="modalTargetSeatStatus" class="seat-target-status-box status-empty">
-                    <span>⚡ Available Seat — Clean Move</span>
+                    <span>Available Seat — Clean Move</span>
                 </div>
             </div>
 
             <div class="seat-modal-footer">
                 <button type="button" class="btn-modal-cancel" onclick="closeSeatEditModal()">Cancel</button>
-                <button type="button" class="btn-modal-save" id="btnSaveSeatEdit" onclick="saveSeatEditModal()">💾 Save Changes</button>
+                <button type="button" class="btn-modal-save" id="btnSaveSeatEdit" onclick="saveSeatEditModal()">Save Changes</button>
             </div>
         </div>
     </div>
@@ -2272,7 +2272,7 @@
         <div class="seat-modal-card">
             <div class="seat-modal-header">
                 <div class="seat-modal-title">
-                    <span style="font-size: 18px;">🪑</span>
+                    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
                     <span>Assign Student to Empty Seat</span>
                 </div>
                 <button type="button" class="seat-modal-close" onclick="closeEmptySeatModal()">✕</button>
@@ -2326,33 +2326,33 @@
             <!-- UNIFIED PRINT DROPDOWN -->
             <div class="print-dropdown-wrap" id="printDropdownWrap">
                 <button type="button" class="btn-focus-action btn-print-primary" id="btnPrintDropdown" onclick="togglePrintDropdown(event)" title="Print options">
-                    <span>🖨️ Print</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> <span>Print</span>
                     <span class="dropdown-caret">▾</span>
                 </button>
                 <div class="print-dropdown-menu" id="printDropdownMenu">
                     <button type="button" class="print-menu-item" onclick="handlePrintAction('current')">
-                        <span class="print-menu-icon">🖨️</span>
+                        <span class="print-menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></span>
                         <div class="print-menu-text">
                             <span class="print-menu-title">Print Active Classroom</span>
                             <span class="print-menu-desc" id="printActiveRoomLabel">Current room sheet</span>
                         </div>
                     </button>
                     <button type="button" class="print-menu-item" onclick="handlePrintAction('all')">
-                        <span class="print-menu-icon">📄</span>
+                        <span class="print-menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></span>
                         <div class="print-menu-text">
                             <span class="print-menu-title">Print All Classrooms</span>
                             <span class="print-menu-desc">One room per page ({{ rooms|length }} rooms)</span>
                         </div>
                     </button>
                     <button type="button" class="print-menu-item" onclick="handlePrintMasterNotice()">
-                        <span class="print-menu-icon">🏢</span>
+                        <span class="print-menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg></span>
                         <div class="print-menu-text">
                             <span class="print-menu-title">Print Master Notice Board</span>
                             <span class="print-menu-desc">Official branch-wise seating notice sheet (A4 Portrait)</span>
                         </div>
                     </button>
                     <a href="{% url 'exam_allocator:export_allocations_csv' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="print-menu-item" style="text-decoration:none; color:inherit;">
-                        <span class="print-menu-icon">📥</span>
+                        <span class="print-menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
                         <div class="print-menu-text">
                             <span class="print-menu-title">Download Seating Plan (CSV)</span>
                             <span class="print-menu-desc">Live seating arrangements spreadsheet for Excel / Sheets</span>
@@ -2362,12 +2362,12 @@
             </div>
 
             <a href="{% url 'exam_allocator:blueprint_review' session.session_id %}?date={{ selected_slot.date|date:'Y-m-d' }}&shift={{ selected_slot.shift }}" class="btn-focus-action btn-blueprint" title="Back to Blueprint editor">
-                📐 Edit Blueprint
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> <span>Edit Blueprint</span>
             </a>
 
             {% if slots|length > 1 %}
             <button type="button" onclick="toggleSlotDrawer()" id="btn-toggle-slot-drawer" class="btn-focus-action btn-toggle-drawer" title="Switch to another examination date">
-                📅 Switch Date ▾
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span>Switch Date</span> <span class="dropdown-caret">▾</span>
             </button>
             {% endif %}
         </div>
@@ -2393,7 +2393,7 @@
     <!-- NO SLOT SELECTED: SHOW STANDARD SELECTOR -->
     <div class="slot-bar">
         <div class="slot-lbl">
-            <span>📅 Select Exam Slot:</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span>Select Exam Slot:</span>
         </div>
         {% if slots %}
             {% for s in slots %}
@@ -2412,13 +2412,13 @@
     <div class="control-toolbar">
         <div class="view-switcher-segmented">
             <button class="view-btn active" id="btn-view-room-cards" onclick="switchView('room-cards')">
-                🪑 Room-by-Room Plan
+                Room-by-Room Plan
             </button>
             <button class="view-btn" id="btn-view-department" onclick="switchView('department')">
-                🏢 Department / Class Wise
+                Department / Class Wise
             </button>
             <button class="view-btn" id="btn-view-all-students" onclick="switchView('all-students')">
-                📋 All Students ({{ total_slot_students }})
+                All Students ({{ total_slot_students }})
             </button>
         </div>
 
@@ -2436,7 +2436,7 @@
             {% endif %}
 
             <button type="button" class="btn-print-master" id="top-btn-print-master" onclick="printMasterNoticeSheet()" title="Print Official Master Notice Board (A4 Portrait)" style="display: none;">
-                <span>🖨️ Print Master Notice</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> <span>Print Master Notice</span>
             </button>
         </div>
     </div>
@@ -2447,7 +2447,7 @@
         <!-- TOP ROOM SELECTOR BAR -->
         <div class="top-rooms-navbar">
             <div class="top-rooms-bar-left">
-                <span class="top-rooms-label">🏫 Classrooms:</span>
+                <span class="top-rooms-label">Classrooms:</span>
                 <div class="top-rooms-scroll-wrap">
                     <div class="top-rooms-scroll-list" id="topRoomsList">
                         {% for r in rooms %}
@@ -2531,10 +2531,10 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="1"
-                                         title="{{ bench.seat_1.student_name }} ({{ bench.seat_1.department }})&#10;{{ bench.seat_1.subject_code }}: {{ bench.seat_1.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                         title="{{ bench.seat_1.student_name }} ({{ bench.seat_1.department }})&#10;{{ bench.seat_1.subject_code }}: {{ bench.seat_1.subject_name }}&#10;Drag to arrange or click to edit">
                                         <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_1.roll_number }}</div>
-                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
                                     </div>
                                     {% else %}
                                     <div class="seat-empty"
@@ -2542,7 +2542,7 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="1"
-                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 1)&#10;💡 Drop student here or click to assign"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 1)&#10;Drop student here or click to assign"
                                          onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
@@ -2563,10 +2563,10 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="2"
-                                         title="{{ bench.seat_2.student_name }} ({{ bench.seat_2.department }})&#10;{{ bench.seat_2.subject_code }}: {{ bench.seat_2.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                         title="{{ bench.seat_2.student_name }} ({{ bench.seat_2.department }})&#10;{{ bench.seat_2.subject_code }}: {{ bench.seat_2.subject_name }}&#10;Drag to arrange or click to edit">
                                         <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_2.roll_number }}</div>
-                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
                                     </div>
                                     {% else %}
                                     <div class="seat-empty"
@@ -2574,7 +2574,7 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="2"
-                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 2)&#10;💡 Drop student here or click to assign"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 2)&#10;Drop student here or click to assign"
                                          onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
@@ -2595,10 +2595,10 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="3"
-                                         title="{{ bench.seat_3.student_name }} ({{ bench.seat_3.department }})&#10;{{ bench.seat_3.subject_code }}: {{ bench.seat_3.subject_name }}&#10;💡 Drag to arrange or click to edit">
+                                         title="{{ bench.seat_3.student_name }} ({{ bench.seat_3.department }})&#10;{{ bench.seat_3.subject_code }}: {{ bench.seat_3.subject_name }}&#10;Drag to arrange or click to edit">
                                         <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
                                         <div class="seat-roll">{{ bench.seat_3.roll_number }}</div>
-                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
+                                        <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
                                     </div>
                                     {% else %}
                                     <div class="seat-empty"
@@ -2606,7 +2606,7 @@
                                          data-room-number="{{ r.room_number }}"
                                          data-bench-number="{{ bench.bench_number }}"
                                          data-seat-number="3"
-                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 3)&#10;💡 Drop student here or click to assign"
+                                         title="Available Seat (Bench {{ bench.bench_number }}, Seat 3)&#10;Drop student here or click to assign"
                                          onclick="openEmptySeatModal(this)">
                                         <span class="seat-empty-label">—</span>
                                     </div>
@@ -2648,7 +2648,7 @@
                 {% endif %}
 
                 <div class="master-search-wrap">
-                    <span class="master-search-icon">🔍</span>
+                    <span class="master-search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
                     <input type="text" id="master-notice-search" class="search-input"
                            placeholder="Search Branch, Subject, Room..."
                            onkeyup="filterMasterNoticeTable()">
@@ -2744,7 +2744,7 @@
             <div class="detailed-rosters-section" style="margin-top: 24px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <h4 style="margin: 0; font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-                        📋 Candidate Roster Verification (Individual Names & Seats)
+                        Candidate Roster Verification (Individual Names & Seats)
                     </h4>
                     <button type="button" class="btn-toggle-roster" onclick="toggleDetailedRosters(this)">
                         <span>Show Detailed Rosters</span> <span class="caret">▾</span>
@@ -2806,7 +2806,7 @@
         <div class="all-students-window">
             <div class="all-students-window-header">
                 <div class="all-students-search-wrap">
-                    <span class="all-students-search-icon">🔍</span>
+                    <span class="all-students-search-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
                     <input type="text" id="all-students-filter" class="search-input" placeholder="Search by Roll No, Name, Room, Class, Subject..." onkeyup="filterAllStudentsTable()">
                 </div>
                 <div class="all-students-count" id="filter-count-display">
@@ -2866,7 +2866,7 @@
     {% else %}
         {% if selected_slot %}
         <div class="empty-state" style="text-align: center; padding: 48px 24px; background: var(--bg-card); border: 1px dashed var(--border); border-radius: 12px; margin-top: 20px;">
-            <div style="font-size: 28px; margin-bottom: 12px;">📐</div>
+            <div style="font-size: 28px; margin-bottom: 12px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></div>
             <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">
                 No Physical Seating Found for This Exam Slot
             </div>
@@ -3072,10 +3072,10 @@ function toggleSlotDrawer() {
     if (!drawer) return;
     if (drawer.style.display === 'none' || !drawer.style.display) {
         drawer.style.display = 'block';
-        if (btn) btn.innerHTML = '📅 Close Dates ▴';
+        if (btn) btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span>Close Dates</span> ▴';
     } else {
         drawer.style.display = 'none';
-        if (btn) btn.innerHTML = '📅 Switch Date ▾';
+        if (btn) btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> <span>Switch Date</span> <span class="dropdown-caret">▾</span>';
     }
 }
 
@@ -3604,11 +3604,11 @@ async function handleSeatDrop(e) {
         target.dataset.seatNumber = targetSeat;
         target.title = `${src.name} (${src.dept})
 ${src.subjectCode}: ${src.subjectName}
-💡 Drag to arrange or click to edit`;
+Drag to arrange or click to edit`;
         target.innerHTML = `
             <div class="seat-drag-handle" title="Drag to rearrange">⋮⋮</div>
             <div class="seat-roll">${src.roll}</div>
-            <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat">✏️</button>
+            <button type="button" class="seat-edit-btn" onclick="openSeatEditModal(event, this)" title="Edit / Reassign seat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
         `;
         makeSeatCellInteractive(target);
 
@@ -3624,7 +3624,7 @@ ${src.subjectCode}: ${src.subjectName}
         srcEl.dataset.benchNumber = originalSrcBench;
         srcEl.dataset.seatNumber = originalSrcSeat;
         srcEl.title = `Available Seat (Bench ${originalSrcBench}, Seat ${originalSrcSeat})
-💡 Drop student here or click to assign`;
+Drop student here or click to assign`;
         srcEl.innerHTML = `<span class="seat-empty-label">—</span>`;
         makeEmptySeatInteractive(srcEl);
 
@@ -3677,7 +3677,7 @@ ${src.subjectCode}: ${src.subjectName}
         target.dataset.subjectName = src.subjectName;
         target.title = `${src.name} (${src.dept})
 ${src.subjectCode}: ${src.subjectName}
-💡 Drag to arrange or click to edit`;
+Drag to arrange or click to edit`;
         const targetRollEl = target.querySelector('.seat-roll');
         if (targetRollEl) targetRollEl.textContent = src.roll;
 
@@ -3690,7 +3690,7 @@ ${src.subjectCode}: ${src.subjectName}
         srcEl.dataset.subjectName = targetSubjName;
         srcEl.title = `${targetName} (${targetDept})
 ${targetSubjCode}: ${targetSubjName}
-💡 Drag to arrange or click to edit`;
+Drag to arrange or click to edit`;
         const srcRollEl = srcEl.querySelector('.seat-roll');
         if (srcRollEl) srcRollEl.textContent = targetRoll;
 
@@ -3806,7 +3806,7 @@ function updateTargetSeatStatus() {
         statusBox.className = 'seat-target-status-box';
         statusBox.style.background = 'rgba(100, 116, 139, 0.1)';
         statusBox.style.color = 'var(--text-secondary)';
-        statusBox.innerHTML = '<span>ℹ️ Current Assigned Seat</span>';
+        statusBox.innerHTML = '<span>Current Assigned Seat</span>';
         return;
     }
 
@@ -3829,7 +3829,7 @@ function updateTargetSeatStatus() {
         statusBox.className = 'seat-target-status-box status-empty';
         statusBox.style.background = '';
         statusBox.style.color = '';
-        statusBox.innerHTML = '<span>⚡ Available Empty Seat — Clean Move</span>';
+        statusBox.innerHTML = '<span>Available Empty Seat — Clean Move</span>';
     }
 }
 
@@ -3864,7 +3864,7 @@ async function saveSeatEditModal() {
         if (!result.success) {
             showToast(result.error || 'Failed to update seat', 'error');
             saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Save Changes';
+            saveBtn.textContent = 'Save Changes';
             return;
         }
 
@@ -3878,7 +3878,7 @@ async function saveSeatEditModal() {
         console.error(err);
         showToast('Error saving seat allocation', 'error');
         saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Save Changes';
+        saveBtn.textContent = 'Save Changes';
     }
 }
 

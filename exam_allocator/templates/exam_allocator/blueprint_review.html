@@ -1439,7 +1439,7 @@
                     </button>
                     {% if blueprint.unallocated_count > 0 %}
                     <button class="action-btn btn-warning-action" onclick="openUnallocatedModal()" title="Place unallocated students">
-                        ⚠️ Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
+                        Unallocated (<span id="unallocatedBtnCount">{{ blueprint.unallocated_count }}</span>)
                     </button>
                     {% endif %}
                 {% endif %}
@@ -1451,7 +1451,7 @@
                     </button>
                     <div class="action-dropdown-menu" id="actionDropdownMenu">
                         <button type="button" class="action-menu-item" onclick="validateBlueprint()">
-                            <span>✓</span> Re-validate Rules
+                            <span>Re-validate Rules</span>
                         </button>
                         <button type="button" class="action-menu-item" onclick="openAddRoomModal()">
                             Add Classroom
@@ -1477,7 +1477,7 @@
     <!-- DIAGNOSTIC ALERT IF NO ELIGIBLE STUDENTS -->
     {% if diagnostic_message %}
     <div class="alert-box alert-warning">
-        <strong>⚠️ Student Eligibility Diagnostic:</strong><br>
+        <strong>Student Eligibility Diagnostic:</strong><br>
         {{ diagnostic_message }}
     </div>
     {% endif %}
@@ -1487,7 +1487,7 @@
     {% if blueprint and blueprint.validation_errors %}
     <div class="alert-box alert-danger">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-            <strong>⚠️ Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
+            <strong>Allocation Hard Constraint Errors ({{ blueprint.validation_errors|length }}):</strong>
             <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
                 Auto-Resolve &amp; Recalculate
             </button>
@@ -1541,7 +1541,7 @@
             <div class="metric-window-right">
                 {% if blueprint.unallocated_count > 0 %}
                 <span class="metric-pill pill-warning" onclick="openUnallocatedModal()" style="cursor: pointer;" title="Click to place unallocated students">
-                    ⚠️ <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
+                    <span id="statUnallocatedCount">{{ blueprint.unallocated_count }}</span> Unallocated
                 </span>
                 {% else %}
                 <span class="metric-pill pill-success">✓ 100% Placed</span>
@@ -1595,12 +1595,12 @@
                         <span class="room-title">Room {{ r.room_number }}</span>
                         {% if blueprint.status != "FINALIZED" and blueprint.status != "SEATS_GENERATED" %}
                         <button type="button" class="btn-room-edit-inline" onclick="openRoomEditModal({{ r.room_blueprint_id }}, '{{ r.room_number|escapejs }}', {{ r.room.room_id }}, {{ r.capacity }}, {{ r.total_students }}, {{ r.is_dummy|yesno:'true,false' }})" title="Edit room name or switch room">
-                            ✏️
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                         </button>
                         {% endif %}
                     </div>
                     {% if r.is_dummy %}
-                    <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+                    <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">Dummy Placeholder</span>
                     <button type="button" class="btn-assign-room" onclick="openRoomEditModal({{ r.room_blueprint_id }}, '{{ r.room_number|escapejs }}', {{ r.room.room_id }}, {{ r.capacity }}, {{ r.total_students }}, true)" title="Assign a real classroom name to this dummy room">
                         Assign Real Room Name
                     </button>
@@ -2632,7 +2632,7 @@ function updateBoardFromData(data) {
             alertsHtml += `
             <div class="alert-box alert-danger">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
-                    <strong>⚠️ Allocation Hard Constraint Errors (${data.errors.length}):</strong>
+                    <strong>Allocation Hard Constraint Errors (${data.errors.length}):</strong>
                     <button type="button" class="action-btn btn-primary-cta" onclick="allocateDepartments(true)" style="padding: 3px 10px; font-size: 11.5px; border-radius: 5px;">
                         Auto-Resolve &amp; Recalculate
                     </button>
@@ -2775,7 +2775,7 @@ function buildRoomCardHTML(r) {
     const hasUnused = r.unused_capacity > 0 ? 'has-unused' : '';
     const isDummy = r.is_dummy || (r.room_number && r.room_number.startsWith("Dummy Room"));
     const dummyBadge = isDummy ? `
-        <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">⚠️ Dummy Placeholder</span>
+        <span class="badge-dummy-room" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 12px;">Dummy Placeholder</span>
         <button type="button" class="btn-assign-room" onclick="openRoomEditModal(${r.room_blueprint_id}, '${escapeHtml(r.room_number)}', ${r.room_id}, ${r.capacity}, ${r.total_students}, true)" title="Assign a real classroom name to this dummy room">
             Assign Real Room Name
         </button>
@@ -2783,7 +2783,7 @@ function buildRoomCardHTML(r) {
 
     const editBtn = !IS_LOCKED ? `
         <button type="button" class="btn-room-edit-inline" onclick="openRoomEditModal(${r.room_blueprint_id}, '${escapeHtml(r.room_number)}', ${r.room_id}, ${r.capacity}, ${r.total_students}, ${isDummy ? 'true' : 'false'})" title="Edit room name or switch room">
-            ✏️
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
         </button>
     ` : '';
 
@@ -3551,7 +3551,7 @@ function allocateDepartments(force) {
                 if (overlay) overlay.style.display = 'none';
                 btns.forEach(btn => {
                     btn.disabled = false;
-                    btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
+                    btn.textContent = force ? 'Recalculate Blueprint' : 'Allocate Departments for This Slot';
                 });
                 showToast("Allocation failed: " + (data.error || "Unknown error"), 'error', 5000);
             }
@@ -3560,7 +3560,7 @@ function allocateDepartments(force) {
             if (overlay) overlay.style.display = 'none';
             btns.forEach(btn => {
                 btn.disabled = false;
-                btn.textContent = force ? '⚡ Recalculate Blueprint' : 'Allocate Departments for This Slot';
+                btn.textContent = force ? 'Recalculate Blueprint' : 'Allocate Departments for This Slot';
             });
             showToast("Request error: " + err, 'error', 5000);
         });
@@ -3901,7 +3901,7 @@ function openUnallocatedModal() {
         document.querySelectorAll('.room-card').forEach(card => {
             const rId = card.dataset.roomId || (card.id ? card.id.replace('roomCard-', '') : null);
             const rNumElem = card.querySelector('.room-title');
-            const rNum = rNumElem ? rNumElem.textContent.replace('🏛️', '').trim() : `Room ${rId}`;
+            const rNum = rNumElem ? rNumElem.textContent.trim() : `Room ${rId}`;
             const rCapElem = card.querySelector('.room-occupancy span');
             const rCap = rCapElem ? rCapElem.textContent.trim() : '';
             if (rId) {

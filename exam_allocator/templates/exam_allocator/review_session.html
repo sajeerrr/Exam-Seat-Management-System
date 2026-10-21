@@ -1413,7 +1413,7 @@
                 <span id="toolbar-missing-badge-wrap">
                 {% if missing_roll_count > 0 %}
                 <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
-                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>{{ missing_roll_count }} student{{ missing_roll_count|pluralize }} with missing Roll No (left blank)</span>
                 </span>
                 {% endif %}
@@ -1434,7 +1434,7 @@
                     <span id="dept-missing-badge-wrap-{{ dept.department_id }}">
                     {% if dept.missing_roll_count > 0 %}
                     <span class="missing-roll-badge">
-                        <span class="badge-warn-icon">⚠️</span> {{ dept.missing_roll_count }} missing roll
+                        <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ dept.missing_roll_count }} missing roll
                     </span>
                     {% endif %}
                     </span>
@@ -1451,7 +1451,7 @@
                             <span id="class-missing-badge-wrap-{{ cls.class_id }}">
                             {% if cls.missing_roll_count > 0 %}
                             <span class="missing-roll-badge">
-                                <span class="badge-warn-icon">⚠️</span> {{ cls.missing_roll_count }} missing roll
+                                <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> {{ cls.missing_roll_count }} missing roll
                             </span>
                             {% endif %}
                             </span>
@@ -1949,7 +1949,7 @@
 <div class="modal-backdrop" id="confirm-modal" hidden>
     <div class="modal-box" style="max-width:440px; animation: fu .2s ease both;">
         <div class="modal-title" id="confirm-modal-title" style="display:flex; align-items:center; gap:8px;">
-            <span class="badge-warn-icon" style="font-size:18px;">⚠️</span>
+            <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
             <span id="confirm-modal-title-text">Confirm Action</span>
         </div>
         <div id="confirm-modal-body" style="font-size:13.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:20px; white-space:pre-line;">
@@ -2149,7 +2149,7 @@
             html += `
             <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>Notice: <strong>${missingRolls} student${missingRolls > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                 </div>
                 <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
@@ -2167,7 +2167,7 @@
             const hasRoll = s.roll_number && s.roll_number.trim();
             const rollDisplay = hasRoll 
                 ? `<span style="font-weight:600">${escHTML(s.roll_number)}</span>`
-                : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
+                : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> Missing Roll No</span>`;
 
             html += `<tr id="stud-row-${s.id}" data-student-id="${s.id}" data-class-id="${classId}">
             <td class="row-num" style="color:var(--text-muted)">${i + 1}</td>
@@ -2244,7 +2244,7 @@
                 noticeContainer.innerHTML = `
                 <div class="missing-notice-banner" style="background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; border-radius:6px; padding:9px 14px; margin-bottom:12px; font-size:12px; color:#92400e; display:flex; align-items:center; justify-content:space-between; animation: fu .3s ease both;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="badge-warn-icon" style="font-size:13px;">⚠️</span>
+                        <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                         <span>Notice: <strong>${data.class_missing_count} student${data.class_missing_count > 1 ? 's have' : ' has'} missing Roll Number</strong> (left blank as in source records).</span>
                     </div>
                     <span style="font-size:11px; background:#fef3c7; padding:2px 8px; border-radius:12px; font-weight:600; color:#b45309;">Missing Value</span>
@@ -2260,7 +2260,7 @@
             if (data.class_missing_count > 0) {
                 classBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge">
-                    <span class="badge-warn-icon">⚠️</span> ${data.class_missing_count} missing roll
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> ${data.class_missing_count} missing roll
                 </span>`;
             } else {
                 classBadgeWrap.innerHTML = '';
@@ -2283,7 +2283,7 @@
             if (data.dept_missing_count > 0) {
                 deptBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge">
-                    <span class="badge-warn-icon">⚠️</span> ${data.dept_missing_count} missing roll
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> ${data.dept_missing_count} missing roll
                 </span>`;
             } else {
                 deptBadgeWrap.innerHTML = '';
@@ -2296,7 +2296,7 @@
             if (data.total_missing_count > 0) {
                 toolbarBadgeWrap.innerHTML = `
                 <span class="missing-roll-badge" style="font-size:12px; padding:3px 10px; border-radius:12px;">
-                    <span class="badge-warn-icon" style="font-size:12px;">⚠️</span>
+                    <span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
                     <span>${data.total_missing_count} student${data.total_missing_count > 1 ? 's' : ''} with missing Roll No (left blank)</span>
                 </span>`;
             } else {
@@ -2356,7 +2356,7 @@
                         const hasRoll = data.roll_number && data.roll_number.trim();
                         row.cells[2].innerHTML = hasRoll
                             ? `<span style="font-weight:600">${escHTML(data.roll_number)}</span>`
-                            : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon">⚠️</span> Missing Roll No</span>`;
+                            : `<span class="badge-missing" title="No roll number in source file — left blank"><span class="badge-warn-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span> Missing Roll No</span>`;
                         row.cells[3].textContent = data.uni_reg_no || '—';
                         row.cells[4].textContent = data.student_name;
                         row.cells[5].textContent = data.gender || '—';

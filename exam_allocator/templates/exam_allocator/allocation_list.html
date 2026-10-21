@@ -181,8 +181,8 @@
     <div class="page-header">
         <h1>{{ exam.subject.subject_code }} — {{ exam.subject.subject_name }}</h1>
         <div class="header-meta">
-            <span class="meta-chip">📅 {{ exam.exam_date }}</span>
-            <span class="meta-chip">🕐 {{ exam.get_session_display }}</span>
+            <span class="meta-chip">{{ exam.exam_date }}</span>
+            <span class="meta-chip">{{ exam.get_session_display }}</span>
         </div>
     </div>
 
@@ -215,7 +215,7 @@
                 {% empty %}
                 <tr class="empty-row">
                     <td colspan="5">
-                        📋 No allocation has been generated yet.
+                        No allocation has been generated yet.
                     </td>
                 </tr>
                 {% endfor %}
