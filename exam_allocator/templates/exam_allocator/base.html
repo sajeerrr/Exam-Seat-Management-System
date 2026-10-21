@@ -93,12 +93,35 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
+        html {
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important; /* IE and Edge */
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
             background-color: var(--canvas);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.5;
+            scrollbar-width: none !important; /* Firefox */
+            -ms-overflow-style: none !important; /* IE and Edge */
+        }
+
+        /* ══ HIDE SCROLLBARS GLOBALLY ACROSS BROWSERS (CHROME, EDGE, SAFARI, OPERA) ══ */
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        *::-webkit-scrollbar,
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0px !important;
+            height: 0px !important;
+            background: transparent !important;
+        }
+
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
         }
 
         /* Suppress colored ambient blobs across all templates */
@@ -178,6 +201,33 @@
     </style>
 
     {% block extra_css %}{% endblock %}
+
+    <style>
+        /* Global guarantee: Suppress right-side vertical & horizontal scrollbars project-wide */
+        html, body {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar,
+        *::-webkit-scrollbar,
+        ::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+        }
+        * {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+        }
+    </style>
 </head>
 <body>
 
