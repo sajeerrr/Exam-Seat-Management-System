@@ -278,11 +278,14 @@
         color: #0f172a;
     }
     .btn-success-action {
-        background: #059669;
+        background: #000000;
         color: white;
+        border: 1px solid #000000;
+        border-radius: 9999px;
     }
     .btn-success-action:hover:not(:disabled) {
-        background: #10b981;
+        background: #27272a;
+        border-color: #27272a;
     }
     .btn-warning-action {
         background: #fffbeb;
@@ -561,8 +564,8 @@
         align-items: center;
         justify-content: space-between;
         padding: 12px 18px;
-        background: linear-gradient(180deg, #f8faff 0%, #f1f5f9 100%);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background: #ffffff;
+        border-bottom: 1px solid var(--border);
         flex-wrap: wrap;
         gap: 10px;
     }
@@ -573,8 +576,8 @@
     }
     .room-title {
         font-size: 15px;
-        font-weight: 700;
-        color: #1e1b4b;
+        font-weight: 750;
+        color: #09090b;
         display: flex;
         align-items: center;
         gap: 6px;
@@ -713,14 +716,14 @@
         border-radius: 6px;
         font-size: 11px;
         font-weight: 600;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        color: #64748b;
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
+        color: #71717a;
     }
     .room-unused-pill.has-unused {
-        color: #0369a1;
-        border-color: #7dd3fc;
-        background: #e0f2fe;
+        color: #09090b;
+        border-color: #d4d4d8;
+        background: #f4f4f5;
         font-weight: 700;
     }
     .room-depts-pill {
@@ -864,8 +867,8 @@
         transform: scale(0.98);
     }
     .group-card.drag-over-swap {
-        border-color: #38bdf8;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        border-color: #09090b;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
     .group-card-top {
         display: flex;
@@ -975,9 +978,9 @@
         color: #ffffff;
     }
     .btn-sm-action {
-        background: #eef2ff;
-        border: 1px solid #c7d2fe;
-        color: #4338ca;
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
+        color: #09090b;
         font-size: 11.5px;
         font-weight: 600;
         padding: 4px 10px;
@@ -1122,8 +1125,8 @@
     }
     .toast-msg.toast-info {
         border-color: rgba(0, 0, 0, 0.05);
-        background: #1e1b4b;
-        color: #e0e7ff;
+        background: #18181b;
+        color: #ffffff;
     }
     @keyframes toastIn {
         from { transform: translateX(100%); opacity: 0; }
@@ -1294,9 +1297,9 @@
     .alloc-spinner-ring {
         width: 52px;
         height: 52px;
-        border: 4px solid #e0e7ff;
+        border: 4px solid #e4e4e7;
         border-top-color: #09090b;
-        border-right-color: #818cf8;
+        border-right-color: #71717a;
         border-radius: 50%;
         margin: 0 auto 20px;
         animation: spin-kf 0.85s linear infinite;
@@ -1325,7 +1328,7 @@
     .alloc-progress-fill {
         height: 100%;
         width: 40%;
-        background: linear-gradient(90deg, #6366f1, #818cf8, #a855f7);
+        background: #09090b;
         border-radius: 999px;
         position: absolute;
         animation: allocIndeterminate 1.5s ease-in-out infinite;
@@ -1953,7 +1956,7 @@
             </div>
             <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); text-align: center;">
                 <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px;">No real classrooms left or need extra placeholder capacity?</span>
-                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(0, 0, 0, 0.05); color: #09090b; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
+                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(0, 0, 0, 0.05); color: #09090b; border: 1px dashed #71717a; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
                     + Add Dummy Room Placeholder
                 </button>
             </div>
@@ -2018,7 +2021,7 @@
             <!-- Populated dynamically via JS -->
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
-            <button type="button" class="action-btn btn-secondary-action" id="manageModalAddStudentBtn" style="color: #4f46e5; border-color: #c7d2fe;">
+            <button type="button" class="action-btn btn-secondary-action" id="manageModalAddStudentBtn" style="color: #09090b; border-color: #d4d4d8;">
                 + Add Student
             </button>
             <button type="button" class="action-btn btn-secondary-action" onclick="closeManageStudentsModal()">Close</button>
@@ -3107,7 +3110,7 @@ function addDummyRoom(capacity = 45) {
                     const newCard = document.getElementById(`roomCard-${data.added_room_blueprint_id}`);
                     if (newCard) {
                         newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        newCard.style.outline = '2px solid #6366f1';
+                        newCard.style.outline = '2px solid #09090b';
                         setTimeout(() => { newCard.style.outline = ''; }, 2000);
                     }
                 }, 100);
