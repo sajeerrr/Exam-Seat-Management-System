@@ -53,7 +53,7 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        color: #6366f1;
+        color: #09090b;
     }
     .nav-breadcrumb {
         display: flex;
@@ -218,19 +218,34 @@
         opacity: 0.45;
         cursor: not-allowed;
     }
-    .btn-primary-cta {
-        background: #000000 !important; border-radius: 9999px !important; border-color: #000000 !important;
+    .btn-primary-cta, a.btn-primary-cta, button.btn-primary-cta {
+        background: #000000 !important;
+        border-radius: 9999px !important;
+        border: 1px solid #000000 !important;
+        border-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 700 !important;
-        padding: 8px 18px !important;
+        padding: 8px 20px !important;
         font-size: 13px !important;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
-        border: 1px solid #4f46e5 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+        text-decoration: none !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease !important;
     }
-    .btn-primary-cta:hover:not(:disabled) {
-        background: #27272a !important; border-color: #27272a !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-        transform: translateY(-1px);
+    .btn-primary-cta:hover, a.btn-primary-cta:hover, button.btn-primary-cta:hover {
+        background: #27272a !important;
+        border: 1px solid #27272a !important;
+        border-color: #27272a !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
+        transform: translateY(-1px) !important;
+        text-decoration: none !important;
+    }
+    .btn-primary-cta:active, a.btn-primary-cta:active, button.btn-primary-cta:active {
+        background: #09090b !important;
+        border-color: #09090b !important;
+        color: #ffffff !important;
+        transform: translateY(0) !important;
     }
     .btn-primary-action {
         background: #000000; border-radius: 9999px;
@@ -607,9 +622,9 @@
         line-height: 1;
     }
     .btn-room-edit-inline:hover {
-        background: #e0e7ff;
-        color: #4338ca;
-        border-color: #c7d2fe;
+        background: #f4f4f5;
+        color: #09090b;
+        border-color: #d4d4d8;
         transform: scale(1.05);
     }
     .btn-room-edit-inline:active {
@@ -665,7 +680,7 @@
         transition: color 0.15s;
     }
     .cap-stepper-val:hover {
-        color: #4f46e5;
+        color: #09090b;
         text-decoration: underline;
     }
     .room-meta-right {
@@ -838,7 +853,7 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     .group-card:hover {
-        border-color: #6366f1;
+        border-color: #a1a1aa;
         background: #ffffff;
         transform: translateY(-1px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -1021,9 +1036,9 @@
         gap: 3px;
     }
     .btn-card-action:hover {
-        background: #eef2ff;
-        border-color: #a5b4fc;
-        color: #4338ca;
+        background: #f4f4f5;
+        border-color: #d4d4d8;
+        color: #09090b;
     }
     .btn-card-danger {
         background: #fff1f2;
@@ -1234,7 +1249,7 @@
     }
     .add-dummy-room-tab-card:hover {
         background: rgba(0, 0, 0, 0.05);
-        border-color: #6366f1;
+        border-color: #09090b;
         transform: translateY(-1px);
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
     }
@@ -1287,7 +1302,7 @@
         width: 52px;
         height: 52px;
         border: 4px solid #e0e7ff;
-        border-top-color: #6366f1;
+        border-top-color: #09090b;
         border-right-color: #818cf8;
         border-radius: 50%;
         margin: 0 auto 20px;
@@ -1855,7 +1870,7 @@
     <div class="add-dummy-room-tab-card" id="addDummyRoomTab" onclick="addDummyRoom()" title="Click to add a dummy placeholder classroom">
         <span style="font-size: 18px; line-height: 1; font-weight: 700;">+</span>
         <div style="text-align: left;">
-            <div style="font-weight: 700; font-size: 14px; color: #6366f1;">Add Dummy Room</div>
+            <div style="font-weight: 700; font-size: 14px; color: #09090b;">Add Dummy Room</div>
             <div style="font-size: 12px; color: var(--text-muted);">Add an unassigned placeholder room to reorganize, split, or balance students</div>
         </div>
     </div>
@@ -1945,7 +1960,7 @@
             </div>
             <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); text-align: center;">
                 <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px;">No real classrooms left or need extra placeholder capacity?</span>
-                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(0, 0, 0, 0.05); color: #6366f1; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
+                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(0, 0, 0, 0.05); color: #09090b; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
                     + Add Dummy Room Placeholder
                 </button>
             </div>
