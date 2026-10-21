@@ -4,7 +4,7 @@ from collections import defaultdict, Counter
 from django.contrib import messages
 from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db import transaction, models
-from django.db.models import Prefetch, Case, When, Value
+from django.db.models import Prefetch, Case, When, Value, Count
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -117,16 +117,62 @@ def format_rolls_for_room(rolls, class_rolls):
 @ensure_csrf_cookie
 def session_list(request):
 
-    sessions = AllocationSession.objects.order_by(
-        "-updated_at",
-        "-session_id",
+    sessions = list(
+        AllocationSession.objects.order_by("-updated_at", "-session_id")
     )
+    session_ids = [s.session_id for s in sessions]
+
+    # Efficient grouped counts per session without Cartesian explosion
+    student_counts = dict(
+        Student.objects.filter(student_class__department__session_id__in=session_ids)
+        .values("student_class__department__session_id")
+        .annotate(c=Count("student_id"))
+        .values_list("student_class__department__session_id", "c")
+    )
+
+    room_counts = dict(
+        Room.objects.filter(session_id__in=session_ids)
+        .values("session_id")
+        .annotate(c=Count("room_id"))
+        .values_list("session_id", "c")
+    )
+
+    exam_counts = dict(
+        Exam.objects.filter(subject__session_id__in=session_ids)
+        .values("subject__session_id")
+        .annotate(c=Count("exam_id"))
+        .values_list("subject__session_id", "c")
+    )
+
+    alloc_counts = dict(
+        Allocation.objects.filter(exam__subject__session_id__in=session_ids)
+        .values("exam__subject__session_id")
+        .annotate(c=Count("allocation_id"))
+        .values_list("exam__subject__session_id", "c")
+    )
+
+    for s in sessions:
+        s.student_count = student_counts.get(s.session_id, 0)
+        s.room_count = room_counts.get(s.session_id, 0)
+        s.exam_count = exam_counts.get(s.session_id, 0)
+        s.allocation_count = alloc_counts.get(s.session_id, 0)
+
+    total_sessions = len(sessions)
+    total_students = sum(s.student_count for s in sessions)
+    total_rooms = sum(s.room_count for s in sessions)
+    total_exams = sum(s.exam_count for s in sessions)
+    total_allocations = sum(s.allocation_count for s in sessions)
 
     return render(
         request,
         "exam_allocator/session_list.html",
         {
             "sessions": sessions,
+            "total_sessions": total_sessions,
+            "total_students": total_students,
+            "total_rooms": total_rooms,
+            "total_exams": total_exams,
+            "total_allocations": total_allocations,
         },
     )
 
