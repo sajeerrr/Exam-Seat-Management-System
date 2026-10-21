@@ -31,11 +31,11 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 13px;
+        padding: 6px 16px;
         background: #ffffff;
         color: var(--text-primary);
-        border: 1px solid rgba(203, 213, 225, 0.85);
-        border-radius: 8px;
+        border: 1px solid var(--border-default);
+        border-radius: 9999px;
         font-size: 12.5px;
         font-weight: 600;
         text-decoration: none;
@@ -46,7 +46,7 @@
         background: #f8fafc;
         border-color: var(--accent-light);
         color: var(--accent);
-        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         transform: translateY(-1px);
     }
     .compact-metric-icon {
@@ -117,10 +117,10 @@
         color: #0f172a;
     }
     .slot-pill.active {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #000000; border-radius: 9999px;
+        border-color: #000000;
         color: #ffffff;
-        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.28);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
     .slot-status-dot {
         width: 7px;
@@ -219,26 +219,26 @@
         cursor: not-allowed;
     }
     .btn-primary-cta {
-        background: #4f46e5 !important;
+        background: #000000 !important; border-radius: 9999px !important; border-color: #000000 !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         padding: 8px 18px !important;
         font-size: 13px !important;
-        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.28) !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12) !important;
         border: 1px solid #4f46e5 !important;
     }
     .btn-primary-cta:hover:not(:disabled) {
-        background: #4338ca !important;
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+        background: #27272a !important; border-color: #27272a !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
         transform: translateY(-1px);
     }
     .btn-primary-action {
-        background: #4f46e5;
+        background: #000000; border-radius: 9999px;
         color: white;
     }
     .btn-primary-action:hover:not(:disabled) {
-        background: #4338ca;
-        box-shadow: 0 3px 8px rgba(79, 70, 229, 0.25);
+        background: #27272a;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
     }
     .btn-secondary-action {
         background: #ffffff;
@@ -361,8 +361,8 @@
     }
 
     .metric-card-window:hover {
-        border-color: rgba(99, 102, 241, 0.35);
-        box-shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.1), 0 2px 4px rgba(15, 23, 42, 0.03);
+        border-color: rgba(0, 0, 0, 0.05);
+        box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(15, 23, 42, 0.03);
         transform: translateY(-1px);
     }
 
@@ -445,7 +445,7 @@
     }
     .metric-progress-fill {
         height: 100%;
-        background: #4f46e5;
+        background: #000000; border-radius: 9999px;
         border-radius: 3px;
         transition: width 0.3s ease;
     }
@@ -513,15 +513,15 @@
     }
     .room-card {
         background: #ffffff;
-        border: 1px solid rgba(99, 102, 241, 0.22);
+        border: 1px solid rgba(0, 0, 0, 0.05);
         border-radius: var(--radius);
         overflow: hidden;
         transition: border-color 0.2s, box-shadow 0.2s;
-        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
     }
     .room-card:hover {
-        border-color: rgba(99, 102, 241, 0.45);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.12);
+        border-color: rgba(0, 0, 0, 0.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
     }
     .room-card-header {
         display: flex;
@@ -529,7 +529,7 @@
         justify-content: space-between;
         padding: 12px 18px;
         background: linear-gradient(180deg, #f8faff 0%, #f1f5f9 100%);
-        border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         flex-wrap: wrap;
         gap: 10px;
     }
@@ -748,7 +748,7 @@
         border-color: var(--accent);
         border-style: solid;
         background: #eef2ff !important;
-        box-shadow: 0 0 12px rgba(99, 102, 241, 0.25) inset;
+        box-shadow: 0 0 12px rgba(0, 0, 0, 0.05) inset;
     }
     .stream-col-header {
         display: flex;
@@ -841,7 +841,7 @@
         border-color: #6366f1;
         background: #ffffff;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.14);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
     .group-card:active {
         cursor: grabbing;
@@ -962,8 +962,8 @@
         gap: 4px;
     }
     .btn-card-move:hover {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #000000; border-radius: 9999px;
+        border-color: #000000;
         color: #ffffff;
     }
     .btn-sm-action {
@@ -981,10 +981,10 @@
         gap: 4px;
     }
     .btn-sm-action:hover {
-        background: #4f46e5;
-        border-color: #4f46e5;
+        background: #000000; border-radius: 9999px;
+        border-color: #000000;
         color: #ffffff;
-        box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
     }
     .btn-sm-danger {
         background: #fef2f2;
@@ -1113,7 +1113,7 @@
         color: #fef2f2;
     }
     .toast-msg.toast-info {
-        border-color: rgba(99, 102, 241, 0.5);
+        border-color: rgba(0, 0, 0, 0.05);
         background: #1e1b4b;
         color: #e0e7ff;
     }
@@ -1181,11 +1181,11 @@
         font-family: inherit;
         cursor: pointer;
         transition: all .2s;
-        box-shadow: 0 3px 12px rgba(99, 102, 241, .25);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
     }
     .btn-modal-primary:hover {
         transform: translateY(-1px);
-        box-shadow: 0 5px 18px rgba(99, 102, 241, .4);
+        box-shadow: 0 5px 18px rgba(0, 0, 0, 0.05);
     }
     .btn-modal-secondary {
         padding: 9px 18px;
@@ -1217,12 +1217,12 @@
         font-size: 13px;
     }
     .add-dummy-room-tab-card {
-        border: 2px dashed rgba(99, 102, 241, 0.45);
+        border: 2px dashed rgba(0, 0, 0, 0.05);
         border-radius: var(--radius);
         padding: 18px 24px;
         text-align: center;
         cursor: pointer;
-        background: rgba(99, 102, 241, 0.04);
+        background: rgba(0, 0, 0, 0.05);
         transition: all 0.2s ease;
         margin-top: 18px;
         margin-bottom: 24px;
@@ -1233,10 +1233,10 @@
         gap: 12px;
     }
     .add-dummy-room-tab-card:hover {
-        background: rgba(99, 102, 241, 0.1);
+        background: rgba(0, 0, 0, 0.05);
         border-color: #6366f1;
         transform: translateY(-1px);
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
     }
     .add-dummy-room-tab-card:active {
         transform: translateY(0);
@@ -1945,7 +1945,7 @@
             </div>
             <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border); text-align: center;">
                 <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px;">No real classrooms left or need extra placeholder capacity?</span>
-                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(99, 102, 241, 0.08); color: #6366f1; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
+                <button type="button" class="btn btn-sm" onclick="closeAddRoomModal(); addDummyRoom();" style="background: rgba(0, 0, 0, 0.05); color: #6366f1; border: 1px dashed #6366f1; font-weight: 700; border-radius: 6px; padding: 6px 14px; cursor: pointer;">
                     + Add Dummy Room Placeholder
                 </button>
             </div>
@@ -2059,7 +2059,7 @@
             <input type="hidden" id="moveAssignmentId">
             <div class="form-group">
                 <label>Selected Group</label>
-                <div id="groupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(99,102,241,0.08); border-radius: 6px; border: 1px solid rgba(99,102,241,0.2);"></div>
+                <div id="groupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(0, 0, 0, 0.05); border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.05);"></div>
             </div>
 
             <div class="form-group" style="margin-top: 14px;">
@@ -2121,7 +2121,7 @@
             
             <div class="form-group">
                 <label>Selected Group</label>
-                <div id="splitGroupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(99,102,241,0.08); border-radius: 6px; border: 1px solid rgba(99,102,241,0.2);">
+                <div id="splitGroupDetailsText" style="font-size: 13px; font-weight: 600; color: var(--accent-light); padding: 8px 12px; background: rgba(0, 0, 0, 0.05); border-radius: 6px; border: 1px solid rgba(0, 0, 0, 0.05);">
                     <!-- e.g. ME · ME 2K22 — Current: 15 students -->
                 </div>
             </div>
@@ -3962,7 +3962,7 @@ function renderUnallocatedModalData(students) {
         const g = groups[key];
         const row = document.createElement('label');
         row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; margin: 0;';
-        row.onmouseover = () => row.style.background = 'rgba(99,102,241,0.06)';
+        row.onmouseover = () => row.style.background = 'rgba(0, 0, 0, 0.05)';
         row.onmouseout = () => row.style.background = 'transparent';
 
         row.innerHTML = `

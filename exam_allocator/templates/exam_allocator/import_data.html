@@ -27,7 +27,7 @@
         right: -10%;
         width: 55vw;
         height: 55vw;
-        background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        background: radial-gradient(circle, #f4f4f5 0%, transparent 70%);
         pointer-events: none;
         z-index: 0;
     }
@@ -111,12 +111,12 @@
         width: 56px;
         height: 56px;
         border-radius: 16px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 26px;
-        box-shadow: 0 0 32px var(--accent-glow);
+        
         flex-shrink: 0;
     }
 
@@ -165,8 +165,8 @@
     }
 
     .flash-msg:not(.success):not(.error):not(.warning) {
-        background: rgba(99, 102, 241, 0.1);
-        border-color: rgba(99, 102, 241, 0.25);
+        background: #f4f4f5;
+        border-color: #e4e4e7;
         color: var(--accent-light);
     }
 
@@ -244,7 +244,7 @@
     }
 
     .card-icon.student {
-        background: rgba(99, 102, 241, 0.12);
+        background: #f4f4f5;
     }
 
     .card-icon.timetable {
@@ -301,7 +301,7 @@
     .drop-zone:hover,
     .drop-zone.drag-over {
         border-color: var(--accent);
-        background: rgba(99, 102, 241, 0.05);
+        background: #f4f4f5;
     }
 
     .drop-zone.has-files {
@@ -463,9 +463,9 @@
         width: 100%;
         margin-top: auto;
         padding: 9px 10px;
-        background: rgba(99, 102, 241, 0.12);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.25);
+        border: 1px solid #e4e4e7;
         border-radius: 8px;
         font-size: 12.5px;
         font-weight: 600;
@@ -568,16 +568,16 @@
         justify-content: center;
         gap: 8px;
         padding: 11px 26px;
-        border-radius: 10px;
+        border-radius: 9999px;
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 650;
         font-family: inherit;
         cursor: pointer;
         transition: all 0.25s ease;
         border: 1px solid var(--accent);
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
         color: #ffffff;
-        box-shadow: 0 4px 18px var(--accent-glow);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         white-space: nowrap;
         box-sizing: border-box;
         height: 42px;
@@ -585,7 +585,7 @@
 
     .btn-common-upload:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45);
+        box-shadow: 0 8px 30px #e4e4e7;
         filter: brightness(1.08);
     }
 
@@ -657,8 +657,8 @@
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        background: #f4f4f5;
+        border: 1px solid #e4e4e7;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -701,12 +701,12 @@
         justify-content: center;
         gap: 8px;
         padding: 11px 24px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000;
         color: white;
         border: none;
-        border-radius: 10px;
+        border-radius: 9999px;
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 650;
         font-family: inherit;
         cursor: pointer;
         text-decoration: none;
@@ -719,7 +719,7 @@
 
     .btn-primary-lg:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 32px rgba(99, 102, 241, 0.45);
+        box-shadow: 0 8px 32px #e4e4e7;
         color: white;
     }
 
@@ -799,15 +799,15 @@
     }
 
     .badge-processing {
-        background: rgba(99, 102, 241, 0.1);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        border: 1px solid #e4e4e7;
     }
 
     .badge-student {
-        background: rgba(99, 102, 241, 0.1);
+        background: #f4f4f5;
         color: var(--accent-light);
-        border: 1px solid rgba(99, 102, 241, 0.2);
+        border: 1px solid #e4e4e7;
     }
 
     .badge-timetable {

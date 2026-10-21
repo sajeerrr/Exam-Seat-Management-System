@@ -26,7 +26,7 @@
         right: -10%;
         width: 55vw;
         height: 55vw;
-        background: radial-gradient(circle, rgba(99, 102, 241, .09) 0%, transparent 70%);
+        background: radial-gradient(circle, #f4f4f5 0%, transparent 70%);
         pointer-events: none;
         z-index: 0;
     }
@@ -137,7 +137,7 @@
         background: #f8fafc;
         border-color: var(--accent-light);
         color: var(--accent);
-        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         transform: translateY(-1px);
     }
 
@@ -146,7 +146,7 @@
         align-items: center;
         gap: 8px;
         padding: 9px 20px;
-        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        background: #000000; border-radius: 9999px;
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.25);
         border-radius: 10px;
@@ -154,7 +154,7 @@
         font-size: 13.5px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
         user-select: none;
         white-space: nowrap;
@@ -162,7 +162,7 @@
 
     .btn-header-allocate:hover {
         transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         filter: brightness(1.05);
     }
 
@@ -200,12 +200,12 @@
         width: 52px;
         height: 52px;
         border-radius: 14px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 24px;
-        box-shadow: 0 0 28px var(--accent-glow);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         flex-shrink: 0;
     }
 
@@ -253,8 +253,8 @@
     }
 
     .msg:not(.success):not(.error):not(.warning) {
-        background: rgba(99, 102, 241, .09);
-        border-color: rgba(99, 102, 241, .22);
+        background: #f4f4f5;
+        border-color: #e4e4e7;
         color: var(--accent-light);
     }
 
@@ -280,9 +280,9 @@
     }
 
     .stat-card:hover {
-        border-color: rgba(99, 102, 241, 0.35);
+        border-color: #a1a1aa;
         transform: translateY(-2px);
-        box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(15, 23, 42, 0.04);
     }
 
     .stat-card-top {
@@ -402,7 +402,7 @@
     }
 
     .sec-card-header:hover {
-        background: rgba(99, 102, 241, .04);
+        background: #f4f4f5;
     }
 
     .sec-card-title {
@@ -445,7 +445,7 @@
         align-items: center;
         padding: 11px 20px 11px 36px;
         gap: 12px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
         cursor: pointer;
         transition: background .2s;
     }
@@ -455,7 +455,7 @@
     }
 
     .class-row:hover {
-        background: rgba(99, 102, 241, .04);
+        background: #f4f4f5;
     }
 
     .class-name {
@@ -512,7 +512,7 @@
     .stud-table td {
         padding: 9px 10px;
         font-size: 13px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
     }
 
     .stud-table tr:last-child td {
@@ -617,7 +617,7 @@
 
     .tt-exam-row {
         padding: 10px 16px;
-        border-bottom: 1px solid rgba(99, 102, 241, .06);
+        border-bottom: 1px solid #e4e4e7;
     }
 
     .tt-exam-row:last-child {
@@ -679,7 +679,7 @@
         align-items: center;
         gap: 7px;
         padding: 9px 18px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         color: white;
         border: none;
         border-radius: 9px;
@@ -902,7 +902,7 @@
     .btn-save {
         padding: 10px 22px;
         border-radius: 8px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         border: none;
         color: white;
         font-size: 13px;
@@ -983,7 +983,7 @@
     .btn-sm-primary {
         padding: 7px 14px;
         border-radius: 8px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         border: none;
         color: white;
         font-size: 12px;
@@ -1064,19 +1064,19 @@
         align-items: center;
         gap: 8px;
         padding: 10px 22px;
-        background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+        background: #000000; border-radius: 9999px;
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 10px;
         font-size: 13.5px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: all .2s ease;
     }
 
     .btn-bottom-allocate:hover {
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         transform: translateY(-1px);
     }
 
@@ -1108,7 +1108,7 @@
         align-items: center;
         gap: 8px;
         padding: 11px 26px;
-        background: linear-gradient(135deg, var(--accent), #8b5cf6);
+        background: #000000; border-radius: 9999px;
         color: white;
         border: none;
         border-radius: 10px;
@@ -1676,7 +1676,7 @@
                                 </td>
                                 <td>
                                     {% for dept in item.departments %}
-                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(99,102,241,0.12);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
+                                    <span style="display:inline-block;padding:2px 7px;font-size:11px;font-weight:600;border-radius:5px;background:rgba(0, 0, 0, 0.05);color:var(--accent-light);border:1px solid rgba(99,102,241,0.25);margin-right:4px;">
                                         {{ dept }}
                                     </span>
                                     {% empty %}
