@@ -53,7 +53,7 @@
     .nav-container {
         max-width: 1280px;
         margin: 0 auto;
-        padding: 0 28px;
+        padding: 0 32px;
         height: 70px;
         display: flex;
         align-items: center;
@@ -154,13 +154,15 @@
        HERO 2-COLUMN SECTION (Exact Shibutz Layout)
        ══════════════════════════════════════════════════════════════════════ */
     .hero-wrapper {
-        max-width: 1340px;
+        max-width: 1280px;
         margin: 0 auto;
-        padding: 64px 32px 80px;
+        min-height: calc(100vh - 70px);
+        padding: clamp(16px, 3.2vh, 36px) 32px;
         display: grid;
-        grid-template-columns: 1.05fr 1.15fr;
-        gap: 48px;
+        grid-template-columns: 1fr 1.15fr;
+        gap: 40px;
         align-items: center;
+        box-sizing: border-box;
     }
 
     .hero-content {
@@ -177,27 +179,27 @@
         background: #ffffff;
         border: 1px solid #d4d4d8;
         border-radius: 9999px;
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--sb-text-body);
-        margin-bottom: 28px;
+        margin-bottom: clamp(14px, 2vh, 22px);
     }
 
     .hero-title {
-        font-size: 64px;
+        font-size: clamp(38px, 3.8vw, 52px);
         font-weight: 850;
-        letter-spacing: -0.045em;
-        line-height: 1.05;
+        letter-spacing: -0.04em;
+        line-height: 1.08;
         color: var(--sb-text-title);
-        margin-bottom: 26px;
+        margin-bottom: clamp(14px, 2vh, 22px);
     }
 
     .hero-subhead {
-        font-size: 17.5px;
-        line-height: 1.65;
+        font-size: 15px;
+        line-height: 1.55;
         color: var(--sb-text-body);
-        margin-bottom: 38px;
-        max-width: 540px;
+        margin-bottom: clamp(20px, 2.8vh, 30px);
+        max-width: 500px;
     }
 
     .hero-actions {
@@ -211,11 +213,11 @@
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        padding: 13px 26px;
+        padding: 11px 22px;
         background: var(--sb-btn-black);
         color: #ffffff !important;
         border-radius: 9999px;
-        font-size: 14.5px;
+        font-size: 13.5px;
         font-weight: 600;
         border: 1px solid var(--sb-btn-black);
         transition: all 0.15s ease;
@@ -233,11 +235,11 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 13px 24px;
+        padding: 11px 20px;
         background: #ffffff;
         color: var(--sb-text-title) !important;
         border-radius: 9999px;
-        font-size: 14.5px;
+        font-size: 13.5px;
         font-weight: 600;
         border: 1px solid var(--sb-border);
         transition: all 0.15s ease;
@@ -254,8 +256,8 @@
     .mac-window {
         background: #ffffff;
         border: 1px solid var(--sb-border);
-        border-radius: 20px;
-        box-shadow: 0 24px 60px -15px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+        border-radius: 18px;
+        box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
         overflow: hidden;
         position: relative;
     }
@@ -264,10 +266,10 @@
     .mac-window-bar {
         background: #fafafa;
         border-bottom: 1px solid var(--sb-border);
-        padding: 12px 18px;
+        padding: 11px 16px;
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
     }
 
     .traffic-lights {
@@ -304,18 +306,18 @@
     /* Window Body */
     .mac-window-body {
         display: grid;
-        grid-template-columns: 180px 1fr;
-        min-height: 480px;
+        grid-template-columns: 175px 1fr;
+        min-height: 380px;
     }
 
     /* Inner Sidebar */
     .mock-sidebar {
         background: #fafafa;
         border-right: 1px solid var(--sb-border);
-        padding: 16px 12px;
+        padding: 14px 10px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
     }
 
     .btn-mock-generate {
@@ -323,11 +325,11 @@
         align-items: center;
         justify-content: center;
         gap: 6px;
-        padding: 8px 12px;
+        padding: 7px 10px;
         background: #000000;
         color: #ffffff;
-        border-radius: 8px;
-        font-size: 12px;
+        border-radius: 7px;
+        font-size: 11.5px;
         font-weight: 600;
         border: none;
         cursor: default;
@@ -352,9 +354,9 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 6px 8px;
+        padding: 5px 8px;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 500;
         color: var(--sb-text-body);
     }
@@ -373,10 +375,10 @@
 
     /* Inner Main Content */
     .mock-main {
-        padding: 22px 24px;
+        padding: 18px 20px;
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 14px;
         background: #ffffff;
     }
 
@@ -387,7 +389,7 @@
     }
 
     .mock-title {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 750;
         letter-spacing: -0.02em;
         color: var(--sb-text-title);
@@ -397,7 +399,7 @@
     }
 
     .mock-subtitle {
-        font-size: 11.5px;
+        font-size: 11px;
         color: var(--sb-text-muted);
         margin-top: 2px;
     }
@@ -406,21 +408,21 @@
     .mock-stat-card {
         background: #fafafa;
         border: 1px solid var(--sb-border);
-        border-radius: 12px;
-        padding: 14px 16px;
+        border-radius: 10px;
+        padding: 11px 14px;
     }
 
     .mock-stat-title {
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 600;
         color: var(--sb-text-muted);
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
     }
 
     .mock-stat-value {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 800;
         letter-spacing: -0.03em;
         color: var(--sb-text-title);
@@ -428,20 +430,20 @@
     }
 
     .mock-stat-subtext {
-        font-size: 11px;
+        font-size: 10.5px;
         color: var(--sb-text-muted);
-        margin-top: 4px;
+        margin-top: 3px;
     }
 
     /* Statistics Grid inside Mockup */
     .mock-stats-box {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
 
     .mock-stats-headline {
-        font-size: 13.5px;
+        font-size: 12.5px;
         font-weight: 700;
         color: var(--sb-text-title);
     }
@@ -449,21 +451,21 @@
     .mock-stat-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 10px;
     }
 
     .stat-metric-card {
         border: 1px solid var(--sb-border);
-        border-radius: 10px;
-        padding: 12px;
+        border-radius: 9px;
+        padding: 10px 11px;
         background: #ffffff;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
     }
 
     .stat-metric-header {
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 600;
         color: var(--sb-text-title);
     }
@@ -472,7 +474,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        font-size: 10.5px;
+        font-size: 10px;
         color: var(--sb-text-muted);
     }
 
@@ -587,10 +589,12 @@
     @media (max-width: 1024px) {
         .hero-wrapper {
             grid-template-columns: 1fr;
-            gap: 40px;
+            gap: 36px;
+            min-height: auto;
+            padding: 40px 24px;
         }
         .hero-title {
-            font-size: 48px;
+            font-size: 40px;
         }
         .path-grid {
             grid-template-columns: 1fr;
