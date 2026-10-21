@@ -84,7 +84,7 @@ class ElectiveExtractionResult:
 # --- Helper Functions & Normalization ---
 
 ROLL_REGEX = re.compile(
-    r"^(?:B\d{2}[A-Z]{2,4}\d{1,4}|[A-Z]{3}\d{2}[A-Z]{2,4}\d{1,4}|L\d{2}[A-Z]{2,4}\d{1,4}|B21MC\d{3})$",
+    r"^(?:[A-Z]?\d{2}[A-Z]{2,4}\d{1,4}|[A-Z]{2,4}\d{2}[A-Z]{2,4}\d{1,4}|B21MC\d{3}|[A-Z]{1,3}\d{4,8})$",
     re.IGNORECASE,
 )
 
@@ -129,31 +129,38 @@ def split_subject_header(s: str) -> tuple[str, str, str]:
     """
     if not s:
         return "", "", ""
+    # Normalize unicode dashes and replacement chars often found in PDFs
+    s = str(s).replace('\ufffd', '-')
+    s = re.sub(r'[\u2013\u2014\u2212]', '-', s)
     # Normalize internal newlines and whitespace
-    s = re.sub(r"[\r\n]+", " ", str(s)).strip()
+    s = re.sub(r"[\r\n]+", " ", s).strip()
+    # Strip enclosing brackets e.g. [22CSE803.5 - DATA MINING]
+    s = re.sub(r"^[\[\(]+|[\]\)]+$", "", s).strip()
     # Strip trailing decorative underscores or dashes
     s = re.sub(r"[\s_]+$", "", s).strip()
     # Remove leading "Student List -" if present
-    s = re.sub(r"^STUDENT\s+LIST\s*[-:]?\s*", "", s, flags=re.IGNORECASE).strip()
+    s = re.sub(r"^STUDENT\s+LIST\s*[-:–—−]?\s*", "", s, flags=re.IGNORECASE).strip()
     if s.lower().startswith("sub:"):
         s = s[4:].strip()
 
-    # Pattern: course code followed by separator and subject name
-    m = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*[0-9\._A-Za-z]+(?:[ _][A-Za-z0-9]+)?)\s*[-:]\s*(.+)$", s)
+    # Pattern: course code followed by separator (-, :, en-dash, em-dash, minus) and subject name
+    m = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*\d+(?:\.\d+)?(?:[ _]?[A-Za-z0-9]{1,2})?|[A-Za-z]{2,5}\s*\d{3}[A-Za-z0-9\._]*)\s*[-:–—−]\s*(.+)$", s)
     if m:
         orig_code = m.group(1).strip()
         norm_code = normalize_subject_code(orig_code)
         name = m.group(2).strip()
+        name = re.sub(r"^[\[\(]+|[\]\)]+$", "", name).strip()
         name = re.sub(r"[\s_]+$", "", name).strip()
         name = " ".join(name.split())
         return orig_code, norm_code, name
 
     # Pattern without separator e.g. "22ECE802.7 ENTREPRENEURSHIP"
-    m2 = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*[0-9\._A-Za-z]+(?:[ _][A-Za-z0-9]+)?)\s+([A-Za-z].+)$", s)
+    m2 = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*\d+(?:\.\d+)?(?:[ _]?[A-Za-z0-9]{1,2})?|[A-Za-z]{2,5}\s*\d{3}[A-Za-z0-9\._]*)\s+([A-Za-z].+)$", s)
     if m2:
         orig_code = m2.group(1).strip()
         norm_code = normalize_subject_code(orig_code)
         name = m2.group(2).strip()
+        name = re.sub(r"^[\[\(]+|[\]\)]+$", "", name).strip()
         name = re.sub(r"[\s_]+$", "", name).strip()
         name = " ".join(name.split())
         return orig_code, norm_code, name
@@ -165,7 +172,7 @@ def split_subject_header(s: str) -> tuple[str, str, str]:
         return code, code, name
 
     # If starts with standard code alone
-    m3 = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*[0-9\._A-Za-z]+(?:[ _][A-Za-z0-9]+)?)$", s)
+    m3 = re.match(r"^([0-9]{2}[A-Za-z]{2,5}\s*\d+(?:\.\d+)?(?:[ _]?[A-Za-z0-9]{1,2})?|[A-Za-z]{2,5}\s*\d{3}[A-Za-z0-9\._]*)$", s)
     if m3:
         orig_code = m3.group(1).strip()
         norm_code = normalize_subject_code(orig_code)
@@ -217,6 +224,44 @@ def derive_elective_type(sub_code: str, context: str = "") -> str:
             return "Programme Elective V"
 
     return "Programme Elective"
+
+
+def normalize_elective_type(raw_num: str, norm_code: str = "", context: str = "") -> str:
+    """
+    Map raw elective number string (e.g. 'I', 'II', 'III', 'IV', 'PE-III', '3', 'Open Elective I')
+    or context/norm_code to standardized elective group label (e.g. 'Programme Elective III').
+    """
+    if not raw_num:
+        return derive_elective_type(norm_code, context)
+
+    clean = re.sub(r"[\[\]]", "", str(raw_num)).strip()
+    clean = re.sub(r"\be\.g\.?\b", "", clean, flags=re.IGNORECASE).strip()
+    if not clean or clean.lower() in {"i, ii, iii, iv", "i, ii, iii", "i/ii/iii/iv", "i,ii,iii,iv"}:
+        return derive_elective_type(norm_code, context)
+
+    c_upper = clean.upper()
+    ctx_upper = context.upper()
+    sub_upper = norm_code.upper()
+
+    is_arch = "ARE" in sub_upper or "ARCH" in ctx_upper or "ARCH" in c_upper
+    is_open = "OPEN" in ctx_upper or "OPEN" in c_upper
+
+    prefix = "Architecture Elective" if is_arch else ("Open Elective" if is_open else "Programme Elective")
+
+    if re.search(r"\b(?:III|3)\b", c_upper) or "PE-III" in c_upper or "PE III" in c_upper or "PE_III" in c_upper:
+        return f"{prefix} III"
+    elif re.search(r"\b(?:IV|4)\b", c_upper) or "PE-IV" in c_upper or "PE IV" in c_upper or "PE_IV" in c_upper:
+        return f"{prefix} IV"
+    elif re.search(r"\b(?:V|5)\b", c_upper) or "PE-V" in c_upper or "PE V" in c_upper or "PE_V" in c_upper:
+        return f"{prefix} V"
+    elif re.search(r"\b(?:II|2)\b", c_upper) or "PE-II" in c_upper or "PE II" in c_upper or "PE_II" in c_upper:
+        return f"{prefix} II"
+    elif re.search(r"\b(?:I|1)\b", c_upper) or "PE-I" in c_upper or "PE I" in c_upper or "PE_I" in c_upper:
+        return f"{prefix} I"
+    elif any(k in c_upper for k in ("PROGRAMME ELECTIVE", "PROGRAM ELECTIVE", "ELECTIVE", "MINOR", "HONOURS")):
+        return clean.title()
+
+    return derive_elective_type(norm_code, context)
 
 
 def derive_dept_from_roll(roll: str) -> str:
@@ -299,11 +344,11 @@ def derive_class_name(roll: str, sheet_name: str = "", context: str = "") -> str
 
 
 def clean_roll_number(val: str) -> str:
-    """Normalize roll number: uppercase, remove internal spaces and punctuation."""
+    """Normalize roll number: uppercase, remove internal spaces, dashes, dots, and punctuation."""
     if not val:
         return ""
     r = str(val).strip().upper()
-    r = re.sub(r"\s+", "", r)
+    r = re.sub(r"[\s\-_.]+", "", r)
     return r
 
 
@@ -321,10 +366,10 @@ def is_valid_roll_number(val: str) -> bool:
     if not val:
         return False
     r = clean_roll_number(val)
-    if len(r) < 6 or len(r) > 16:
+    if len(r) < 4 or len(r) > 16:
         return False
     # Avoid header keywords or numbers
-    if r.isdigit() or r in {"ROLLNO", "SLNO", "NAME", "STUDENTNAME", "CLASSNAME"}:
+    if r.isdigit() or r in {"ROLLNO", "SLNO", "NAME", "STUDENTNAME", "CLASSNAME", "DATE", "TIME"}:
         return False
     return bool(ROLL_REGEX.match(r))
 
@@ -447,6 +492,119 @@ def _parse_excel_sheet(
     sheet_title = worksheet.title.strip()
     rows = list(worksheet.iter_rows(values_only=True))
     if not rows:
+        return
+
+    # 0. Check if this sheet matches the official ELECTIVE STUDENT DETAILS template
+    is_template_sheet = False
+    for r in rows[:10]:
+        r_str = " ".join(str(c).lower() for c in r if c is not None)
+        if "elective student details" in r_str or ("elective course" in r_str and "department name" in r_str):
+            is_template_sheet = True
+            break
+
+    if is_template_sheet:
+        raw_elective_number = ""
+        header_dept_name = ""
+        header_batch = ""
+        header_sem = ""
+        raw_course = ""
+        declared_count_str = ""
+
+        header_row_idx = None
+        r_idx = -1
+        n_idx = -1
+
+        for r_idx_scan, row in enumerate(rows):
+            if not any(row):
+                continue
+            for c_i, cell in enumerate(row):
+                if cell is not None:
+                    clow = str(cell).strip().lower()
+                    val = str(row[c_i + 1]).strip() if c_i + 1 < len(row) and row[c_i + 1] is not None else ""
+                    if "elective number" in clow or "elective no" in clow:
+                        raw_elective_number = val
+                    elif "department" in clow:
+                        header_dept_name = val
+                    elif "class" in clow or "batch" in clow:
+                        header_batch = val
+                    elif "semester" in clow or "sem" in clow:
+                        header_sem = val
+                    elif "course" in clow or "subject" in clow:
+                        raw_course = val
+                    elif "count" in clow:
+                        declared_count_str = val
+
+            vals_low = [str(c).strip().lower() for c in row if c is not None]
+            if any("roll" in h for h in vals_low):
+                header_row_idx = r_idx_scan
+                for c_i, c_val in enumerate(row):
+                    if c_val is not None:
+                        clow = str(c_val).strip().lower()
+                        if "roll" in clow:
+                            r_idx = c_i
+                        elif "name" in clow:
+                            n_idx = c_i
+                break
+
+        raw_course = re.split(r"Faculty\s*Advisor", raw_course, flags=re.IGNORECASE)[0].strip()
+        raw_course = re.sub(r"[\s_]+$", "", raw_course).strip()
+        orig_code, norm_code, subject_name = split_subject_header(raw_course)
+
+        etype = normalize_elective_type(
+            raw_elective_number,
+            norm_code,
+            f"{file_name} {sheet_title} {subject_name} {header_sem} {header_batch}",
+        )
+
+        clean_dept = re.sub(r"[\[\]]", "", header_dept_name).strip().upper()
+        clean_batch = re.sub(r"[\[\]]|\be\.g\.?\b", "", header_batch, flags=re.IGNORECASE).strip()
+        header_dept_code = COMMON_DEPT_MAP.get(clean_dept, "")
+        if not header_dept_code:
+            for k, v in COMMON_DEPT_MAP.items():
+                if k in clean_dept:
+                    header_dept_code = v
+                    break
+        if not header_dept_code:
+            b_upper = clean_batch.upper()
+            for k, v in [("CHE", "CHE"), ("ARCH", "B.ARCH"), ("CSE", "CSE"), ("ECE", "ECE"), ("EEE", "EEE"), ("ME", "ME"), ("CE", "CE")]:
+                if k in b_upper:
+                    header_dept_code = v
+                    break
+
+        if header_row_idx is not None and r_idx != -1:
+            start_row = header_row_idx + 1
+            if n_idx == -1 and r_idx + 1 < len(rows[header_row_idx]):
+                n_idx = r_idx + 1
+
+            for r_num, row in enumerate(rows[start_row:], start=start_row + 1):
+                if not any(row):
+                    continue
+                val_roll = str(row[r_idx]).strip() if r_idx < len(row) and row[r_idx] else ""
+                val_name = str(row[n_idx]).strip() if n_idx != -1 and n_idx < len(row) and row[n_idx] else ""
+
+                clean_r = clean_roll_number(val_roll)
+                if not is_valid_roll_number(clean_r):
+                    continue
+
+                clean_n = clean_student_name(val_name) or clean_r
+                dept = derive_dept_from_roll(clean_r) or header_dept_code
+                cname = derive_class_name(clean_r, sheet_title, clean_batch) or clean_batch
+
+                _add_student_to_subject(
+                    subject_map=subject_map,
+                    report=report,
+                    orig_code=orig_code,
+                    norm_code=norm_code,
+                    subject_name=subject_name,
+                    elective_type=etype,
+                    roll=clean_r,
+                    name=clean_n,
+                    dept=dept,
+                    class_name=cname,
+                    source_file=file_name,
+                    sheet_or_page=sheet_title,
+                    row_idx=r_num,
+                )
         return
 
     # 1. Check if this is an explicit multi-column format (e.g. File1.xlsx: Dept | Elective Group | Subject Code | ...)
@@ -672,12 +830,34 @@ def _parse_excel_sheet(
 
 COMMON_DEPT_MAP = {
     "ARCHITECTURE": "B.ARCH",
+    "B.ARCH": "B.ARCH",
+    "BARCH": "B.ARCH",
     "CHEMICAL ENGINEERING": "CHE",
     "CIVIL ENGINEERING": "CE",
     "COMPUTER SCIENCE AND ENGINEERING": "CSE",
+    "COMPUTER SCIENCE & ENGINEERING": "CSE",
     "ELECTRICAL AND ELECTRONICS ENGINEERING": "EEE",
+    "ELECTRICAL & ELECTRONICS ENGINEERING": "EEE",
     "ELECTRONICS AND COMMUNICATION ENGINEERING": "ECE",
+    "ELECTRONICS & COMMUNICATION ENGINEERING": "ECE",
     "MECHANICAL ENGINEERING": "ME",
+    "DEPARTMENT OF ARCHITECTURE": "B.ARCH",
+    "DEPARTMENT OF CHEMICAL ENGINEERING": "CHE",
+    "DEPARTMENT OF CIVIL ENGINEERING": "CE",
+    "DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING": "CSE",
+    "DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING": "CSE",
+    "DEPARTMENT OF ELECTRICAL AND ELECTRONICS ENGINEERING": "EEE",
+    "DEPARTMENT OF ELECTRICAL & ELECTRONICS ENGINEERING": "EEE",
+    "DEPARTMENT OF ELECTRONICS AND COMMUNICATION ENGINEERING": "ECE",
+    "DEPARTMENT OF ELECTRONICS & COMMUNICATION ENGINEERING": "ECE",
+    "DEPARTMENT OF MECHANICAL ENGINEERING": "ME",
+    "DEPT OF ARCHITECTURE": "B.ARCH",
+    "DEPT OF CHEMICAL ENGINEERING": "CHE",
+    "DEPT OF CIVIL ENGINEERING": "CE",
+    "DEPT OF COMPUTER SCIENCE AND ENGINEERING": "CSE",
+    "DEPT OF ELECTRICAL AND ELECTRONICS ENGINEERING": "EEE",
+    "DEPT OF ELECTRONICS AND COMMUNICATION ENGINEERING": "ECE",
+    "DEPT OF MECHANICAL ENGINEERING": "ME",
 }
 
 
@@ -739,43 +919,69 @@ def _parse_common_template_pdf(
 ) -> None:
     p1_text = doc[0].get_text() if len(doc) > 0 else ""
 
-    # 1. Metadata Extraction
-    m_dept = re.search(r"Department\s*Name\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
-    header_dept_name = m_dept.group(1).strip() if m_dept else ""
-    header_dept_code = COMMON_DEPT_MAP.get(header_dept_name.upper(), "")
+    # 1. Metadata Extraction from Structured Table & Fallback Text
+    raw_elective_number = ""
+    header_dept_name = ""
+    header_batch = ""
+    header_sem = ""
+    raw_course = ""
+    faculty_advisor = ""
+    declared_count_str = ""
 
-    m_batch = re.search(r"Class\s*/\s*Batch\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
-    header_batch = m_batch.group(1).strip() if m_batch else ""
+    # Strategy A: Table-based extraction on Page 1
+    tabs_p1 = doc[0].find_tables()
+    if tabs_p1.tables:
+        for t in tabs_p1.tables:
+            data = t.extract()
+            for row in data:
+                if row and len(row) >= 2 and row[0]:
+                    k = str(row[0]).strip().lower()
+                    v = str(row[1]).strip() if row[1] is not None else ""
+                    v = re.sub(r"[\r\n]+", " ", v).strip()
+                    if "elective number" in k or "elective no" in k:
+                        raw_elective_number = v
+                    elif "department" in k:
+                        header_dept_name = v
+                    elif "class" in k or "batch" in k:
+                        header_batch = v
+                    elif "semester" in k or "sem" in k:
+                        header_sem = v
+                    elif "course" in k or "subject" in k:
+                        raw_course = v
+                    elif "faculty" in k or "advisor" in k or "in-charge" in k:
+                        faculty_advisor = v
+                    elif "count" in k:
+                        declared_count_str = v
 
-    m_sem = re.search(r"Current\s*Semester\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
-    header_sem = m_sem.group(1).strip() if m_sem else ""
+    # Strategy B: Fallback Text Regex Extraction (when find_tables misses cells)
+    if not raw_elective_number:
+        m = re.search(r"Elective\s*(?:Number|No)\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
+        if m: raw_elective_number = m.group(1).strip()
+    if not header_dept_name:
+        m = re.search(r"Department\s*Name\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
+        if m: header_dept_name = m.group(1).strip()
+    if not header_batch:
+        m = re.search(r"Class\s*/\s*Batch\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
+        if m: header_batch = m.group(1).strip()
+    if not header_sem:
+        m = re.search(r"Current\s*Semester\s*[\n:]*\s*([^\n]+)", p1_text, re.IGNORECASE)
+        if m: header_sem = m.group(1).strip()
+    if not raw_course:
+        m = re.search(r"Elective\s*Course\s*[\n:]*\s*([^\n]+(?:\n[^\n]+)?)", p1_text, re.IGNORECASE)
+        if m: raw_course = m.group(1).strip()
+    if not declared_count_str:
+        m = re.search(r"Students\s*Count\s*[\n:]*\s*(\d+)", p1_text, re.IGNORECASE)
+        if m: declared_count_str = m.group(1).strip()
 
-    m_cnt = re.search(r"Students\s*Count\s*[\n:]*\s*(\d+)", p1_text, re.IGNORECASE)
-    declared_count = int(m_cnt.group(1)) if m_cnt else None
-
-    # Elective course line
-    m_course = re.search(r"Elective\s*Course\s*[\n:]*\s*([^\n]+(?:\n[^\n]+)?)", p1_text, re.IGNORECASE)
-    raw_course = m_course.group(1).strip() if m_course else ""
+    # Clean course line (strip trailing Faculty Advisor if captured together)
     raw_course = re.split(r"Faculty\s*Advisor", raw_course, flags=re.IGNORECASE)[0].strip()
+    raw_course = re.sub(r"[\s_]+$", "", raw_course).strip()
     raw_course = " ".join(raw_course.split())
 
     orig_code, norm_code, subject_name = split_subject_header(raw_course)
 
-    # Fallback to checking metadata table in page 1 if not parsed cleanly
-    if not norm_code or norm_code == subject_name:
-        tabs = doc[0].find_tables()
-        for t in tabs.tables:
-            for r in t.extract():
-                if r and len(r) >= 2 and "elective course" in str(r[0]).lower():
-                    table_course = str(r[1]).replace("\n", " ").strip()
-                    table_course = re.sub(r"[\s_]+$", "", table_course).strip()
-                    t_orig, t_norm, t_name = split_subject_header(table_course)
-                    if t_norm and t_norm != t_name:
-                        orig_code, norm_code, subject_name = t_orig, t_norm, t_name
-                        break
-
-    # Second fallback: infer from filename e.g. 22ARE801.1_ARCHITECTURAL_CONSERVATION.pdf
-    if not norm_code or norm_code == subject_name:
+    # Fallback to filename if course code is placeholder or empty
+    if not norm_code or norm_code == subject_name or "[CODE" in norm_code:
         m_fn = re.match(r"^([0-9]{2}[A-Za-z]{2,5}[0-9\._A-Za-z]+(?:_[A-Za-z0-9]+)?)_(.+)\.pdf$", path.name, re.IGNORECASE)
         if m_fn:
             f_code = m_fn.group(1).replace("_", ".")
@@ -784,7 +990,28 @@ def _parse_common_template_pdf(
             norm_code = normalize_subject_code(f_code)
             subject_name = f_name
 
-    etype = derive_elective_type(norm_code, f"{path.name} {subject_name} {header_sem}")
+    # Determine elective type
+    etype = normalize_elective_type(raw_elective_number, norm_code, f"{path.name} {subject_name} {header_sem} {header_batch}")
+
+    # Determine department code
+    clean_dept = re.sub(r"[\[\]]", "", header_dept_name).strip().upper()
+    clean_batch = re.sub(r"[\[\]]|\be\.g\.?\b", "", header_batch, flags=re.IGNORECASE).strip()
+    header_dept_code = COMMON_DEPT_MAP.get(clean_dept, "")
+    if not header_dept_code:
+        for k, v in COMMON_DEPT_MAP.items():
+            if k in clean_dept:
+                header_dept_code = v
+                break
+    if not header_dept_code:
+        b_upper = clean_batch.upper()
+        for k, v in [("CHE", "CHE"), ("ARCH", "B.ARCH"), ("CSE", "CSE"), ("ECE", "ECE"), ("EEE", "EEE"), ("ME", "ME"), ("CE", "CE")]:
+            if k in b_upper:
+                header_dept_code = v
+                break
+
+    # Parse declared student count
+    m_digits = re.search(r"\d+", declared_count_str)
+    declared_count = int(m_digits.group(0)) if m_digits else None
 
     # 2. Extract Students across all pages
     total_parsed_for_subject = 0
@@ -794,16 +1021,57 @@ def _parse_common_template_pdf(
         if tabs.tables:
             for t in tabs.tables:
                 data = t.extract()
-                if not data:
-                    continue
-                header = [str(c).strip().lower() for c in data[0] if c is not None]
-                if not any("roll" in h for h in header):
+                if not data or len(data) < 1:
                     continue
 
-                r_idx = next(i for i, h in enumerate(header) if "roll" in h)
-                n_idx = next((i for i, h in enumerate(header) if "name" in h), -1)
+                # Skip 2-column metadata table on page 1
+                if len(data[0]) <= 2 and any("elective" in str(c).lower() or "department" in str(c).lower() for c in data[0] if c is not None):
+                    continue
 
-                for r_num, row in enumerate(data[1:], start=2):
+                # Detect header row
+                header_row_idx = -1
+                r_idx = -1
+                n_idx = -1
+
+                for row_i, row in enumerate(data[:3]):
+                    row_strs = [str(c).strip().lower() for c in row if c is not None]
+                    if any("roll" in h for h in row_strs):
+                        header_row_idx = row_i
+                        for c_i, c_val in enumerate(row):
+                            if c_val is not None:
+                                clow = str(c_val).strip().lower()
+                                if "roll" in clow:
+                                    r_idx = c_i
+                                elif "name" in clow:
+                                    n_idx = c_i
+                        break
+
+                # If no header row found (continuation page where students start immediately)
+                start_row = 1
+                if header_row_idx == -1:
+                    for test_row in data[:5]:
+                        if not test_row:
+                            continue
+                        for c_i, c_val in enumerate(test_row):
+                            if c_val and is_valid_roll_number(str(c_val)):
+                                r_idx = c_i
+                                if r_idx + 1 < len(test_row):
+                                    n_idx = r_idx + 1
+                                elif r_idx - 1 >= 0 and not str(test_row[r_idx - 1]).strip().isdigit():
+                                    n_idx = r_idx - 1
+                                start_row = 0
+                                break
+                        if r_idx != -1:
+                            break
+                else:
+                    start_row = header_row_idx + 1
+                    if n_idx == -1 and r_idx != -1 and r_idx + 1 < len(data[0]):
+                        n_idx = r_idx + 1
+
+                if r_idx == -1:
+                    continue
+
+                for r_num, row in enumerate(data[start_row:], start=start_row + 1):
                     if not row or not any(row):
                         continue
                     val_roll = str(row[r_idx]).strip() if r_idx < len(row) and row[r_idx] else ""
@@ -815,7 +1083,7 @@ def _parse_common_template_pdf(
 
                     clean_n = clean_student_name(val_name) or clean_r
                     dept = derive_dept_from_roll(clean_r) or header_dept_code
-                    cname = derive_class_name(clean_r, "", header_batch)
+                    cname = derive_class_name(clean_r, "", clean_batch) or clean_batch
 
                     _add_student_to_subject(
                         subject_map=subject_map,
@@ -840,16 +1108,30 @@ def _parse_common_template_pdf(
             page_text = page.get_text()
             lines = [l.strip() for l in page_text.splitlines() if l.strip()]
             for l_idx, line in enumerate(lines):
-                if is_valid_roll_number(line):
-                    clean_r = clean_roll_number(line)
-                    cand_name = ""
-                    if l_idx + 1 < len(lines):
-                        cand = lines[l_idx + 1]
-                        if not is_valid_roll_number(cand) and not cand.isdigit() and len(cand) > 2:
-                            cand_name = clean_student_name(cand)
+                line_lower = line.lower()
+                if any(k in line_lower for k in ("tkm college", "karicode", "elective student details", "date:", "time:")):
+                    continue
+
+                tokens = line.split()
+                roll_token_idx = -1
+                for t_idx, tok in enumerate(tokens):
+                    clean_tok = clean_roll_number(tok)
+                    if is_valid_roll_number(clean_tok):
+                        roll_token_idx = t_idx
+                        clean_r = clean_tok
+                        break
+
+                if roll_token_idx != -1:
+                    name_tokens = [t for t in tokens[roll_token_idx + 1:] if not t.isdigit() and len(t) > 1]
+                    cand_name = " ".join(name_tokens).strip()
+
+                    if not cand_name and l_idx + 1 < len(lines):
+                        nxt = lines[l_idx + 1]
+                        if not any(is_valid_roll_number(t) for t in nxt.split()) and not nxt.isdigit() and len(nxt) > 2:
+                            cand_name = clean_student_name(nxt)
 
                     dept = derive_dept_from_roll(clean_r) or header_dept_code
-                    cname = derive_class_name(clean_r, "", header_batch)
+                    cname = derive_class_name(clean_r, "", clean_batch) or clean_batch
 
                     _add_student_to_subject(
                         subject_map=subject_map,

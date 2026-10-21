@@ -861,3 +861,147 @@ class ExamSlotOrderingTests(TestCase):
         ]
         self.assertEqual(exam_pairs, expected_pairs)
 
+
+
+class ElectiveOfficialTemplateParserTests(TestCase):
+    def test_normalize_elective_type(self):
+        from exam_allocator.parsers.elective_parser import normalize_elective_type
+        self.assertEqual(normalize_elective_type('III'), 'Programme Elective III')
+        self.assertEqual(normalize_elective_type('IV'), 'Programme Elective IV')
+        self.assertEqual(normalize_elective_type('PE-III'), 'Programme Elective III')
+        self.assertEqual(normalize_elective_type('3'), 'Programme Elective III')
+        self.assertEqual(normalize_elective_type('[e.g.  I, II, III, IV ]', norm_code='22CSE802.1'), 'Programme Elective III')
+        self.assertEqual(normalize_elective_type('I', norm_code='22ARE801'), 'Architecture Elective I')
+        self.assertEqual(normalize_elective_type('Open Elective 1'), 'Open Elective I')
+
+    def test_split_subject_header_variants(self):
+        from exam_allocator.parsers.elective_parser import split_subject_header
+        c, nc, n = split_subject_header('22CSE803.5 – DATA MINING')
+        self.assertEqual(nc, '22CSE803.5')
+        self.assertEqual(n, 'DATA MINING')
+
+        c, nc, n = split_subject_header('[22CSE803.5 - DATA MINING]')
+        self.assertEqual(nc, '22CSE803.5')
+        self.assertEqual(n, 'DATA MINING')
+
+        c, nc, n = split_subject_header('22CSE803.5 DATA MINING')
+        self.assertEqual(nc, '22CSE803.5')
+        self.assertEqual(n, 'DATA MINING')
+
+    def test_parse_official_template_pdf(self):
+        import fitz
+        from exam_allocator.parsers.elective_parser import parse_elective_file
+        import tempfile
+        import os
+
+        doc = fitz.open()
+        p1 = doc.new_page()
+        p1.insert_text((50, 40), 'TKM COLLEGE OF ENGINEERING\nELECTIVE STUDENT DETAILS\n', fontsize=11)
+
+        meta = [
+            ('Elective Number', 'III'),
+            ('Department Name', 'COMPUTER SCIENCE AND ENGINEERING'),
+            ('Class / Batch', 'CSE 2K22'),
+            ('Current Semester', 'VIIIth Semester'),
+            ('Elective Course', '22CSE803.5 - DATA MINING'),
+            ('Faculty Advisor / In-Charge', 'Dr. Smith'),
+            ('Students Count', '4'),
+        ]
+        y = 90
+        for k, v in meta:
+            p1.draw_rect(fitz.Rect(50, y, 200, y + 15))
+            p1.draw_rect(fitz.Rect(200, y, 500, y + 15))
+            p1.insert_text((55, y + 11), k, fontsize=9)
+            p1.insert_text((205, y + 11), v, fontsize=9)
+            y += 15
+
+        y += 20
+        p1.draw_rect(fitz.Rect(50, y, 100, y + 15))
+        p1.draw_rect(fitz.Rect(100, y, 220, y + 15))
+        p1.draw_rect(fitz.Rect(220, y, 500, y + 15))
+        p1.insert_text((55, y + 11), 'Sl. No.', fontsize=9)
+        p1.insert_text((105, y + 11), 'Roll No', fontsize=9)
+        p1.insert_text((225, y + 11), 'Name', fontsize=9)
+        y += 15
+
+        for sl, r, name in [('1', 'B22CS001', 'ALICE'), ('2', 'B22CS002', 'BOB')]:
+            p1.draw_rect(fitz.Rect(50, y, 100, y + 15))
+            p1.draw_rect(fitz.Rect(100, y, 220, y + 15))
+            p1.draw_rect(fitz.Rect(220, y, 500, y + 15))
+            p1.insert_text((55, y + 11), sl, fontsize=9)
+            p1.insert_text((105, y + 11), r, fontsize=9)
+            p1.insert_text((225, y + 11), name, fontsize=9)
+            y += 15
+
+        p2 = doc.new_page()
+        y2 = 50
+        for sl, r, name in [('3', 'B22CS003', 'CHARLIE'), ('4', 'B22CS004', 'DIANA')]:
+            p2.draw_rect(fitz.Rect(50, y2, 100, y2 + 15))
+            p2.draw_rect(fitz.Rect(100, y2, 220, y2 + 15))
+            p2.draw_rect(fitz.Rect(220, y2, 500, y2 + 15))
+            p2.insert_text((55, y2 + 11), sl, fontsize=9)
+            p2.insert_text((105, y2 + 11), r, fontsize=9)
+            p2.insert_text((225, y2 + 11), name, fontsize=9)
+            y2 += 15
+
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tf:
+            temp_path = tf.name
+
+        try:
+            doc.save(temp_path)
+            doc.close()
+
+            res = parse_elective_file(temp_path)
+            self.assertEqual(len(res.subjects), 1)
+            subj = res.subjects[0]
+            self.assertEqual(subj.subject_code, '22CSE803.5')
+            self.assertEqual(subj.subject_name, 'DATA MINING')
+            self.assertEqual(subj.elective_type, 'Programme Elective III')
+            self.assertEqual(len(subj.students), 4)
+            self.assertEqual(subj.students[0].roll_number, 'B22CS001')
+            self.assertEqual(subj.students[0].department, 'CSE')
+            self.assertEqual(subj.students[0].class_name, 'CSE 2K22')
+            self.assertEqual(subj.students[3].roll_number, 'B22CS004')
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_parse_official_template_excel(self):
+        import openpyxl
+        from exam_allocator.parsers.elective_parser import parse_elective_file
+        import tempfile
+        import os
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Elective Details'
+        ws.append(['TKM COLLEGE OF ENGINEERING'])
+        ws.append(['ELECTIVE STUDENT DETAILS'])
+        ws.append(['Elective Number', 'IV'])
+        ws.append(['Department Name', 'DEPARTMENT OF CHEMICAL ENGINEERING'])
+        ws.append(['Class / Batch', 'CHE 2K22'])
+        ws.append(['Current Semester', 'VIIIth Semester'])
+        ws.append(['Elective Course', '22CHE802.4 - AIR QUALITY MANAGEMENT'])
+        ws.append(['Faculty Advisor / In-Charge', 'Prof. Chemist'])
+        ws.append(['Students Count', '2'])
+        ws.append([])
+        ws.append(['Sl. No.', 'Roll No', 'Name'])
+        ws.append(['1', 'B22CH01', 'STUDENT ONE'])
+        ws.append(['2', 'B22CH02', 'STUDENT TWO'])
+
+        with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tf:
+            temp_path = tf.name
+
+        try:
+            wb.save(temp_path)
+            res = parse_elective_file(temp_path)
+            self.assertEqual(len(res.subjects), 1)
+            subj = res.subjects[0]
+            self.assertEqual(subj.subject_code, '22CHE802.4')
+            self.assertEqual(subj.elective_type, 'Programme Elective IV')
+            self.assertEqual(len(subj.students), 2)
+            self.assertEqual(subj.students[0].department, 'CHE')
+            self.assertEqual(subj.students[0].class_name, 'CHE 2K22')
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
